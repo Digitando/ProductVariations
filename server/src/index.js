@@ -235,6 +235,17 @@ const PROMPT_MAP = PROMPT_TEMPLATES.reduce((acc, template) => {
 
 const DEFAULT_PROMPT_SEQUENCE = ['1', '2', '3', '4', '5'];
 
+function translateUpstreamError(error) {
+  const rawMessage =
+    error?.response?.data?.error?.message || error?.response?.data?.error || error?.message || 'Request failed';
+
+  if (typeof rawMessage === 'string' && /user not found/i.test(rawMessage)) {
+    return 'OpenRouter rejected the configured API key (user not found). Update OPENROUTER_API_KEY and redeploy.';
+  }
+
+  return rawMessage || 'Request failed';
+}
+
 function normalizeBase64Payload(input) {
   if (typeof input !== 'string') {
     return '';
@@ -464,7 +475,7 @@ app.post('/api/generate-images', upload.single('image'), async (req, res) => {
       status,
       error.response?.data || error.message
     );
-    const message = error.response?.data?.error?.message || error.message || 'Image generation failed';
+    const message = translateUpstreamError(error);
     res.status(status).json({ error: message });
   }
 });
@@ -647,7 +658,7 @@ app.post('/api/generate-descriptions', async (req, res) => {
       status,
       error.response?.data || error.message
     );
-    const message = error.response?.data?.error?.message || error.message || 'Description generation failed';
+    const message = translateUpstreamError(error);
     res.status(status).json({ error: message });
   }
 });
