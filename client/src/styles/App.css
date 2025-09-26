@@ -677,6 +677,8 @@ button {
   box-shadow: 0 40px 80px rgba(15, 23, 42, 0.2);
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
 }
 
 .modal__header {
@@ -691,6 +693,9 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .icon-button {

@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home' },
   { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
   { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
-  { id: VIEWS.PROFILE, label: 'Profile', icon: '🙍', requiresAuth: true, iconOnly: true },
+  { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
