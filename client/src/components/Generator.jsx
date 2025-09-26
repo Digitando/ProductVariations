@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as promptCatalogModule from '@shared/promptCatalog.js'
 import '../styles/Generator.css'
 
-const promptCatalog = promptCatalogModule.default || promptCatalogModule
+const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule['default'] : promptCatalogModule
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
