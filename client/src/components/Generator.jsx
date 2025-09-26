@@ -95,6 +95,13 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     [],
   )
 
+  const accessoryOptionsForDisplay = useMemo(() => {
+    if (selectedGenderId) {
+      return accessoryOptions.filter((option) => option.id !== 'sunglasses')
+    }
+    return accessoryOptions
+  }, [accessoryOptions, selectedGenderId])
+
   const selectedGender = useMemo(
     () => genderOptions.find((option) => option.id === selectedGenderId) || null,
     [genderOptions, selectedGenderId],
@@ -226,6 +233,12 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     }
     updateStatus({ error: '' })
     if (scope === 'standalone') {
+      if (selectedGenderId && categoryId === 'sunglasses') {
+        updateStatus({
+          error: 'Switch to accessories-only mode to generate sunglasses looks.',
+        })
+        return
+      }
       setAccessoriesOnly(true)
     } else {
       setAccessoriesOnly(false)
@@ -722,11 +735,11 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                   )
                 )}
 
-                {accessoryOptions.length > 0 && (
+                {accessoryOptionsForDisplay.length > 0 && (
                   <div className="selector-subgroup">
                     <span className="selector-subheading">Accessories</span>
                     <div className="selector-row" role="radiogroup" aria-label="Accessories">
-                      {accessoryOptions.map((option) => {
+                      {accessoryOptionsForDisplay.map((option) => {
                         const isSelected = selectedCategoryId === option.id
                         return (
                           <button

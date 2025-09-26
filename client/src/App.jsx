@@ -23,12 +23,10 @@ const VIEWS = {
 }
 
 const NAV_ITEMS = [
-  { id: VIEWS.HOME, label: 'Home', icon: '🏠' },
-  { id: VIEWS.GENERATOR, label: 'Create', icon: '✨', requiresAuth: true },
-  { id: VIEWS.LIBRARY, label: 'Library', icon: '🗂️', requiresAuth: true },
+  { id: VIEWS.HOME, label: 'Home' },
+  { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
+  { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
   { id: VIEWS.PROFILE, label: 'Profile', icon: '🙍', requiresAuth: true, iconOnly: true },
-  { id: VIEWS.COOKIE_POLICY, label: 'Cookie Policy', icon: '🍪' },
-  { id: VIEWS.PRIVACY, label: 'Privacy Notice', icon: '🔒' },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
@@ -1605,6 +1603,15 @@ function App() {
       />
 
       <CookieConsent />
+
+      <footer className="app-footer">
+        <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.COOKIE_POLICY)}>
+          Cookie Policy
+        </button>
+        <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.PRIVACY)}>
+          Privacy Notice
+        </button>
+      </footer>
     </div>
   )
 }
