@@ -210,17 +210,72 @@ button {
 .hero__preview {
   width: 100%;
   aspect-ratio: 4 / 3;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.25));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.18));
   border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero__placeholder {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 0;
 }
 
-.hero__preview img {
+.hero__placeholder img {
   width: 120px;
   height: 120px;
   opacity: 0.6;
+}
+
+.hero__slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  z-index: 0;
+}
+
+.hero__slide--active {
+  opacity: 1;
+}
+
+.hero__preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 10%, rgba(15, 23, 42, 0.35) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero__preview-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.hero__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.hero__dot--active {
+  transform: scale(1.2);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .hero__list {

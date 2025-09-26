@@ -4,6 +4,7 @@ import GoogleSignInButton from './components/GoogleSignInButton.jsx'
 import ImageViewer from './components/ImageViewer.jsx'
 import CookieConsent from './components/CookieConsent.jsx'
 import './styles/App.css'
+import './styles/Profile.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -194,7 +195,35 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
   )
 }
 
-function Hero({ onGetStarted, user }) {
+function Hero({ onGetStarted, user, recentImages = [] }) {
+  const hasImages = recentImages.length > 0
+  const previewImages = useMemo(
+    () => (hasImages ? recentImages.slice(0, 10) : []),
+    [hasImages, recentImages],
+  )
+  const [activeIndex, setActiveIndex] = useState(hasImages ? 0 : -1)
+
+  useEffect(() => {
+    if (!previewImages.length) {
+      setActiveIndex(-1)
+      return undefined
+    }
+
+    setActiveIndex(0)
+    const interval = setInterval(() => {
+      setActiveIndex((previous) => {
+        if (previewImages.length <= 1) {
+          return 0
+        }
+
+        const next = previous + 1
+        return next >= previewImages.length ? 0 : next
+      })
+    }, 4500)
+
+    return () => clearInterval(interval)
+  }, [previewImages])
+
   return (
     <section className="hero">
       <div className="hero__content">
@@ -217,7 +246,30 @@ function Hero({ onGetStarted, user }) {
       </div>
       <div className="hero__card">
         <div className="hero__preview" aria-hidden="true">
-          <img src="/vite.svg" alt="" />
+          {previewImages.length > 0 ? (
+            <>
+              {previewImages.map((src, index) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  className={`hero__slide${index === activeIndex ? ' hero__slide--active' : ''}`}
+                />
+              ))}
+              <div className="hero__preview-dots">
+                {previewImages.map((_, index) => (
+                  <span
+                    key={`hero-dot-${index}`}
+                    className={`hero__dot${index === activeIndex ? ' hero__dot--active' : ''}`}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="hero__placeholder">
+              <img src="/vite.svg" alt="" />
+            </div>
+          )}
         </div>
         <ul className="hero__list" aria-label="Workflow highlights">
           <li>
@@ -353,13 +405,62 @@ function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
   )
 }
 
-function ProfileView({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('library')
+function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLogout }) {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [isEditing, setIsEditing] = useState(false)
   const [profileSettings, setProfileSettings] = useState({
     name: user?.name || '',
     email: user?.email || '',
   })
-  const [isEditing, setIsEditing] = useState(false)
+  const [feedback, setFeedback] = useState('')
+
+  useEffect(() => {
+    setProfileSettings({ name: user?.name || '', email: user?.email || '' })
+  }, [user])
+
+  useEffect(() => {
+    if (!feedback) {
+      return undefined
+    }
+
+    const timer = setTimeout(() => setFeedback(''), 4000)
+    return () => clearTimeout(timer)
+  }, [feedback])
+
+  const metrics = useMemo(() => {
+    const list = Array.isArray(sessions) ? sessions : []
+    const totalSessions = list.length
+    let totalImages = 0
+    let totalDescriptions = 0
+
+    list.forEach((session) => {
+      totalImages += session?.generatedImages?.length || 0
+      totalDescriptions += session?.descriptions?.length || 0
+    })
+
+    const lastSession = list[0] || null
+    return { totalSessions, totalImages, totalDescriptions, lastSession }
+  }, [sessions])
+
+  const joinedAt = user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : null
+
+  const handleSettingsUpdate = (event) => {
+    event.preventDefault()
+    setIsEditing(false)
+    setFeedback('Profile preferences saved. We will sync these soon with your account backend.')
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setProfileSettings({ name: user?.name || '', email: user?.email || '' })
+    setFeedback('Changes discarded.')
+  }
+
+  const triggerImageView = (src, alt) => {
+    if (typeof onViewImage === 'function') {
+      onViewImage(src, alt)
+    }
+  }
 
   if (!user) {
     return (
@@ -370,113 +471,262 @@ function ProfileView({ user, onLogout }) {
     )
   }
 
-  const handleSettingsUpdate = (e) => {
-    e.preventDefault()
-    // In a real app, this would make an API call to update user settings
-    setIsEditing(false)
-    // For now, just simulate the update
-    alert('Profile settings updated!')
-  }
-
   return (
     <div className="profile">
-      <header className="profile__header">
+      <header className="profile__hero">
         <div>
-          <h1>Profile</h1>
-          <p>Manage your account settings and view your library</p>
+          <p className="profile__eyebrow">Account hub</p>
+          <h1>{user.name || user.email}</h1>
+          <p>Review your creator activity, manage saved sessions, and adjust contact preferences.</p>
+          {joinedAt && <span className="profile__meta">Member since {joinedAt}</span>}
         </div>
+        <button type="button" className="secondary" onClick={onLogout}>
+          Sign out
+        </button>
       </header>
 
-      <div className="profile__tabs">
+      <section className="profile__stats">
+        <article className="profile-stat">
+          <h2>Total sessions</h2>
+          <p className="profile-stat__number">{metrics.totalSessions}</p>
+          <p className="profile-stat__hint">Each session captures your prompt set, source photo, and outputs.</p>
+        </article>
+        <article className="profile-stat">
+          <h2>Images generated</h2>
+          <p className="profile-stat__number">{metrics.totalImages}</p>
+          <p className="profile-stat__hint">Download single shots or bulk export from the library view.</p>
+        </article>
+        <article className="profile-stat">
+          <h2>Descriptions crafted</h2>
+          <p className="profile-stat__number">{metrics.totalDescriptions}</p>
+          <p className="profile-stat__hint">High-converting copy stored alongside each session.</p>
+        </article>
+      </section>
+
+      <nav className="profile__tabs" aria-label="Profile sections">
         <button
           type="button"
-          className={`tab ${activeTab === 'library' ? 'tab--active' : ''}`}
-          onClick={() => setActiveTab('library')}
+          className={`profile-tab${activeTab === 'overview' ? ' profile-tab--active' : ''}`}
+          onClick={() => setActiveTab('overview')}
         >
-          My Library
+          Overview
         </button>
         <button
           type="button"
-          className={`tab ${activeTab === 'settings' ? 'tab--active' : ''}`}
+          className={`profile-tab${activeTab === 'library' ? ' profile-tab--active' : ''}`}
+          onClick={() => setActiveTab('library')}
+        >
+          Library
+        </button>
+        <button
+          type="button"
+          className={`profile-tab${activeTab === 'settings' ? ' profile-tab--active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
           Settings
         </button>
-      </div>
+      </nav>
 
-      <div className="profile__content">
+      {feedback && <p className="profile__feedback">{feedback}</p>}
+
+      <section className="profile__panel">
+        {activeTab === 'overview' && (
+          <div className="profile-overview">
+            <article className="profile-card">
+              <h2>Creator summary</h2>
+              <ul>
+                <li>
+                  <span>Account email</span>
+                  <strong>{user.email}</strong>
+                </li>
+                <li>
+                  <span>Authentication provider</span>
+                  <strong>{user.provider ? user.provider.replace(/^[a-z]/, (c) => c.toUpperCase()) : 'Credentials'}</strong>
+                </li>
+                {user.lastLoginAt && (
+                  <li>
+                    <span>Last sign-in</span>
+                    <strong>{new Date(user.lastLoginAt).toLocaleString()}</strong>
+                  </li>
+                )}
+              </ul>
+            </article>
+
+            <article className="profile-card">
+              <h2>Most recent session</h2>
+              {metrics.lastSession ? (
+                <>
+                  <p className="profile-card__timestamp">
+                    {new Date(metrics.lastSession.createdAt).toLocaleString()}
+                  </p>
+                  <div className="profile-card__prompts">
+                    {(metrics.lastSession.prompts || []).slice(0, 3).map((prompt, index) => (
+                      <span key={`recent-prompt-${index}`}>{prompt?.title || prompt?.name || 'Custom prompt'}</span>
+                    ))}
+                  </div>
+                  <div className="profile-card__preview">
+                    {(metrics.lastSession.generatedImages || []).slice(0, 3).map((src, index) => (
+                      <button
+                        key={`${metrics.lastSession.id}-preview-${index}`}
+                        type="button"
+                        onClick={() => triggerImageView(src, `Generated variation ${index + 1}`)}
+                      >
+                        <img src={src} alt="Generated preview" loading="lazy" />
+                      </button>
+                    ))}
+                    {(metrics.lastSession.generatedImages || []).length === 0 && (
+                      <p className="profile-card__empty">Run a generation to see previews here.</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="profile-card__empty">You have not saved any sessions yet. Generate a look to get started.</p>
+              )}
+            </article>
+          </div>
+        )}
+
         {activeTab === 'library' && (
           <div className="profile-library">
-            <h2>Your Saved Sessions</h2>
-            <p>This shows the same content as the Library tab. You can view all your generated variations here.</p>
-            <div className="profile-library__stats">
-              <div className="stat-card">
-                <h3>Total Sessions</h3>
-                <p className="stat-number">0</p>
+            <header className="profile-library__header">
+              <div>
+                <h2>Saved sessions</h2>
+                <p>Access every generation saved to your account.</p>
               </div>
-              <div className="stat-card">
-                <h3>Images Generated</h3>
-                <p className="stat-number">0</p>
+              <div className="profile-library__actions">
+                <button type="button" className="secondary" onClick={onRefresh} disabled={status?.loading}>
+                  Refresh
+                </button>
               </div>
-              <div className="stat-card">
-                <h3>Descriptions Created</h3>
-                <p className="stat-number">0</p>
+            </header>
+
+            {status?.loading ? (
+              <p className="profile-panel__empty">Loading your sessions…</p>
+            ) : status?.error ? (
+              <div className="profile-panel__empty">
+                <p>We could not load your sessions: {status.error}</p>
+                <button type="button" className="secondary" onClick={onRefresh}>
+                  Try again
+                </button>
               </div>
-            </div>
+            ) : sessions.length === 0 ? (
+              <p className="profile-panel__empty">No saved sessions yet. Generate a look to populate your library.</p>
+            ) : (
+              <div className="profile-session-list">
+                {sessions.map((session) => (
+                  <article key={session.id} className="profile-session-card">
+                    <header>
+                      <div>
+                        <h3>{new Date(session.createdAt).toLocaleString()}</h3>
+                        <p>
+                          {(session.prompts || [])
+                            .map((prompt) => prompt?.title || prompt?.name)
+                            .filter(Boolean)
+                            .join(' · ') || 'Custom prompts'}
+                        </p>
+                      </div>
+                      {session.sourceImage && (
+                        <a href={session.sourceImage} target="_blank" rel="noreferrer" className="profile-session-card__link">
+                          View source
+                        </a>
+                      )}
+                    </header>
+                    <div className="profile-session-card__body">
+                      <div className="profile-session-card__thumbs">
+                        {(session.generatedImages || []).slice(0, 4).map((src, index) => (
+                          <button
+                            key={`${session.id}-img-${index}`}
+                            type="button"
+                            onClick={() => triggerImageView(src, `Generated variation ${index + 1}`)}
+                          >
+                            <img src={src} alt={`Generated variation ${index + 1}`} loading="lazy" />
+                          </button>
+                        ))}
+                        {(session.generatedImages || []).length === 0 && (
+                          <span className="profile-session-card__empty">No images stored</span>
+                        )}
+                      </div>
+                      <ul className="profile-session-card__meta">
+                        <li>
+                          <span>Images</span>
+                          <strong>{session.generatedImages?.length || 0}</strong>
+                        </li>
+                        <li>
+                          <span>Descriptions</span>
+                          <strong>{session.descriptions?.length || 0}</strong>
+                        </li>
+                      </ul>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'settings' && (
           <div className="profile-settings">
-            <div className="settings-section">
-              <h2>Account Information</h2>
-              <form onSubmit={handleSettingsUpdate}>
-                <div className="form-group">
-                  <label htmlFor="profile-name">Full Name</label>
-                  <input
-                    id="profile-name"
-                    type="text"
-                    value={profileSettings.name}
-                    onChange={(e) => setProfileSettings(prev => ({...prev, name: e.target.value}))}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="profile-email">Email</label>
-                  <input
-                    id="profile-email"
-                    type="email"
-                    value={profileSettings.email}
-                    onChange={(e) => setProfileSettings(prev => ({...prev, email: e.target.value}))}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="form-actions">
-                  {isEditing ? (
-                    <>
-                      <button type="submit" className="primary">Save Changes</button>
-                      <button type="button" className="secondary" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button type="button" className="primary" onClick={() => setIsEditing(true)}>
-                      Edit Profile
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
+            <form className="profile-settings__form" onSubmit={handleSettingsUpdate}>
+              <h2>Account information</h2>
+              <p className="profile-settings__hint">
+                We are rolling out full account editing soon. Update your preferred display name and contact email and we will
+                apply the changes on your next sync.
+              </p>
 
-            <div className="settings-section">
-              <h2>Account Actions</h2>
+              <label className="profile-field" htmlFor="profile-name">
+                <span>Display name</span>
+                <input
+                  id="profile-name"
+                  type="text"
+                  value={profileSettings.name}
+                  onChange={(event) =>
+                    setProfileSettings((previous) => ({ ...previous, name: event.target.value }))
+                  }
+                  disabled={!isEditing}
+                />
+              </label>
+
+              <label className="profile-field" htmlFor="profile-email">
+                <span>Email</span>
+                <input
+                  id="profile-email"
+                  type="email"
+                  value={profileSettings.email}
+                  onChange={(event) =>
+                    setProfileSettings((previous) => ({ ...previous, email: event.target.value }))
+                  }
+                  disabled={!isEditing}
+                />
+              </label>
+
+              <div className="profile-settings__actions">
+                {isEditing ? (
+                  <>
+                    <button type="submit" className="primary">
+                      Save changes
+                    </button>
+                    <button type="button" className="secondary" onClick={handleCancelEdit}>
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="primary" onClick={() => setIsEditing(true)}>
+                    Edit profile
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="profile-settings__actions profile-settings__actions--stacked">
+              <h2>Account actions</h2>
+              <p>Need a hand or want to disconnect? Sign out anytime.</p>
               <button type="button" className="secondary" onClick={onLogout}>
-                Sign Out
+                Sign out
               </button>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }
@@ -496,6 +746,33 @@ function App() {
     () => NAV_ITEMS.filter((item) => !item.requiresAuth || user),
     [user],
   )
+  const heroImages = useMemo(() => {
+    const seen = new Set()
+    const collected = []
+
+    currentSessions.forEach((session) => {
+      ;(session?.generatedImages || []).forEach((url) => {
+        if (!url || seen.has(url)) {
+          return
+        }
+
+        seen.add(url)
+        collected.push(url)
+      })
+    })
+
+    if (collected.length <= 1) {
+      return collected
+    }
+
+    const shuffled = [...collected]
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      ;[shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]]
+    }
+
+    return shuffled.slice(0, 12)
+  }, [currentSessions])
 
   useEffect(() => {
     const storedToken = localStorage.getItem('pv_auth_token')
@@ -632,7 +909,12 @@ function App() {
       return
     }
     setView(nextView)
-    if (nextView === VIEWS.LIBRARY && user && !sessions.length && !libraryStatus.loading) {
+    if (
+      (nextView === VIEWS.LIBRARY || nextView === VIEWS.PROFILE) &&
+      user &&
+      !sessions.length &&
+      !libraryStatus.loading
+    ) {
       loadSessions()
     }
   }
@@ -690,7 +972,13 @@ function App() {
       </header>
 
       <main className="app-main">
-        {view === VIEWS.HOME && <Hero onGetStarted={() => setView(VIEWS.GENERATOR)} user={user} />}
+        {view === VIEWS.HOME && (
+          <Hero
+            onGetStarted={() => setView(VIEWS.GENERATOR)}
+            user={user}
+            recentImages={heroImages}
+          />
+        )}
         {view === VIEWS.GENERATOR && (
           <Generator onSessionComplete={handleSessionComplete} onViewImage={openImageViewer} />
         )}
@@ -706,6 +994,10 @@ function App() {
         {view === VIEWS.PROFILE && (
           <ProfileView
             user={user}
+            sessions={sessions}
+            status={libraryStatus}
+            onRefresh={() => loadSessions()}
+            onViewImage={(src, alt) => openImageViewer({ src, alt })}
             onLogout={handleLogout}
           />
         )}
