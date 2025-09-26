@@ -120,7 +120,7 @@ button {
 .topbar__link-label {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1f2937;
+  color: inherit;
 }
 
 .topbar__menu {

@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home', icon: '🏠' },
   { id: VIEWS.GENERATOR, label: 'Create', icon: '✨', requiresAuth: true },
   { id: VIEWS.LIBRARY, label: 'Library', icon: '🗂️', requiresAuth: true },
-  { id: VIEWS.PROFILE, label: 'Profile', icon: '🙍', requiresAuth: true },
+  { id: VIEWS.PROFILE, label: 'Profile', icon: '🙍', requiresAuth: true, iconOnly: true },
   { id: VIEWS.COOKIE_POLICY, label: 'Cookie Policy', icon: '🍪' },
   { id: VIEWS.PRIVACY, label: 'Privacy Notice', icon: '🔒' },
 ]
@@ -1416,20 +1416,29 @@ function App() {
   }
 
   const renderNavItems = ({ showLabels = false } = {}) =>
-    navigationItems.map((item) => (
-      <button
-        key={item.id}
-        type="button"
-        className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
-        onClick={() => handleNavigate(item.id)}
-        title={item.label}
-      >
-        <span className="topbar__link-icon" aria-hidden="true">
-          {item.icon}
-        </span>
-        <span className={showLabels ? 'topbar__link-label' : 'sr-only'}>{item.label}</span>
-      </button>
-    ))
+    navigationItems.map((item) => {
+      const isIconOnly = Boolean(item.iconOnly) && !showLabels
+      return (
+        <button
+          key={item.id}
+          type="button"
+          className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
+          onClick={() => handleNavigate(item.id)}
+          title={item.label}
+        >
+          {item.icon && (
+            <span className="topbar__link-icon" aria-hidden={isIconOnly}>
+              {item.icon}
+            </span>
+          )}
+          {isIconOnly ? (
+            <span className="sr-only">{item.label}</span>
+          ) : (
+            <span className="topbar__link-label">{item.label}</span>
+          )}
+        </button>
+      )
+    })
 
   return (
     <div className="app-shell">
