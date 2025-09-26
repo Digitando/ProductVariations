@@ -163,7 +163,12 @@ const PROMPT_GROUPS = PROMPT_TEMPLATES.reduce((acc, option) => {
   return acc
 }, [])
 
-function Generator({ onSessionComplete }) {
+function Generator({ onSessionComplete, onViewImage }) {
+  const handleViewImage = (src, alt) => {
+    if (typeof onViewImage === 'function') {
+      onViewImage({ src, alt })
+    }
+  }
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
   const [selectedPromptIds, setSelectedPromptIds] = useState([])
@@ -448,7 +453,13 @@ function Generator({ onSessionComplete }) {
               <div className="image-grid">
                 {generatedImages.map((src, index) => (
                   <figure key={`${src}-${index}`}>
-                    <img src={src} alt={`Generated variation ${index + 1}`} />
+                    <button
+                      type="button"
+                      className="image-thumb"
+                      onClick={() => handleViewImage(src, `Generated variation ${index + 1}`)}
+                    >
+                      <img src={src} alt={`Generated variation ${index + 1}`} loading="lazy" />
+                    </button>
                     <figcaption>Variation {index + 1}</figcaption>
                   </figure>
                 ))}

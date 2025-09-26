@@ -6,6 +6,17 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
+const crypto = require('crypto');
+const {
+  sanitizeUser,
+  registerUser,
+  authenticateCredentials,
+  authenticateGoogle,
+  createToken,
+  optionalAuth,
+  requireAuth,
+} = require('./auth');
+const { getSessions, saveSessions } = require('./storage');
 
 dotenv.config();
 
@@ -39,6 +50,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '20mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR));
+app.use(optionalAuth);
 
 if (hasClientBuild) {
   app.use(express.static(CLIENT_DIST_DIR, { index: false, maxAge: '1h' }));
@@ -245,6 +257,67 @@ function translateUpstreamError(error) {
 
   return rawMessage || 'Request failed';
 }
+
+function sendAuthResponse(res, user) {
+  const token = createToken(user);
+  if (!token) {
+    return res.status(500).json({ error: 'JWT_SECRET is not configured on the server.' });
+  }
+
+  return res.json({
+    token,
+    user: sanitizeUser(user),
+  });
+}
+
+app.post('/auth/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const user = await registerUser({ name, email, password });
+    return sendAuthResponse(res, user);
+  } catch (error) {
+    console.error('Registration failed', error.message || error);
+    res.status(400).json({ error: error.message || 'Registration failed.' });
+  }
+});
+
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const user = await authenticateCredentials({ email, password });
+    return sendAuthResponse(res, user);
+  } catch (error) {
+    console.error('Login failed', error.message || error);
+    res.status(401).json({ error: error.message || 'Login failed.' });
+  }
+});
+
+app.post('/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body || {};
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential is required.' });
+    }
+
+    const user = await authenticateGoogle(credential);
+    return sendAuthResponse(res, user);
+  } catch (error) {
+    console.error('Google authentication failed', error.message || error);
+    res.status(401).json({ error: error.message || 'Google authentication failed.' });
+  }
+});
+
+app.get('/auth/me', requireAuth, (req, res) => {
+  res.json({ user: req.user });
+});
 
 function normalizeBase64Payload(input) {
   if (typeof input !== 'string') {
@@ -669,6 +742,50 @@ app.post('/api/generate-descriptions', async (req, res) => {
     );
     const message = translateUpstreamError(error);
     res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/sessions', requireAuth, async (req, res) => {
+  try {
+    const sessions = await getSessions();
+    const userSessions = sessions.filter((session) => session.userId === req.user.id);
+    res.json({ sessions: userSessions });
+  } catch (error) {
+    console.error('Failed to fetch sessions', error);
+    res.status(500).json({ error: 'Failed to fetch sessions.' });
+  }
+});
+
+app.post('/api/sessions', requireAuth, async (req, res) => {
+  try {
+    const {
+      prompts = [],
+      sourceImage = '',
+      generatedImages = [],
+      descriptions = [],
+    } = req.body || {};
+
+    const session = {
+      id: crypto.randomUUID(),
+      userId: req.user.id,
+      createdAt: new Date().toISOString(),
+      prompts: Array.isArray(prompts) ? prompts.slice(0, 10) : [],
+      sourceImage: typeof sourceImage === 'string' ? sourceImage : '',
+      generatedImages: Array.isArray(generatedImages) ? generatedImages.slice(0, 10) : [],
+      descriptions: Array.isArray(descriptions) ? descriptions.slice(0, 10) : [],
+    };
+
+    const sessions = await getSessions();
+    sessions.unshift(session);
+
+    // Retain only the most recent 200 sessions across all users to avoid unbounded growth.
+    const trimmed = sessions.slice(0, 200);
+    await saveSessions(trimmed);
+
+    res.status(201).json({ session });
+  } catch (error) {
+    console.error('Failed to save session', error);
+    res.status(500).json({ error: 'Failed to save session.' });
   }
 });
 

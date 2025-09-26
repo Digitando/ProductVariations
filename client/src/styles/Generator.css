@@ -80,7 +80,8 @@
 .upload__preview {
   width: 100%;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
 }
 
 .styles {
@@ -226,12 +227,8 @@
   gap: 10px;
 }
 
-.image-grid img {
+.image-grid .image-thumb img {
   border-radius: 12px;
-  object-fit: cover;
-  width: 100%;
-  aspect-ratio: 1;
-  background: #fff;
 }
 
 .image-grid figcaption {

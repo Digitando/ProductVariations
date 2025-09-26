@@ -1,6 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Generator from './components/Generator.jsx'
+import GoogleSignInButton from './components/GoogleSignInButton.jsx'
+import ImageViewer from './components/ImageViewer.jsx'
 import './styles/App.css'
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 const VIEWS = {
   HOME: 'home',
@@ -14,31 +19,99 @@ const NAV_ITEMS = [
   { id: VIEWS.LIBRARY, label: 'Library' },
 ]
 
-function AuthModal({ mode, onClose, onAuthenticate }) {
+async function apiRequest(path, { method = 'GET', body, token } = {}) {
+  const url = `${API_BASE_URL}${path}`
+  const headers = {}
+  let payload = body
+
+  if (body && !(body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+    payload = JSON.stringify(body)
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(url, {
+    method,
+    body: payload,
+    headers,
+  })
+
+  const text = await response.text()
+  let data
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch (error) {
+    data = text
+  }
+
+  if (!response.ok) {
+    const message = data?.error || response.statusText || 'Request failed'
+    const error = new Error(message)
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+
+  return data
+}
+
+function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const isRegister = mode === 'register'
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = onAuthenticate({ provider: 'credentials', mode, ...formData })
-    if (result.success) {
-      setFormData({ name: '', email: '', password: '' })
-      setError('')
-      onClose()
-    } else if (result.error) {
-      setError(result.error)
+    setError('')
+    setSubmitting(true)
+
+    try {
+      const result = await onAuthenticate({
+        provider: 'credentials',
+        mode,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+
+      if (result.success) {
+        setFormData({ name: '', email: '', password: '' })
+        setError('')
+        onClose()
+      } else if (result.error) {
+        setError(result.error)
+      }
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Authentication failed.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleGoogle = () => {
-    const result = onAuthenticate({ provider: 'google' })
-    if (result.success) {
-      setError('')
-      onClose()
-    } else if (result.error) {
-      setError(result.error)
+  const handleGoogleCredential = async (credential) => {
+    if (!credential) {
+      setError('Google sign-in is not configured yet. Set VITE_GOOGLE_CLIENT_ID to enable.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const result = await onAuthenticate({ provider: 'google', credential })
+      if (result.success) {
+        onClose()
+      } else if (result.error) {
+        setError(result.error)
+      }
+    } catch (googleError) {
+      setError(googleError instanceof Error ? googleError.message : 'Google sign-in failed.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -57,9 +130,11 @@ function AuthModal({ mode, onClose, onAuthenticate }) {
               ? 'Register to save your garment uploads and revisit generated assets at any time.'
               : 'Sign in to access saved uploads and continue where you left off.'}
           </p>
-          <button type="button" className="google-button" onClick={handleGoogle}>
-            Continue with Google
-          </button>
+          <GoogleSignInButton
+            clientId={googleClientId}
+            onCredential={handleGoogleCredential}
+            text="Continue with Google"
+          />
           <div className="modal__divider">
             <span>or</span>
           </div>
@@ -70,9 +145,12 @@ function AuthModal({ mode, onClose, onAuthenticate }) {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, name: event.target.value }))
+                  }
                   placeholder="Alex Rivera"
                   required
+                  disabled={submitting}
                 />
               </label>
             )}
@@ -81,9 +159,12 @@ function AuthModal({ mode, onClose, onAuthenticate }) {
               <input
                 type="email"
                 value={formData.email}
-                onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, email: event.target.value }))
+                }
                 placeholder="you@example.com"
                 required
+                disabled={submitting}
               />
             </label>
             <label className="auth-form__field">
@@ -91,13 +172,18 @@ function AuthModal({ mode, onClose, onAuthenticate }) {
               <input
                 type="password"
                 value={formData.password}
-                onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, password: event.target.value }))
+                }
                 placeholder="••••••••"
                 required
+                disabled={submitting}
               />
             </label>
             {error && <p className="auth-form__error">{error}</p>}
-            <button type="submit" className="primary">{isRegister ? 'Create account' : 'Sign in'}</button>
+            <button type="submit" className="primary" disabled={submitting}>
+              {submitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
+            </button>
           </form>
         </div>
       </div>
@@ -149,14 +235,40 @@ function Hero({ onGetStarted, user }) {
   )
 }
 
-function LibraryView({ sessions, user }) {
+function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
   const hasSessions = sessions.length > 0
+  const triggerViewImage = (src, alt) => {
+    if (typeof onViewImage === 'function') {
+      onViewImage(src, alt)
+    }
+  }
 
   if (!user) {
     return (
       <section className="empty-state">
         <h2>Sign in to build your library</h2>
         <p>Your garment uploads and generated content appear here once you are signed in.</p>
+      </section>
+    )
+  }
+
+  if (status.loading) {
+    return (
+      <section className="empty-state">
+        <h2>Loading your library…</h2>
+        <p>Please hold tight while we fetch your saved sessions.</p>
+      </section>
+    )
+  }
+
+  if (status.error) {
+    return (
+      <section className="empty-state">
+        <h2>Unable to load sessions</h2>
+        <p>{status.error}</p>
+        <button type="button" className="secondary" onClick={onRefresh}>
+          Try again
+        </button>
       </section>
     )
   }
@@ -184,20 +296,32 @@ function LibraryView({ sessions, user }) {
           <article key={session.id} className="library-card">
             <header className="library-card__header">
               <h3>{new Date(session.createdAt).toLocaleString()}</h3>
-              <p>{session.prompts?.map((prompt) => prompt?.name || prompt?.title).filter(Boolean).join(', ') || 'Custom'}</p>
+              <p>
+                {session.prompts
+                  ?.map((prompt) => prompt?.name || prompt?.title)
+                  .filter(Boolean)
+                  .join(', ') || 'Custom'}
+              </p>
             </header>
             <div className="library-card__body">
               <div className="library-card__images">
-                {session.generatedImages.length > 0 ? (
-                  session.generatedImages.slice(0, 3).map((imageUrl, index) => (
-                    <img key={`${session.id}-${index}`} src={imageUrl} alt="Generated variation" />
+                {session.generatedImages?.length > 0 ? (
+                  session.generatedImages.map((imageUrl, index) => (
+                    <button
+                      type="button"
+                      key={`${session.id}-${index}`}
+                      className="image-thumb"
+                      onClick={() => triggerViewImage(imageUrl, `Generated variation ${index + 1}`)}
+                    >
+                      <img src={imageUrl} alt={`Generated variation ${index + 1}`} loading="lazy" />
+                    </button>
                   ))
                 ) : (
                   <div className="library-card__placeholder">No images stored</div>
                 )}
               </div>
               <div className="library-card__descriptions">
-                {session.descriptions.length > 0 ? (
+                {session.descriptions?.length > 0 ? (
                   <ul>
                     {session.descriptions.map((item, index) => (
                       <li key={`${session.id}-desc-${index}`}>
@@ -228,14 +352,52 @@ function LibraryView({ sessions, user }) {
 function App() {
   const [view, setView] = useState(VIEWS.HOME)
   const [user, setUser] = useState(null)
-  const [accounts, setAccounts] = useState([])
-  const [sessionsByUser, setSessionsByUser] = useState({})
+  const [token, setToken] = useState('')
+  const [sessions, setSessions] = useState([])
+  const [guestSessions, setGuestSessions] = useState([])
+  const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
+  const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
 
-  const sessions = useMemo(() => {
-    if (!user) return []
-    return sessionsByUser[user.id] || []
-  }, [sessionsByUser, user])
+  const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('pv_auth_token')
+    if (!storedToken) {
+      return
+    }
+
+    setToken(storedToken)
+
+    ;(async () => {
+      try {
+        const data = await apiRequest('/auth/me', { token: storedToken })
+        if (data?.user) {
+          setUser(data.user)
+          await loadSessions(storedToken)
+        }
+      } catch (error) {
+        console.warn('Session restore failed', error)
+        localStorage.removeItem('pv_auth_token')
+        setToken('')
+      }
+    })()
+  }, [])
+
+  const loadSessions = async (authToken = token) => {
+    if (!authToken) {
+      return
+    }
+
+    setLibraryStatus({ loading: true, error: '' })
+    try {
+      const data = await apiRequest('/api/sessions', { token: authToken })
+      setSessions(data?.sessions || [])
+      setLibraryStatus({ loading: false, error: '' })
+    } catch (error) {
+      setLibraryStatus({ loading: false, error: error.message })
+    }
+  }
 
   const openAuthModal = (mode) => {
     setAuthModal({ open: true, mode })
@@ -243,81 +405,111 @@ function App() {
 
   const closeAuthModal = () => setAuthModal((prev) => ({ ...prev, open: false }))
 
-  const handleAuthenticate = ({ provider, mode, name, email, password }) => {
-    if (provider === 'google') {
-      const profile = {
-        id: `google-${Date.now()}`,
-        name: 'Google Sign-In',
-        email: 'you@googleuser.com',
-        provider,
+  const handleAuthenticate = async ({ provider, mode, name, email, password, credential }) => {
+    try {
+      let data
+
+      if (provider === 'google') {
+        if (!credential) {
+          return { success: false, error: 'Google sign-in is not configured.' }
+        }
+        data = await apiRequest('/auth/google', {
+          method: 'POST',
+          body: { credential },
+        })
+      } else if (mode === 'register') {
+        data = await apiRequest('/auth/register', {
+          method: 'POST',
+          body: { name, email, password },
+        })
+      } else {
+        data = await apiRequest('/auth/login', {
+          method: 'POST',
+          body: { email, password },
+        })
       }
-      setUser(profile)
-      setAccounts((prev) => (prev.some((account) => account.id === profile.id) ? prev : [...prev, profile]))
+
+      if (!data?.token || !data?.user) {
+        return { success: false, error: 'Authentication failed.' }
+      }
+
+      setToken(data.token)
+      setUser(data.user)
+      localStorage.setItem('pv_auth_token', data.token)
+      await loadSessions(data.token)
       return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Authentication failed.' }
     }
-
-    if (!email || !password) {
-      return { success: false, error: 'Email and password are required.' }
-    }
-
-    if (mode === 'register') {
-      if (accounts.some((account) => account.email === email)) {
-        return { success: false, error: 'An account already exists with that email.' }
-      }
-
-      const newAccount = {
-        id: crypto.randomUUID(),
-        name: name || email.split('@')[0],
-        email,
-        password,
-        provider: 'credentials',
-      }
-      setAccounts((prev) => [...prev, newAccount])
-      setUser(newAccount)
-      return { success: true }
-    }
-
-    const existingAccount = accounts.find((account) => account.email === email && account.password === password)
-    if (!existingAccount) {
-      return { success: false, error: 'Invalid email or password.' }
-    }
-
-    setUser(existingAccount)
-    return { success: true }
   }
 
   const handleLogout = () => {
     setUser(null)
+    setToken('')
+    setSessions([])
+    localStorage.removeItem('pv_auth_token')
     setView(VIEWS.HOME)
   }
 
-  const handleSessionComplete = (session) => {
-    if (!user) {
-      // Store the most recent session in memory for non-authenticated visitors to view immediately.
-      setSessionsByUser((prev) => ({ ...prev, guest: [session] }))
+  const openImageViewer = ({ src, alt }) => {
+    if (!src) return
+    setViewerState({ open: true, src, alt: alt || 'Generated variation' })
+  }
+
+  const closeImageViewer = () => {
+    setViewerState({ open: false, src: '', alt: '' })
+  }
+
+  const handleSessionComplete = async (session) => {
+    if (!user || !token) {
+      setGuestSessions((prev) => [session, ...prev].slice(0, 5))
+      setView(VIEWS.LIBRARY)
       return
     }
 
-    setSessionsByUser((prev) => {
-      const existingSessions = prev[user.id] || []
-      return {
-        ...prev,
-        [user.id]: [session, ...existingSessions],
-      }
-    })
+    try {
+      const response = await apiRequest('/api/sessions', {
+        method: 'POST',
+        body: {
+          prompts: session.prompts,
+          sourceImage: session.sourceImage,
+          generatedImages: session.generatedImages,
+          descriptions: session.descriptions,
+        },
+        token,
+      })
+
+      const saved = response?.session || session
+      setSessions((prev) => [saved, ...prev])
+      setLibraryStatus({ loading: false, error: '' })
+    } catch (error) {
+      setLibraryStatus({ loading: false, error: error.message })
+    }
+
     setView(VIEWS.LIBRARY)
   }
 
-  const guestSessions = useMemo(() => sessionsByUser.guest || [], [sessionsByUser])
-
   const handleNavigate = (nextView) => {
     setView(nextView)
+    if (nextView === VIEWS.LIBRARY && user && !sessions.length && !libraryStatus.loading) {
+      loadSessions()
+    }
   }
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="topbar__brand" role="button" tabIndex={0} onClick={() => handleNavigate(VIEWS.HOME)}>
+        <div
+          className="topbar__brand"
+          role="button"
+          tabIndex={0}
+          onClick={() => handleNavigate(VIEWS.HOME)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              handleNavigate(VIEWS.HOME)
+            }
+          }}
+        >
           <span className="topbar__logo" aria-hidden="true">
             PG
           </span>
@@ -358,13 +550,35 @@ function App() {
 
       <main className="app-main">
         {view === VIEWS.HOME && <Hero onGetStarted={() => setView(VIEWS.GENERATOR)} user={user} />}
-        {view === VIEWS.GENERATOR && <Generator onSessionComplete={handleSessionComplete} />}
-        {view === VIEWS.LIBRARY && <LibraryView sessions={user ? sessions : guestSessions} user={user} />}
+        {view === VIEWS.GENERATOR && (
+          <Generator onSessionComplete={handleSessionComplete} onViewImage={openImageViewer} />
+        )}
+        {view === VIEWS.LIBRARY && (
+          <LibraryView
+            sessions={currentSessions}
+            user={user}
+            status={libraryStatus}
+            onRefresh={() => loadSessions()}
+            onViewImage={(src, alt) => openImageViewer({ src, alt })}
+          />
+        )}
       </main>
 
       {authModal.open && (
-        <AuthModal mode={authModal.mode} onClose={closeAuthModal} onAuthenticate={handleAuthenticate} />
+        <AuthModal
+          mode={authModal.mode}
+          onClose={closeAuthModal}
+          onAuthenticate={handleAuthenticate}
+          googleClientId={GOOGLE_CLIENT_ID}
+        />
       )}
+
+      <ImageViewer
+        isOpen={viewerState.open}
+        src={viewerState.src}
+        alt={viewerState.alt}
+        onClose={closeImageViewer}
+      />
     </div>
   )
 }
