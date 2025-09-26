@@ -1,3 +1,4 @@
+import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -5,7 +6,15 @@ const proxyTarget = process.env.VITE_DEV_SERVER_PROXY_TARGET || 'http://localhos
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, '../shared'),
+    },
+  },
   server: {
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
     proxy: {
       '/api': {
         target: proxyTarget,

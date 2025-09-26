@@ -1,167 +1,38 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import promptCatalog from '@shared/promptCatalog.js'
 import '../styles/Generator.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-// Removed MAX_PROMPT_SELECTION limit - users can select as many variations as they want
 
-const PROMPT_TEMPLATES = [
-  // Studio Editorials
-  {
-    id: '1',
-    group: 'Studio Editorials',
-    title: 'Studio · Front Pose',
-    description:
-      'Premium studio shot, male model facing camera, soft lighting, crops chin to mid thigh.',
-  },
-  {
-    id: '2',
-    group: 'Studio Editorials',
-    title: 'Studio · Seated Chair',
-    description:
-      'High-fashion studio, model seated on minimalist chair, waist-up crop with natural lighting.',
-  },
-  {
-    id: '3',
-    group: 'Studio Editorials',
-    title: 'Studio · Leaning Wall',
-    description:
-      'Cinematic studio image with model leaning on neutral wall, directional light reveals fabric.',
-  },
-  {
-    id: '4',
-    group: 'Studio Editorials',
-    title: 'Studio · Adjusting Collar',
-    description:
-      'Upper torso crop of model adjusting collar, seamless light grey background, even illumination.',
-  },
-  {
-    id: '5',
-    group: 'Studio Editorials',
-    title: 'Studio · Step Forward',
-    description:
-      'Dynamic studio pose stepping forward, crop chest to thigh, garment fills frame.',
-  },
-  // Lifestyle Editorials
-  {
-    id: '6',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Street Neutral',
-    description:
-      'Minimalist street backdrop, open shade daylight, chest-up crop with muted architecture.',
-  },
-  {
-    id: '7',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Balcony Minimal',
-    description:
-      'Golden hour balcony scene, chest-to-waist crop with softly blurred city background.',
-  },
-  {
-    id: '8',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Minimal Architecture',
-    description:
-      'Model against sleek architecture, soft natural daylight, waist-up crop showing structure.',
-  },
-  {
-    id: '9',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Seated Steps',
-    description:
-      'Model seated on neutral stone steps, torso crop, overcast daylight with shallow depth.',
-  },
-  {
-    id: '10',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Window Light',
-    description:
-      'Modern interior by large window, chest-up crop, soft daylight with subtle rim light.',
-  },
-  // Studio Close-ups
-  {
-    id: '11',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Collar Texture',
-    description:
-      'Macro collar and neckline detail with raking light on seamless neutral background.',
-  },
-  {
-    id: '12',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Sleeve Fold',
-    description:
-      'Sleeve area close-up showcasing folds and texture with soft controlled lighting.',
-  },
-  {
-    id: '13',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Button Detail',
-    description:
-      'Mid-chest crop focusing on fastenings, cinematic soft light keeps fabric grain intact.',
-  },
-  {
-    id: '14',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Shoulder Structure',
-    description:
-      'Tight crop on shoulder seam construction with directional light and gentle negative fill.',
-  },
-  {
-    id: '15',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Cuff Detail',
-    description:
-      'Sleeve cuff macro to highlight stitching and tailoring with cinematic lighting.',
-  },
-  // Product Hero Shots
-  {
-    id: '16',
-    group: 'Product Hero Shots',
-    title: 'Product · Suspended Hero',
-    description:
-      'Garment on minimal mannequin, front facing, soft even lighting, neutral seamless background.',
-  },
-  {
-    id: '17',
-    group: 'Product Hero Shots',
-    title: 'Product · Stitching Focus',
-    description:
-      'Extreme close-up of stitching and seam construction with directional light.',
-  },
-  {
-    id: '18',
-    group: 'Product Hero Shots',
-    title: 'Product · Fabric Weave',
-    description:
-      'Macro of fabric weave showing texture depth with raking light and minimal backdrop.',
-  },
-  {
-    id: '19',
-    group: 'Product Hero Shots',
-    title: 'Product · Fastening Detail',
-    description:
-      'Close-up on button or zipper showcasing finishing detail, balanced lighting.',
-  },
-  {
-    id: '20',
-    group: 'Product Hero Shots',
-    title: 'Product · Cuff Edge',
-    description:
-      'Macro of cuff edge highlighting tailoring craftsmanship with controlled reflections.',
-  },
-]
+const PROMPTS_BY_ID = promptCatalog.promptsById || {}
+const GENDER_DEFINITIONS = promptCatalog.genders || []
+const STANDALONE_DEFINITIONS = promptCatalog.standaloneCategories || []
+const CATEGORY_LOOKUP = promptCatalog.categoryLookup || {}
+const STANDALONE_LOOKUP = promptCatalog.standaloneLookup || {}
 
-const PROMPT_LOOKUP = PROMPT_TEMPLATES.reduce((acc, option) => {
-  acc[option.id] = option
-  return acc
-}, {})
-
-const PROMPT_GROUPS = PROMPT_TEMPLATES.reduce((acc, option) => {
-  if (!acc.includes(option.group)) {
-    acc.push(option.group)
+const getCategoryDefinition = (genderId, categoryId) => {
+  if (!genderId || !categoryId) {
+    return null
   }
-  return acc
-}, [])
+  return CATEGORY_LOOKUP[`${genderId}:${categoryId}`] || null
+}
+
+const getStandaloneDefinition = (categoryId) => {
+  if (!categoryId) {
+    return null
+  }
+  return STANDALONE_LOOKUP[categoryId] || null
+}
+
+function buildSummaryLabel({ genderLabel, categoryLabel, accessoryLabel }) {
+  if (accessoryLabel) {
+    return accessoryLabel
+  }
+  if (genderLabel && categoryLabel) {
+    return `${genderLabel} - ${categoryLabel}`
+  }
+  return categoryLabel || genderLabel || ''
+}
 
 function Generator({ onSessionComplete, onViewImage }) {
   const handleViewImage = (src, alt) => {
@@ -169,22 +40,21 @@ function Generator({ onSessionComplete, onViewImage }) {
       onViewImage({ src, alt })
     }
   }
+
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
+  const [selectedGenderId, setSelectedGenderId] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedPromptIds, setSelectedPromptIds] = useState([])
   const [generatedImages, setGeneratedImages] = useState([])
   const [sourceImage, setSourceImage] = useState('')
   const [descriptions, setDescriptions] = useState([])
   const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
+  const selectionSnapshotRef = useRef({ genderId: '', categoryId: '' })
 
   const hasResults = useMemo(
     () => generatedImages.length > 0 || descriptions.length > 0,
     [generatedImages.length, descriptions.length],
-  )
-
-  const selectedPromptDetails = useMemo(
-    () => selectedPromptIds.map((id) => PROMPT_LOOKUP[id]).filter(Boolean),
-    [selectedPromptIds],
   )
 
   const resetOutputs = () => {
@@ -195,6 +65,99 @@ function Generator({ onSessionComplete, onViewImage }) {
 
   const updateStatus = (partial) => {
     setStatus((prev) => ({ ...prev, ...partial }))
+  }
+
+  const genderOptions = useMemo(
+    () =>
+      GENDER_DEFINITIONS.map((gender) => ({
+        id: gender.id,
+        label: gender.label,
+        hasPrompts: gender.categories.some((category) => category.hasPrompts),
+        categories: gender.categories,
+      })),
+    [],
+  )
+
+  const accessoryOptions = useMemo(
+    () =>
+      STANDALONE_DEFINITIONS.map((category) => ({
+        id: category.id,
+        label: category.label,
+        hasPrompts: category.hasPrompts,
+      })),
+    [],
+  )
+
+  const selectedGender = useMemo(
+    () => genderOptions.find((option) => option.id === selectedGenderId) || null,
+    [genderOptions, selectedGenderId],
+  )
+
+  const standaloneCategory = useMemo(
+    () => getStandaloneDefinition(selectedCategoryId),
+    [selectedCategoryId],
+  )
+
+  const activeCategory = useMemo(() => {
+    if (standaloneCategory) {
+      return standaloneCategory
+    }
+    return getCategoryDefinition(selectedGenderId, selectedCategoryId)
+  }, [standaloneCategory, selectedGenderId, selectedCategoryId])
+
+  const activeCategoryLabel = useMemo(
+    () =>
+      buildSummaryLabel({
+        genderLabel: selectedGender?.label || '',
+        categoryLabel: standaloneCategory ? '' : activeCategory?.label || '',
+        accessoryLabel: standaloneCategory?.label || '',
+      }),
+    [activeCategory?.label, selectedGender?.label, standaloneCategory?.label],
+  )
+
+  const activePromptGroups = activeCategory?.groups || []
+  const availablePromptCount = activeCategory?.prompts?.length || 0
+
+  const selectedPromptDetails = useMemo(
+    () => selectedPromptIds.map((id) => PROMPTS_BY_ID[id]).filter(Boolean),
+    [selectedPromptIds],
+  )
+
+  useEffect(() => {
+    const previous = selectionSnapshotRef.current
+    if (previous.genderId === selectedGenderId && previous.categoryId === selectedCategoryId) {
+      return
+    }
+
+    selectionSnapshotRef.current = { genderId: selectedGenderId, categoryId: selectedCategoryId }
+
+    if (!selectedGenderId && !selectedCategoryId) {
+      return
+    }
+
+    setSelectedPromptIds([])
+    setGeneratedImages([])
+    setDescriptions([])
+    setSourceImage('')
+    setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
+  }, [selectedGenderId, selectedCategoryId])
+
+  const handleSelectGender = (genderId) => {
+    if (selectedGenderId === genderId) {
+      return
+    }
+    updateStatus({ error: '' })
+    setSelectedGenderId(genderId)
+    setSelectedCategoryId('')
+  }
+
+  const handleSelectCategory = (categoryId, scope) => {
+    if (scope !== 'standalone' && !selectedGenderId) {
+      updateStatus({ error: 'Choose male or female product pictures first.' })
+      return
+    }
+    updateStatus({ error: '' })
+    setSelectedCategoryId(categoryId)
   }
 
   const handleFileChange = (evt) => {
@@ -214,6 +177,14 @@ function Generator({ onSessionComplete, onViewImage }) {
   }
 
   const togglePrompt = (promptId) => {
+    const isPromptInActiveCategory = Boolean(
+      activeCategory?.prompts?.some((prompt) => prompt.id === promptId),
+    )
+
+    if (!isPromptInActiveCategory) {
+      return
+    }
+
     updateStatus({ error: '' })
     setSelectedPromptIds((prev) => {
       if (prev.includes(promptId)) {
@@ -229,6 +200,23 @@ function Generator({ onSessionComplete, onViewImage }) {
   const handleSubmit = async (evt) => {
     evt.preventDefault()
 
+    const isStandaloneSelection = Boolean(standaloneCategory)
+
+    if (!selectedCategoryId) {
+      updateStatus({ error: 'Select a product focus to continue.' })
+      return
+    }
+
+    if (!isStandaloneSelection && !selectedGenderId) {
+      updateStatus({ error: 'Choose male or female product pictures first.' })
+      return
+    }
+
+    if (!activeCategory || availablePromptCount === 0) {
+      updateStatus({ error: 'Prompt templates for this selection are not available yet.' })
+      return
+    }
+
     if (!imageFile) {
       updateStatus({ error: 'Upload a product photo to continue.' })
       return
@@ -243,7 +231,7 @@ function Generator({ onSessionComplete, onViewImage }) {
 
     updateStatus({
       step: 'images',
-      message: 'Generating editorials and close-ups…',
+      message: 'Generating editorials and close-ups...',
       loading: true,
       error: '',
     })
@@ -269,7 +257,7 @@ function Generator({ onSessionComplete, onViewImage }) {
 
       updateStatus({
         step: 'descriptions',
-        message: 'Visuals ready. Writing product descriptions…',
+        message: 'Visuals ready. Writing product descriptions...',
         loading: true,
       })
 
@@ -332,7 +320,10 @@ function Generator({ onSessionComplete, onViewImage }) {
   const handleReset = () => {
     setImageFile(null)
     setImagePreview('')
+    setSelectedGenderId('')
+    setSelectedCategoryId('')
     setSelectedPromptIds([])
+    selectionSnapshotRef.current = { genderId: '', categoryId: '' }
     resetOutputs()
     updateStatus({ step: '', message: '', loading: false, error: '' })
   }
@@ -357,20 +348,20 @@ function Generator({ onSessionComplete, onViewImage }) {
 
   const downloadAllImages = async () => {
     if (generatedImages.length === 0) return
-    
+
     updateStatus({ loading: true, message: 'Preparing bulk download...' })
-    
+
     try {
       const JSZip = await import('jszip')
       const zip = new JSZip.default()
-      
+
       for (let i = 0; i < generatedImages.length; i++) {
         const imageUrl = generatedImages[i]
         const response = await fetch(imageUrl)
         const blob = await response.blob()
         zip.file(`variation-${i + 1}.png`, blob)
       }
-      
+
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = window.URL.createObjectURL(zipBlob)
       const link = document.createElement('a')
@@ -380,13 +371,18 @@ function Generator({ onSessionComplete, onViewImage }) {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
       updateStatus({ loading: false, message: 'Bulk download completed!' })
     } catch (error) {
       console.error('Bulk download failed:', error)
-      updateStatus({ loading: false, error: 'Failed to download images. Please try individual downloads.' })
+      updateStatus({
+        loading: false,
+        error: 'Failed to download images. Please try individual downloads.',
+      })
     }
   }
+
+  const apparelCategories = selectedGender ? selectedGender.categories : []
 
   return (
     <div className="page">
@@ -420,45 +416,137 @@ function Generator({ onSessionComplete, onViewImage }) {
               )}
             </div>
 
-            <div className="styles">
-              <div className="styles__header">
-                <h2>Prompt directions</h2>
-                <span>{selectedPromptIds.length} selected</span>
+            <div className="selector-group">
+              <h2>1. Model reference</h2>
+              <p className="selector-note">Pick whether you want male or female model imagery.</p>
+              <div className="selector-row" role="radiogroup" aria-label="Model reference">
+                {genderOptions.map((option) => {
+                  const isSelected = option.id === selectedGenderId
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                      onClick={() => handleSelectGender(option.id)}
+                      aria-pressed={isSelected}
+                      disabled={!option.hasPrompts}
+                    >
+                      <span className="selector-btn__label">{option.label}</span>
+                      {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                    </button>
+                  )
+                })}
               </div>
-              <p className="styles__hint">
-                Choose as many prompts as you want. They steer the scenarios while the garment stays unchanged.
-              </p>
-              {PROMPT_GROUPS.map((group) => (
-                <div key={group} className="prompt-group">
-                  <h3>{group}</h3>
-                  <div className="style-grid">
-                    {PROMPT_TEMPLATES.filter((option) => option.group === group).map((option) => {
-                      const isChecked = selectedPromptIds.includes(option.id)
+            </div>
+
+            <div className="selector-group">
+              <h2>2. Product focus</h2>
+              <p className="selector-note">Load tailored prompt cues for the garment zone you need.</p>
+              {selectedGender ? (
+                <div className="selector-subgroup">
+                  <span className="selector-subheading">{selectedGender.label} apparel</span>
+                  <div className="selector-row" role="radiogroup" aria-label="Garment type">
+                    {apparelCategories.map((category) => {
+                      const isSelected = selectedCategoryId === category.id
                       return (
-                        <label
-                          key={option.id}
-                          className={`style-option${isChecked ? ' style-option--selected' : ''}`}
+                        <button
+                          key={`${selectedGender.id}-${category.id}`}
+                          type="button"
+                          className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                          onClick={() => handleSelectCategory(category.id, 'gendered')}
+                          aria-pressed={isSelected}
+                          disabled={!category.hasPrompts}
                         >
-                          <input
-                            type="checkbox"
-                            value={option.id}
-                            checked={isChecked}
-                            onChange={() => togglePrompt(option.id)}
-                          />
-                          <div className="style-option__content">
-                            <span className="style-option__title">{option.title}</span>
-                            <span className="style-option__description">{option.description}</span>
-                          </div>
-                        </label>
+                          <span className="selector-btn__label">{category.label}</span>
+                          {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                        </button>
                       )
                     })}
                   </div>
                 </div>
-              ))}
+              ) : (
+                <p className="selector-placeholder">Select a model reference to unlock apparel prompt sets.</p>
+              )}
+
+              {accessoryOptions.length > 0 && (
+                <div className="selector-subgroup">
+                  <span className="selector-subheading">Accessories</span>
+                  <div className="selector-row" role="radiogroup" aria-label="Accessories">
+                    {accessoryOptions.map((option) => {
+                      const isSelected = selectedCategoryId === option.id
+                      return (
+                        <button
+                          key={`standalone-${option.id}`}
+                          type="button"
+                          className={`selector-btn selector-btn--compact${
+                            isSelected ? ' selector-btn--selected' : ''
+                          }`}
+                          onClick={() => handleSelectCategory(option.id, 'standalone')}
+                          aria-pressed={isSelected}
+                          disabled={!option.hasPrompts}
+                        >
+                          <span className="selector-btn__label">{option.label}</span>
+                          {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="styles">
+              <div className="styles__header">
+                <div>
+                  <h2>Prompt directions</h2>
+                  {activeCategoryLabel && <p className="styles__context">{activeCategoryLabel}</p>}
+                </div>
+                <span>{selectedPromptIds.length} selected</span>
+              </div>
+              {!activeCategory && (
+                <p className="styles__hint">Choose a product focus to load suggested prompt cues.</p>
+              )}
+              {activeCategory && availablePromptCount === 0 && (
+                <p className="styles__hint">Prompt templates for this selection are coming soon.</p>
+              )}
+              {activeCategory && availablePromptCount > 0 && (
+                <>
+                  <p className="styles__hint">
+                    Choose as many prompts as you want. They steer the scenarios while the product stays consistent.
+                  </p>
+                  {activePromptGroups.map((group) => (
+                    <div key={group.id} className="prompt-group">
+                      <h3>{group.label}</h3>
+                      <div className="style-grid">
+                        {group.prompts.map((option) => {
+                          const isChecked = selectedPromptIds.includes(option.id)
+                          return (
+                            <label
+                              key={option.id}
+                              className={`style-option${isChecked ? ' style-option--selected' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                value={option.id}
+                                checked={isChecked}
+                                onChange={() => togglePrompt(option.id)}
+                              />
+                              <div className="style-option__content">
+                                <span className="style-option__title">{option.title}</span>
+                                <span className="style-option__description">{option.description}</span>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             <button className="primary" type="submit" disabled={status.loading}>
-              {status.loading ? 'Generating…' : 'Generate product assets'}
+              {status.loading ? 'Generating...' : 'Generate product assets'}
             </button>
             {status.message && !status.error && <p className="status status--info">{status.message}</p>}
             {status.error && <p className="status status--error">{status.error}</p>}
@@ -499,8 +587,8 @@ function Generator({ onSessionComplete, onViewImage }) {
               <div className="images-header">
                 <h2>Image variations</h2>
                 <div className="download-actions">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="secondary"
                     onClick={downloadAllImages}
                     disabled={status.loading}
@@ -527,7 +615,7 @@ function Generator({ onSessionComplete, onViewImage }) {
                         onClick={() => downloadImage(src, `variation-${index + 1}.png`)}
                         title="Download this image"
                       >
-                        ⬇
+                        Download
                       </button>
                     </div>
                   </figure>
