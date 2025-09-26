@@ -1,469 +1,370 @@
 import { useMemo, useState } from 'react'
-import './App.css'
+import Generator from './components/Generator.jsx'
+import './styles/App.css'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-const MAX_PROMPT_SELECTION = 5
+const VIEWS = {
+  HOME: 'home',
+  GENERATOR: 'generator',
+  LIBRARY: 'library',
+}
 
-const PROMPT_TEMPLATES = [
-  // Studio Editorials
-  {
-    id: '1',
-    group: 'Studio Editorials',
-    title: 'Studio · Front Pose',
-    description:
-      'Premium studio shot, male model facing camera, soft lighting, crops chin to mid thigh.',
-  },
-  {
-    id: '2',
-    group: 'Studio Editorials',
-    title: 'Studio · Seated Chair',
-    description:
-      'High-fashion studio, model seated on minimalist chair, waist-up crop with natural lighting.',
-  },
-  {
-    id: '3',
-    group: 'Studio Editorials',
-    title: 'Studio · Leaning Wall',
-    description:
-      'Cinematic studio image with model leaning on neutral wall, directional light reveals fabric.',
-  },
-  {
-    id: '4',
-    group: 'Studio Editorials',
-    title: 'Studio · Adjusting Collar',
-    description:
-      'Upper torso crop of model adjusting collar, seamless light grey background, even illumination.',
-  },
-  {
-    id: '5',
-    group: 'Studio Editorials',
-    title: 'Studio · Step Forward',
-    description:
-      'Dynamic studio pose stepping forward, crop chest to thigh, garment fills frame.',
-  },
-  // Lifestyle Editorials
-  {
-    id: '6',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Street Neutral',
-    description:
-      'Minimalist street backdrop, open shade daylight, chest-up crop with muted architecture.',
-  },
-  {
-    id: '7',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Balcony Minimal',
-    description:
-      'Golden hour balcony scene, chest-to-waist crop with softly blurred city background.',
-  },
-  {
-    id: '8',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Minimal Architecture',
-    description:
-      'Model against sleek architecture, soft natural daylight, waist-up crop showing structure.',
-  },
-  {
-    id: '9',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Seated Steps',
-    description:
-      'Model seated on neutral stone steps, torso crop, overcast daylight with shallow depth.',
-  },
-  {
-    id: '10',
-    group: 'Lifestyle Editorials',
-    title: 'Lifestyle · Window Light',
-    description:
-      'Modern interior by large window, chest-up crop, soft daylight with subtle rim light.',
-  },
-  // Studio Close-ups
-  {
-    id: '11',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Collar Texture',
-    description:
-      'Macro collar and neckline detail with raking light on seamless neutral background.',
-  },
-  {
-    id: '12',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Sleeve Fold',
-    description:
-      'Sleeve area close-up showcasing folds and texture with soft controlled lighting.',
-  },
-  {
-    id: '13',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Button Detail',
-    description:
-      'Mid-chest crop focusing on fastenings, cinematic soft light keeps fabric grain intact.',
-  },
-  {
-    id: '14',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Shoulder Structure',
-    description:
-      'Tight crop on shoulder seam construction with directional light and gentle negative fill.',
-  },
-  {
-    id: '15',
-    group: 'Studio Close-ups',
-    title: 'Close-up · Cuff Detail',
-    description:
-      'Sleeve cuff macro to highlight stitching and tailoring with cinematic lighting.',
-  },
-  // Product Hero Shots
-  {
-    id: '16',
-    group: 'Product Hero Shots',
-    title: 'Product · Suspended Hero',
-    description:
-      'Garment on minimal mannequin, front facing, soft even lighting, neutral seamless background.',
-  },
-  {
-    id: '17',
-    group: 'Product Hero Shots',
-    title: 'Product · Stitching Focus',
-    description:
-      'Extreme close-up of stitching and seam construction with directional light.',
-  },
-  {
-    id: '18',
-    group: 'Product Hero Shots',
-    title: 'Product · Fabric Weave',
-    description:
-      'Macro of fabric weave showing texture depth with raking light and minimal backdrop.',
-  },
-  {
-    id: '19',
-    group: 'Product Hero Shots',
-    title: 'Product · Fastening Detail',
-    description:
-      'Close-up on button or zipper showcasing finishing detail, balanced lighting.',
-  },
-  {
-    id: '20',
-    group: 'Product Hero Shots',
-    title: 'Product · Cuff Edge',
-    description:
-      'Macro of cuff edge highlighting tailoring craftsmanship with controlled reflections.',
-  },
+const NAV_ITEMS = [
+  { id: VIEWS.HOME, label: 'Home' },
+  { id: VIEWS.GENERATOR, label: 'Create' },
+  { id: VIEWS.LIBRARY, label: 'Library' },
 ]
 
-const PROMPT_LOOKUP = PROMPT_TEMPLATES.reduce((acc, option) => {
-  acc[option.id] = option
-  return acc
-}, {})
+function AuthModal({ mode, onClose, onAuthenticate }) {
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [error, setError] = useState('')
 
-const PROMPT_GROUPS = PROMPT_TEMPLATES.reduce((acc, option) => {
-  if (!acc.includes(option.group)) {
-    acc.push(option.group)
-  }
-  return acc
-}, [])
+  const isRegister = mode === 'register'
 
-function App() {
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState('')
-  const [selectedPromptIds, setSelectedPromptIds] = useState([])
-  const [generatedImages, setGeneratedImages] = useState([])
-  const [sourceImage, setSourceImage] = useState('')
-  const [descriptions, setDescriptions] = useState([])
-  const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
-
-  const hasResults = useMemo(
-    () => generatedImages.length > 0 || descriptions.length > 0,
-    [generatedImages.length, descriptions.length],
-  )
-
-  const selectedPromptDetails = useMemo(
-    () => selectedPromptIds.map((id) => PROMPT_LOOKUP[id]).filter(Boolean),
-    [selectedPromptIds],
-  )
-
-  const resetOutputs = () => {
-    setGeneratedImages([])
-    setDescriptions([])
-    setSourceImage('')
-  }
-
-  const updateStatus = (partial) => {
-    setStatus((prev) => ({ ...prev, ...partial }))
-  }
-
-  const handleFileChange = (evt) => {
-    const file = evt.target.files?.[0]
-    if (!file) {
-      setImageFile(null)
-      setImagePreview('')
-      return
-    }
-
-    setImageFile(file)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setImagePreview(String(e.target?.result || ''))
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const togglePrompt = (promptId) => {
-    updateStatus({ error: '' })
-    setSelectedPromptIds((prev) => {
-      if (prev.includes(promptId)) {
-        return prev.filter((value) => value !== promptId)
-      }
-
-      if (prev.length >= MAX_PROMPT_SELECTION) {
-        updateStatus({ error: `Select up to ${MAX_PROMPT_SELECTION} prompt directions.` })
-        return prev
-      }
-
-      return [...prev, promptId]
-    })
-  }
-
-  const buildApiUrl = (path) => `${API_BASE_URL}${path}`
-
-  const handleSubmit = async (evt) => {
-    evt.preventDefault()
-
-    if (!imageFile) {
-      updateStatus({ error: 'Upload a product photo to continue.' })
-      return
-    }
-
-    if (selectedPromptIds.length === 0) {
-      updateStatus({ error: 'Select at least one prompt direction.' })
-      return
-    }
-
-    resetOutputs()
-
-    updateStatus({
-      step: 'images',
-      message: 'Generating editorials and close-ups…',
-      loading: true,
-      error: '',
-    })
-
-    try {
-      const imageForm = new FormData()
-      imageForm.append('image', imageFile)
-      imageForm.append('prompts', JSON.stringify(selectedPromptIds))
-
-      const imageResponse = await fetch(buildApiUrl('/api/generate-images'), {
-        method: 'POST',
-        body: imageForm,
-      })
-
-      if (!imageResponse.ok) {
-        const errorBody = await imageResponse.json().catch(() => ({}))
-        throw new Error(errorBody.error || 'Image generation request failed')
-      }
-
-      const { images, sourceImage: sourceImageUrl } = await imageResponse.json()
-      setGeneratedImages(Array.isArray(images) ? images : [])
-      setSourceImage(typeof sourceImageUrl === 'string' ? sourceImageUrl : '')
-
-      updateStatus({
-        step: 'descriptions',
-        message: 'Visuals ready. Writing product descriptions…',
-        loading: true,
-      })
-
-      const referenceImagePayload =
-        typeof imagePreview === 'string'
-          ? imagePreview.includes(',')
-            ? (imagePreview.split(',')[1] || '').trim()
-            : imagePreview.trim()
-          : ''
-
-      const descriptionBody = {
-        prompts: selectedPromptIds,
-        referenceImage: sourceImageUrl || referenceImagePayload,
-        referenceImageFallback: referenceImagePayload,
-      }
-
-      const descriptionResponse = await fetch(buildApiUrl('/api/generate-descriptions'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(descriptionBody),
-      })
-
-      if (!descriptionResponse.ok) {
-        const errorBody = await descriptionResponse.json().catch(() => ({}))
-        throw new Error(errorBody.error || 'Description generation request failed')
-      }
-
-      const descriptionPayload = await descriptionResponse.json()
-      setDescriptions(descriptionPayload.descriptions || [])
-
-      updateStatus({
-        step: 'done',
-        message: 'All assets generated successfully.',
-        loading: false,
-      })
-    } catch (error) {
-      console.error(error)
-      updateStatus({
-        error: error instanceof Error ? error.message : 'Something went wrong',
-        loading: false,
-      })
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    const result = onAuthenticate({ provider: 'credentials', mode, ...formData })
+    if (result.success) {
+      setFormData({ name: '', email: '', password: '' })
+      setError('')
+      onClose()
+    } else if (result.error) {
+      setError(result.error)
     }
   }
 
-  const handleReset = () => {
-    setImageFile(null)
-    setImagePreview('')
-    setSelectedPromptIds([])
-    resetOutputs()
-    updateStatus({ step: '', message: '', loading: false, error: '' })
+  const handleGoogle = () => {
+    const result = onAuthenticate({ provider: 'google' })
+    if (result.success) {
+      setError('')
+      onClose()
+    } else if (result.error) {
+      setError(result.error)
+    }
   }
 
   return (
-    <div className="page">
-      <header className="page__header">
-        <div>
-          <h1>Photo-first Garment Generator</h1>
-          <p>
-            Upload a single garment photo, choose up to five editorial prompt directions, and let OpenRouter craft
-            faithful model and product imagery plus e-commerce copy.
+    <div className="modal__backdrop" role="presentation">
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-heading">
+        <header className="modal__header">
+          <h2 id="auth-modal-heading">{isRegister ? 'Create your account' : 'Welcome back'}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        <div className="modal__body">
+          <p className="modal__subtitle">
+            {isRegister
+              ? 'Register to save your garment uploads and revisit generated assets at any time.'
+              : 'Sign in to access saved uploads and continue where you left off.'}
           </p>
+          <button type="button" className="google-button" onClick={handleGoogle}>
+            Continue with Google
+          </button>
+          <div className="modal__divider">
+            <span>or</span>
+          </div>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {isRegister && (
+              <label className="auth-form__field">
+                <span>Full name</span>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Alex Rivera"
+                  required
+                />
+              </label>
+            )}
+            <label className="auth-form__field">
+              <span>Email</span>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="you@example.com"
+                required
+              />
+            </label>
+            <label className="auth-form__field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="••••••••"
+                required
+              />
+            </label>
+            {error && <p className="auth-form__error">{error}</p>}
+            <button type="submit" className="primary">{isRegister ? 'Create account' : 'Sign in'}</button>
+          </form>
         </div>
-        <button type="button" className="secondary" onClick={handleReset}>
-          Reset
-        </button>
+      </div>
+    </div>
+  )
+}
+
+function Hero({ onGetStarted, user }) {
+  return (
+    <section className="hero">
+      <div className="hero__content">
+        <p className="eyebrow">AI Product Studio for Apparel Brands</p>
+        <h1>Transform a single garment photo into launch-ready visuals and copy.</h1>
+        <p className="hero__description">
+          Upload a reference shot, pick the editorial directions, and let our generator return consistent model imagery,
+          close-ups, and conversion-ready product descriptions.
+        </p>
+        <div className="hero__actions">
+          <button type="button" className="primary" onClick={onGetStarted}>
+            Start generating
+          </button>
+          {user ? (
+            <span className="hero__hint">Signed in as {user.name || user.email}</span>
+          ) : (
+            <span className="hero__hint">Create an account to save every upload.</span>
+          )}
+        </div>
+      </div>
+      <div className="hero__card">
+        <div className="hero__preview" aria-hidden="true">
+          <img src="/vite.svg" alt="" />
+        </div>
+        <ul className="hero__list" aria-label="Workflow highlights">
+          <li>
+            <span className="hero__badge">01</span>
+            Upload one outfit photo
+          </li>
+          <li>
+            <span className="hero__badge">02</span>
+            Select editorial prompts
+          </li>
+          <li>
+            <span className="hero__badge">03</span>
+            Download variations and copy
+          </li>
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+function LibraryView({ sessions, user }) {
+  const hasSessions = sessions.length > 0
+
+  if (!user) {
+    return (
+      <section className="empty-state">
+        <h2>Sign in to build your library</h2>
+        <p>Your garment uploads and generated content appear here once you are signed in.</p>
+      </section>
+    )
+  }
+
+  if (!hasSessions) {
+    return (
+      <section className="empty-state">
+        <h2>No saved sessions yet</h2>
+        <p>Generate your first variations to see them listed here.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="library">
+      <header className="library__header">
+        <div>
+          <h2>Saved sessions</h2>
+          <p>Review every product variation set you have generated.</p>
+        </div>
+        <span className="library__meta">{sessions.length} session(s)</span>
+      </header>
+      <div className="library__grid">
+        {sessions.map((session) => (
+          <article key={session.id} className="library-card">
+            <header className="library-card__header">
+              <h3>{new Date(session.createdAt).toLocaleString()}</h3>
+              <p>{session.prompts?.map((prompt) => prompt?.name || prompt?.title).filter(Boolean).join(', ') || 'Custom'}</p>
+            </header>
+            <div className="library-card__body">
+              <div className="library-card__images">
+                {session.generatedImages.length > 0 ? (
+                  session.generatedImages.slice(0, 3).map((imageUrl, index) => (
+                    <img key={`${session.id}-${index}`} src={imageUrl} alt="Generated variation" />
+                  ))
+                ) : (
+                  <div className="library-card__placeholder">No images stored</div>
+                )}
+              </div>
+              <div className="library-card__descriptions">
+                {session.descriptions.length > 0 ? (
+                  <ul>
+                    {session.descriptions.map((item, index) => (
+                      <li key={`${session.id}-desc-${index}`}>
+                        <strong>{item.headline}</strong>
+                        <p>{item.body}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No copy saved for this session.</p>
+                )}
+              </div>
+            </div>
+            {session.sourceImage && (
+              <footer className="library-card__footer">
+                <a href={session.sourceImage} target="_blank" rel="noreferrer">
+                  View source upload
+                </a>
+              </footer>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function App() {
+  const [view, setView] = useState(VIEWS.HOME)
+  const [user, setUser] = useState(null)
+  const [accounts, setAccounts] = useState([])
+  const [sessionsByUser, setSessionsByUser] = useState({})
+  const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
+
+  const sessions = useMemo(() => {
+    if (!user) return []
+    return sessionsByUser[user.id] || []
+  }, [sessionsByUser, user])
+
+  const openAuthModal = (mode) => {
+    setAuthModal({ open: true, mode })
+  }
+
+  const closeAuthModal = () => setAuthModal((prev) => ({ ...prev, open: false }))
+
+  const handleAuthenticate = ({ provider, mode, name, email, password }) => {
+    if (provider === 'google') {
+      const profile = {
+        id: `google-${Date.now()}`,
+        name: 'Google Sign-In',
+        email: 'you@googleuser.com',
+        provider,
+      }
+      setUser(profile)
+      setAccounts((prev) => (prev.some((account) => account.id === profile.id) ? prev : [...prev, profile]))
+      return { success: true }
+    }
+
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required.' }
+    }
+
+    if (mode === 'register') {
+      if (accounts.some((account) => account.email === email)) {
+        return { success: false, error: 'An account already exists with that email.' }
+      }
+
+      const newAccount = {
+        id: crypto.randomUUID(),
+        name: name || email.split('@')[0],
+        email,
+        password,
+        provider: 'credentials',
+      }
+      setAccounts((prev) => [...prev, newAccount])
+      setUser(newAccount)
+      return { success: true }
+    }
+
+    const existingAccount = accounts.find((account) => account.email === email && account.password === password)
+    if (!existingAccount) {
+      return { success: false, error: 'Invalid email or password.' }
+    }
+
+    setUser(existingAccount)
+    return { success: true }
+  }
+
+  const handleLogout = () => {
+    setUser(null)
+    setView(VIEWS.HOME)
+  }
+
+  const handleSessionComplete = (session) => {
+    if (!user) {
+      // Store the most recent session in memory for non-authenticated visitors to view immediately.
+      setSessionsByUser((prev) => ({ ...prev, guest: [session] }))
+      return
+    }
+
+    setSessionsByUser((prev) => {
+      const existingSessions = prev[user.id] || []
+      return {
+        ...prev,
+        [user.id]: [session, ...existingSessions],
+      }
+    })
+    setView(VIEWS.LIBRARY)
+  }
+
+  const guestSessions = useMemo(() => sessionsByUser.guest || [], [sessionsByUser])
+
+  const handleNavigate = (nextView) => {
+    setView(nextView)
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="topbar__brand" role="button" tabIndex={0} onClick={() => handleNavigate(VIEWS.HOME)}>
+          <span className="topbar__logo" aria-hidden="true">
+            PG
+          </span>
+          <span className="topbar__title">Product Variations</span>
+        </div>
+        <nav className="topbar__nav" aria-label="Primary">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
+              onClick={() => handleNavigate(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="topbar__actions">
+          {user ? (
+            <>
+              <span className="topbar__user">{user.name || user.email}</span>
+              <button type="button" className="secondary" onClick={handleLogout}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
+                Log in
+              </button>
+              <button type="button" className="primary" onClick={() => openAuthModal('register')}>
+                Register
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
-      <main className="layout">
-        <section className="panel">
-          <form className="generator" onSubmit={handleSubmit}>
-            <div className="upload">
-              <label htmlFor="image" className="upload__label">
-                <span>Garment photo*</span>
-                <input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
-              </label>
-              {imagePreview ? (
-                <img src={imagePreview} alt="Upload preview" className="upload__preview" />
-              ) : (
-                <p className="upload__placeholder">
-                  Drop or browse for a clear garment shot. This anchors every variation and the marketing copy.
-                </p>
-              )}
-            </div>
-
-            <div className="styles">
-              <div className="styles__header">
-                <h2>Prompt directions</h2>
-                <span>{selectedPromptIds.length}/{MAX_PROMPT_SELECTION} selected</span>
-              </div>
-              <p className="styles__hint">
-                Choose up to {MAX_PROMPT_SELECTION} prompts. They steer the scenarios while the garment stays unchanged.
-              </p>
-              {PROMPT_GROUPS.map((group) => (
-                <div key={group} className="prompt-group">
-                  <h3>{group}</h3>
-                  <div className="style-grid">
-                    {PROMPT_TEMPLATES.filter((option) => option.group === group).map((option) => {
-                      const isChecked = selectedPromptIds.includes(option.id)
-                      return (
-                        <label
-                          key={option.id}
-                          className={`style-option${isChecked ? ' style-option--selected' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            value={option.id}
-                            checked={isChecked}
-                            onChange={() => togglePrompt(option.id)}
-                          />
-                          <div className="style-option__content">
-                            <span className="style-option__title">{option.title}</span>
-                            <span className="style-option__description">{option.description}</span>
-                          </div>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button className="primary" type="submit" disabled={status.loading}>
-              {status.loading ? 'Generating…' : 'Generate product assets'}
-            </button>
-            {status.message && !status.error && <p className="status status--info">{status.message}</p>}
-            {status.error && <p className="status status--error">{status.error}</p>}
-          </form>
-        </section>
-
-        <section className="panel results">
-          {!hasResults && (
-            <p className="placeholder">
-              Generated image variations and descriptions will appear here once processing completes.
-            </p>
-          )}
-
-          {selectedPromptDetails.length > 0 && (
-            <div className="selected-styles">
-              <h2>Selected prompt cues</h2>
-              <div className="style-chip-row">
-                {selectedPromptDetails.map((prompt) => (
-                  <span key={prompt.id} className="style-chip">
-                    {prompt.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {sourceImage && (
-            <div className="source-image">
-              <h2>Source image URL</h2>
-              <a href={sourceImage} target="_blank" rel="noreferrer">
-                {sourceImage}
-              </a>
-            </div>
-          )}
-
-          {generatedImages.length > 0 && (
-            <div>
-              <h2>Image variations</h2>
-              <div className="image-grid">
-                {generatedImages.map((src, index) => (
-                  <figure key={`${src}-${index}`}>
-                    <img src={src} alt={`Generated variation ${index + 1}`} />
-                    <figcaption>Variation {index + 1}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {descriptions.length > 0 && (
-            <div className="descriptions">
-              <h2>Product descriptions</h2>
-              <div className="description-grid">
-                {descriptions.map((item, index) => (
-                  <article key={index} className="description-card">
-                    <header>
-                      <span className="description-index">#{index + 1}</span>
-                      <p className="description-tone">Tone: {item.tone}</p>
-                    </header>
-                    <h3>{item.headline}</h3>
-                    {item.tagline && <p className="description-tagline">{item.tagline}</p>}
-                    <p>{item.body}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
+      <main className="app-main">
+        {view === VIEWS.HOME && <Hero onGetStarted={() => setView(VIEWS.GENERATOR)} user={user} />}
+        {view === VIEWS.GENERATOR && <Generator onSessionComplete={handleSessionComplete} />}
+        {view === VIEWS.LIBRARY && <LibraryView sessions={user ? sessions : guestSessions} user={user} />}
       </main>
+
+      {authModal.open && (
+        <AuthModal mode={authModal.mode} onClose={closeAuthModal} onAuthenticate={handleAuthenticate} />
+      )}
     </div>
   )
 }

@@ -157,38 +157,6 @@
   transform: translateY(-2px);
 }
 
-.primary {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #ffffff;
-  padding: 14px 16px;
-  border-radius: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  border: none;
-}
-
-.primary:disabled {
-  cursor: wait;
-  opacity: 0.7;
-  box-shadow: none;
-}
-
-.primary:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.2);
-}
-
-.secondary {
-  background: transparent;
-  border: 1px solid #d8dae6;
-  color: #3c4150;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .status {
   margin: 0;
   font-size: 14px;
