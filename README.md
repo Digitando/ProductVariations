@@ -24,7 +24,15 @@ Two-part web app that turns a single product reference photo into five OpenRoute
    cp client/.env.example client/.env
    ```
 
-   In `server/.env` set `OPENROUTER_API_KEY` and optional `OPENROUTER_SITE_URL` / `OPENROUTER_SITE_NAME`. For local dev keep `CLIENT_ORIGIN` at `http://localhost:5173`.
+   In `server/.env` set:
+
+   - `OPENROUTER_API_KEY`
+   - `JWT_SECRET`
+   - `STRIPE_SECRET_KEY` (optional, required for the in-app coin checkout)
+   - `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` if you want to persist users/sessions in Supabase instead of local JSON files
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` for Google auth (optional)
+
+   For local dev keep `CLIENT_ORIGIN` at `http://localhost:5173`.
 
 2. Install dependencies:
 
@@ -56,3 +64,35 @@ Two-part web app that turns a single product reference photo into five OpenRoute
 - The same reference image is passed to the description model so copy can reflect visual details (with an automatic text-only fallback if the model rejects image input).
 - Description responses are requested as JSON using OpenRouter's `response_format` schema, making it easy to render structured copy.
 - Adjust proxy target or deployed API base URL via `client/.env` if serving the backend elsewhere.
+- When `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are present the server reads/writes all user and session data from Supabase tables named `users` and `sessions`. Those tables should include JSON/JSONB columns for list fields (`referrals`, `processedPayments`, `prompts`, `generatedImages`, `descriptions`). A minimal schema looks like:
+
+  ```sql
+  create table users (
+    id uuid primary key,
+    email text unique not null,
+    name text,
+    password text,
+    provider text,
+    googleId text,
+    avatar text,
+    coins integer default 0,
+    referralCode text,
+    referrals jsonb default '[]'::jsonb,
+    processedPayments jsonb default '[]'::jsonb,
+    referredBy uuid,
+    createdAt timestamptz default now(),
+    lastLoginAt timestamptz
+  );
+
+  create table sessions (
+    id uuid primary key,
+    userId uuid references users(id) on delete cascade,
+    prompts jsonb default '[]'::jsonb,
+    sourceImage text,
+    generatedImages jsonb default '[]'::jsonb,
+    descriptions jsonb default '[]'::jsonb,
+    createdAt timestamptz default now()
+  );
+  ```
+
+  If the Supabase variables are omitted the server falls back to the file-based store under `server/data/`.
