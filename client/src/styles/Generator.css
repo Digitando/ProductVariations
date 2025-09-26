@@ -227,8 +227,59 @@
   gap: 10px;
 }
 
+.images-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.download-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-actions .secondary {
+  padding-inline: 16px;
+  border-radius: 999px;
+}
+
 .image-grid .image-thumb img {
   border-radius: 12px;
+}
+
+.image-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.download-btn {
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.85), rgba(129, 140, 248, 0.85));
+  color: #ffffff;
+  font-size: 18px;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(99, 102, 241, 0.3);
+}
+
+.download-btn:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline-offset: 3px;
 }
 
 .image-grid figcaption {

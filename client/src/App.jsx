@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Generator from './components/Generator.jsx'
 import GoogleSignInButton from './components/GoogleSignInButton.jsx'
 import ImageViewer from './components/ImageViewer.jsx'
+import CookieConsent from './components/CookieConsent.jsx'
 import './styles/App.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
@@ -17,8 +18,8 @@ const VIEWS = {
 const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home' },
   { id: VIEWS.GENERATOR, label: 'Create' },
-  { id: VIEWS.LIBRARY, label: 'Library' },
-  { id: VIEWS.PROFILE, label: 'Profile' },
+  { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
+  { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
@@ -491,6 +492,10 @@ function App() {
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
 
   const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
+  const navigationItems = useMemo(
+    () => NAV_ITEMS.filter((item) => !item.requiresAuth || user),
+    [user],
+  )
 
   useEffect(() => {
     const storedToken = localStorage.getItem('pv_auth_token')
@@ -621,6 +626,11 @@ function App() {
   }
 
   const handleNavigate = (nextView) => {
+    const target = NAV_ITEMS.find((item) => item.id === nextView)
+    if (target?.requiresAuth && !user) {
+      openAuthModal('login')
+      return
+    }
     setView(nextView)
     if (nextView === VIEWS.LIBRARY && user && !sessions.length && !libraryStatus.loading) {
       loadSessions()
@@ -647,7 +657,7 @@ function App() {
           <span className="topbar__title">Product Variations</span>
         </div>
         <nav className="topbar__nav" aria-label="Primary">
-          {NAV_ITEMS.map((item) => (
+          {navigationItems.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -716,6 +726,8 @@ function App() {
         alt={viewerState.alt}
         onClose={closeImageViewer}
       />
+
+      <CookieConsent />
     </div>
   )
 }

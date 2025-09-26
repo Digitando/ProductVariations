@@ -17,6 +17,7 @@ const {
   requireAuth,
 } = require('./auth');
 const { getSessions, saveSessions } = require('./storage');
+const { sendWelcomeEmail } = require('./mailer');
 
 dotenv.config();
 
@@ -278,6 +279,9 @@ app.post('/auth/register', async (req, res) => {
     }
 
     const user = await registerUser({ name, email, password });
+    sendWelcomeEmail({ to: user.email, name: user.name }).catch((error) => {
+      console.warn('Welcome email was not sent', error?.message || error);
+    });
     return sendAuthResponse(res, user);
   } catch (error) {
     console.error('Registration failed', error.message || error);
