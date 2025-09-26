@@ -70,6 +70,16 @@ function ensureUserDefaults(user, users) {
     mutated = true;
   }
 
+  if (typeof user.marketingOptIn !== 'boolean') {
+    user.marketingOptIn = false;
+    mutated = true;
+  }
+
+  if (!user.privacyAcceptedAt) {
+    user.privacyAcceptedAt = user.createdAt || new Date().toISOString();
+    mutated = true;
+  }
+
   return mutated;
 }
 
@@ -133,12 +143,16 @@ async function findUserById(id) {
   return user;
 }
 
-async function registerUser({ name, email, password, referralCode }) {
+async function registerUser({ name, email, password, referralCode, acceptPrivacy, marketingOptIn }) {
   const users = await getUsers();
   const normalizedEmail = normalizeEmail(email);
   const existing = users.find((user) => normalizeEmail(user.email) === normalizedEmail);
   if (existing) {
     throw new Error('An account already exists with that email.');
+  }
+
+  if (!acceptPrivacy) {
+    throw new Error('Privacy consent is required.');
   }
 
   const hashedPassword = await hashPassword(password);
@@ -155,6 +169,8 @@ async function registerUser({ name, email, password, referralCode }) {
     referrals: [],
     processedPayments: [],
     referredBy: null,
+    privacyAcceptedAt: timestamp,
+    marketingOptIn: Boolean(marketingOptIn),
   };
 
   ensureUserDefaults(user, users);
@@ -208,7 +224,7 @@ async function authenticateCredentials({ email, password }) {
   return user;
 }
 
-async function authenticateGoogle(credential) {
+async function authenticateGoogle({ credential, acceptPrivacy, marketingOptIn }) {
   const client = getGoogleClient();
   if (!client) {
     throw new Error('Google sign-in is not configured. Set GOOGLE_CLIENT_ID.');
@@ -231,8 +247,12 @@ async function authenticateGoogle(credential) {
     (candidate) => candidate.googleId === payload.sub || normalizeEmail(candidate.email) === normalizedEmail,
   );
 
+  const timestamp = new Date().toISOString();
+
   if (!user) {
-    const timestamp = new Date().toISOString();
+    if (!acceptPrivacy) {
+      throw new Error('Privacy consent is required.');
+    }
     user = {
       id: crypto.randomUUID(),
       name: payload.name || email,
@@ -246,6 +266,8 @@ async function authenticateGoogle(credential) {
       referrals: [],
       processedPayments: [],
       referredBy: null,
+      privacyAcceptedAt: timestamp,
+      marketingOptIn: Boolean(marketingOptIn),
     };
     ensureUserDefaults(user, users);
     users.push(user);
@@ -254,7 +276,13 @@ async function authenticateGoogle(credential) {
     user.googleId = payload.sub;
     user.provider = 'google';
     user.avatar = payload.picture || user.avatar || '';
-    user.lastLoginAt = new Date().toISOString();
+    user.lastLoginAt = timestamp;
+    if (!user.privacyAcceptedAt && acceptPrivacy) {
+      user.privacyAcceptedAt = timestamp;
+    }
+    if (typeof marketingOptIn === 'boolean') {
+      user.marketingOptIn = marketingOptIn;
+    }
   }
 
   await saveUsers(users);
@@ -271,6 +299,8 @@ function sanitizeUser(user) {
     referralCode: user.referralCode || '',
     referredBy: user.referredBy || null,
     referralCount: Array.isArray(referrals) ? referrals.length : 0,
+    marketingOptIn: Boolean(user.marketingOptIn),
+    privacyAcceptedAt: user.privacyAcceptedAt || null,
   };
   return sanitized;
 }

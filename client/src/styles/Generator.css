@@ -109,6 +109,16 @@
 }
 
 @media (max-width: 640px) {
+  .selector-row {
+    flex-direction: column;
+  }
+
+  .selector-btn,
+  .selector-btn.selector-btn--compact {
+    width: 100%;
+    justify-content: center;
+  }
+
   .page__header {
     flex-direction: column;
     align-items: flex-start;
@@ -141,6 +151,18 @@
 
   .upload-summary {
     margin-top: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .funnel-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .funnel-actions .secondary,
+  .funnel-actions .primary {
+    width: 100%;
   }
 }
 
@@ -578,15 +600,19 @@
   color: #2f3242;
 }
 .funnel-stepper {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-x: auto;
+  padding-bottom: 6px;
 }
 
 .funnel-step {
+  flex: 1 1 200px;
+  min-width: 200px;
   border: 1px solid #d9dce8;
   border-radius: 14px;
   background: #f8f9ff;

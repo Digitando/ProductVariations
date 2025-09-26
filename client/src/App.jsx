@@ -68,8 +68,15 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
   return data
 }
 
-function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', referralCode: '' })
+function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    referralCode: '',
+    consentPrivacy: false,
+    consentMarketing: false,
+  })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -81,6 +88,12 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
     setSubmitting(true)
 
     try {
+      if (isRegister && !formData.consentPrivacy) {
+        setError('Please acknowledge the privacy policy and GDPR terms to continue.')
+        setSubmitting(false)
+        return
+      }
+
       const result = await onAuthenticate({
         provider: 'credentials',
         mode,
@@ -88,10 +101,19 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
         email: formData.email,
         password: formData.password,
         referralCode: formData.referralCode,
+        consentPrivacy: formData.consentPrivacy,
+        consentMarketing: formData.consentMarketing,
       })
 
       if (result.success) {
-        setFormData({ name: '', email: '', password: '', referralCode: '' })
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          referralCode: '',
+          consentPrivacy: false,
+          consentMarketing: false,
+        })
         setError('')
         onClose()
       } else if (result.error) {
@@ -110,10 +132,20 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
       return
     }
 
+    if (!formData.consentPrivacy) {
+      setError('Please acknowledge the privacy policy and GDPR terms to continue.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
     try {
-      const result = await onAuthenticate({ provider: 'google', credential })
+      const result = await onAuthenticate({
+        provider: 'google',
+        credential,
+        consentPrivacy: formData.consentPrivacy,
+        consentMarketing: formData.consentMarketing,
+      })
       if (result.success) {
         onClose()
       } else if (result.error) {
@@ -205,6 +237,46 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
                   autoComplete="off"
                 />
               </label>
+            )}
+            {isRegister && (
+              <div className="auth-form__consent">
+                <label className="auth-form__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={formData.consentPrivacy}
+                    onChange={(event) =>
+                      setFormData((prev) => ({ ...prev, consentPrivacy: event.target.checked }))
+                    }
+                    required
+                  />
+                  <span>
+                    I accept the{' '}
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={() => {
+                        if (typeof onNavigate === 'function') {
+                          onClose()
+                          onNavigate(VIEWS.PRIVACY)
+                        }
+                      }}
+                    >
+                      Privacy Policy
+                    </button>{' '}
+                    and GDPR terms.
+                  </span>
+                </label>
+                <label className="auth-form__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={formData.consentMarketing}
+                    onChange={(event) =>
+                      setFormData((prev) => ({ ...prev, consentMarketing: event.target.checked }))
+                    }
+                  />
+                  <span>I agree to receive promotional materials and updates (optional).</span>
+                </label>
+              </div>
             )}
             {error && <p className="auth-form__error">{error}</p>}
             <button type="submit" className="primary" disabled={submitting}>
@@ -1299,7 +1371,17 @@ function App() {
 
   const closeAuthModal = () => setAuthModal((prev) => ({ ...prev, open: false }))
 
-  const handleAuthenticate = async ({ provider, mode, name, email, password, credential, referralCode }) => {
+  const handleAuthenticate = async ({
+    provider,
+    mode,
+    name,
+    email,
+    password,
+    credential,
+    referralCode,
+    consentPrivacy,
+    consentMarketing,
+  }) => {
     try {
       let data
 
@@ -1309,12 +1391,23 @@ function App() {
         }
         data = await apiRequest('/auth/google', {
           method: 'POST',
-          body: { credential },
+          body: {
+            credential,
+            acceptPrivacy: Boolean(consentPrivacy),
+            marketingOptIn: Boolean(consentMarketing),
+          },
         })
       } else if (mode === 'register') {
         data = await apiRequest('/auth/register', {
           method: 'POST',
-          body: { name, email, password, referralCode },
+          body: {
+            name,
+            email,
+            password,
+            referralCode,
+            acceptPrivacy: Boolean(consentPrivacy),
+            marketingOptIn: Boolean(consentMarketing),
+          },
         })
       } else {
         data = await apiRequest('/auth/login', {
@@ -1591,6 +1684,7 @@ function App() {
           mode={authModal.mode}
           onClose={closeAuthModal}
           onAuthenticate={handleAuthenticate}
+          onNavigate={handleNavigate}
           googleClientId={GOOGLE_CLIENT_ID}
         />
       )}

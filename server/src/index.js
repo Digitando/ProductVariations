@@ -240,12 +240,23 @@ function sendAuthResponse(res, user) {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    const { name, email, password, referralCode } = req.body || {};
+    const { name, email, password, referralCode, acceptPrivacy, marketingOptIn } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const user = await registerUser({ name, email, password, referralCode });
+    if (!acceptPrivacy) {
+      return res.status(400).json({ error: 'Privacy consent is required to create an account.' });
+    }
+
+    const user = await registerUser({
+      name,
+      email,
+      password,
+      referralCode,
+      acceptPrivacy,
+      marketingOptIn,
+    });
     sendWelcomeEmail({ to: user.email, name: user.name }).catch((error) => {
       console.warn('Welcome email was not sent', error?.message || error);
     });
@@ -273,12 +284,12 @@ app.post('/auth/login', async (req, res) => {
 
 app.post('/auth/google', async (req, res) => {
   try {
-    const { credential } = req.body || {};
+    const { credential, acceptPrivacy, marketingOptIn } = req.body || {};
     if (!credential) {
       return res.status(400).json({ error: 'Google credential is required.' });
     }
 
-    const user = await authenticateGoogle(credential);
+    const user = await authenticateGoogle({ credential, acceptPrivacy, marketingOptIn });
     return sendAuthResponse(res, user);
   } catch (error) {
     console.error('Google authentication failed', error.message || error);

@@ -80,6 +80,8 @@ Two-part web app that turns a single product reference photo into five OpenRoute
     referrals jsonb default '[]'::jsonb,
     processedPayments jsonb default '[]'::jsonb,
     referredBy uuid,
+    marketingOptIn boolean default false,
+    privacyAcceptedAt timestamptz default now(),
     createdAt timestamptz default now(),
     lastLoginAt timestamptz
   );
@@ -96,3 +98,4 @@ Two-part web app that turns a single product reference photo into five OpenRoute
   ```
 
   If the Supabase variables are omitted the server falls back to the file-based store under `server/data/`.
+- During registration users must accept the privacy policy/GDPR disclaimer and can optionally opt in to promotional emails. These preferences are stored on their profile and surfaced through the API.

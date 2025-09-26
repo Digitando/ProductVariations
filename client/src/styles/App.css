@@ -773,6 +773,38 @@ button {
   outline-offset: 2px;
 }
 
+.auth-form__consent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.auth-form__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.auth-form__checkbox input {
+  margin-top: 4px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #6366f1;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: #4c1d95;
+}
+
 .auth-form__error {
   margin: 0;
   color: #dc2626;

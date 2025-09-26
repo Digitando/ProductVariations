@@ -36,6 +36,15 @@ function mapSupabaseUser(row) {
     ...row,
     referrals: parse(row.referrals, []),
     processedPayments: parse(row.processedPayments, []),
+    marketingOptIn:
+      typeof row.marketingOptIn === 'boolean'
+        ? row.marketingOptIn
+        : typeof row.marketingOptIn === 'string'
+        ? row.marketingOptIn.toLowerCase() === 'true'
+        : typeof row.marketingoptin === 'string'
+        ? row.marketingoptin.toLowerCase() === 'true'
+        : Boolean(row.marketingoptin),
+    privacyAcceptedAt: row.privacyAcceptedAt || row.privacyacceptedat || null,
   };
 }
 
@@ -45,6 +54,8 @@ function mapUserForSupabase(user) {
     ...user,
     referrals: Array.isArray(user.referrals) ? user.referrals : [],
     processedPayments: Array.isArray(user.processedPayments) ? user.processedPayments : [],
+    marketingOptIn: Boolean(user.marketingOptIn),
+    privacyAcceptedAt: user.privacyAcceptedAt || null,
   };
 }
 

@@ -91,7 +91,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
         id: category.id,
         label: category.label,
         hasPrompts: category.hasPrompts,
-      })),
+      })).sort((a, b) => a.label.localeCompare(b.label)),
     [],
   )
 
@@ -214,9 +214,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       setSelectedGenderId('')
       setSelectedCategoryId('')
       setSelectedPromptIds([])
-      setGeneratedImages([])
-      setDescriptions([])
-      setSourceImage('')
+      resetOutputs()
       setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
       setCurrentStepIndex(0)
       return
@@ -226,9 +224,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: '' }
       setSelectedCategoryId('')
       setSelectedPromptIds([])
-      setGeneratedImages([])
-      setDescriptions([])
-      setSourceImage('')
+      resetOutputs()
       setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
       setCurrentStepIndex((prev) => {
         const focusIndex = stepOrder.indexOf('focus')
@@ -240,9 +236,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     if (previous.categoryId !== selectedCategoryId) {
       selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: selectedCategoryId }
       setSelectedPromptIds([])
-      setGeneratedImages([])
-      setDescriptions([])
-      setSourceImage('')
+      resetOutputs()
       setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
       return
     }
@@ -550,9 +544,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     setSelectedGenderId('')
     setSelectedCategoryId('')
     setSelectedPromptIds([])
-    setGeneratedImages([])
-    setDescriptions([])
-    setSourceImage('')
+    resetOutputs()
     setCurrentStepIndex(0)
     selectionSnapshotRef.current = { scope: '', genderId: '', categoryId: '' }
     updateStatus({ step: '', message: '', loading: false, error: '' })
