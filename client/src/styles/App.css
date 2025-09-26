@@ -101,6 +101,16 @@ button {
   align-items: center;
 }
 
+.topbar__coins {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(99, 102, 241, 0.16);
+  color: #312e81;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
 .topbar__user {
   font-weight: 600;
   color: #312e81;
@@ -182,6 +192,12 @@ button {
   color: #475569;
   font-size: 1rem;
   max-width: 520px;
+}
+
+.hero__tagline {
+  margin: 12px 0 0;
+  font-weight: 600;
+  color: #312e81;
 }
 
 .hero__actions {
@@ -299,6 +315,121 @@ button {
   background: rgba(99, 102, 241, 0.16);
   color: #4338ca;
   margin-right: 12px;
+}
+
+.home-content {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.home-section {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.home-section h2,
+.home-section h3 {
+  margin: 0;
+}
+
+.home-section p {
+  margin: 0;
+  color: #475569;
+}
+
+.home-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.home-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.home-section__actions span {
+  font-weight: 600;
+  color: #4c1d95;
+}
+
+.home-section--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.home-card {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #312e81;
+}
+
+.home-section--policies {
+  gap: 18px;
+}
+
+.home-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.policy {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 860px;
+}
+
+.policy header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+}
+
+.policy header p {
+  margin: 6px 0 0;
+  color: #475569;
+}
+
+.policy article {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.policy article h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.policy article p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.policy a {
+  color: #6366f1;
+  text-decoration: none;
 }
 
 .eyebrow {

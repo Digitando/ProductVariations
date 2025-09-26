@@ -7,6 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const crypto = require('crypto');
+const sharp = require('sharp');
+const Stripe = require('stripe');
 const {
   sanitizeUser,
   registerUser,
@@ -15,8 +17,10 @@ const {
   createToken,
   optionalAuth,
   requireAuth,
+  findUserById,
+  generateReferralCode,
 } = require('./auth');
-const { getSessions, saveSessions } = require('./storage');
+const { getSessions, saveSessions, getUsers, saveUsers } = require('./storage');
 const { sendWelcomeEmail } = require('./mailer');
 const promptCatalog = require('../../shared/promptCatalog.cjs');
 
@@ -25,9 +29,46 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+
+const stripeClient = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY, {
+      apiVersion: '2024-06-20',
+    })
+  : null;
+
+const COINS_PER_CURRENCY_UNIT = 5;
+const SUPPORTED_PURCHASE_CURRENCIES = new Set(['eur', 'usd']);
+const SQUARE_OUTPUT_SIZE = 1024;
+const DEFAULT_STRIPE_DECIMAL_FACTOR = 100;
+
+function normalizeCurrency(input) {
+  return String(input || '').trim().toLowerCase();
+}
+
+function calculatePurchase(amount, currency) {
+  const numericAmount = Number(amount);
+  if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
+    throw new Error('Purchase amount must be a positive whole number.');
+  }
+
+  const normalizedCurrency = normalizeCurrency(currency);
+  if (!SUPPORTED_PURCHASE_CURRENCIES.has(normalizedCurrency)) {
+    throw new Error('Unsupported currency.');
+  }
+
+  const coins = numericAmount * COINS_PER_CURRENCY_UNIT;
+  const unitAmount = numericAmount * DEFAULT_STRIPE_DECIMAL_FACTOR;
+
+  return { coins, amount: unitAmount, currency: normalizedCurrency };
+}
 
 if (!OPENROUTER_API_KEY) {
   console.warn('Warning: OPENROUTER_API_KEY is not set. API routes will fail until configured.');
+}
+
+if (!stripeClient) {
+  console.warn('Warning: STRIPE_SECRET_KEY is not set. Coin purchases will be disabled until configured.');
 }
 
 const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
@@ -104,6 +145,76 @@ const DEFAULT_PROMPT_SEQUENCE = (() => {
   return Object.keys(PROMPTS_BY_ID).slice(0, 5);
 })();
 
+async function getUserStoreEntry(userId) {
+  if (!userId) {
+    return { users: [], user: null, index: -1 };
+  }
+
+  // Ensure defaults are applied before we load the full list for mutation.
+  await findUserById(userId);
+  const users = await getUsers();
+  const index = users.findIndex((candidate) => candidate.id === userId);
+  const user = index === -1 ? null : users[index];
+
+  if (user) {
+    if (typeof user.coins !== 'number' || Number.isNaN(user.coins)) {
+      user.coins = 0;
+    }
+    if (!Array.isArray(user.processedPayments)) {
+      user.processedPayments = [];
+    }
+    if (!Array.isArray(user.referrals)) {
+      user.referrals = [];
+    }
+  }
+
+  return { users, user, index };
+}
+
+function computeRequiredCoins(variationRequests = []) {
+  const count = Array.isArray(variationRequests) ? variationRequests.length : 0;
+  return Math.max(count, 1);
+}
+
+async function loadImageBuffer(reference) {
+  if (!reference) {
+    throw new Error('Image reference is empty');
+  }
+
+  if (reference.startsWith('data:')) {
+    const commaIndex = reference.indexOf(',');
+    const base64 = commaIndex >= 0 ? reference.slice(commaIndex + 1) : reference;
+    return Buffer.from(base64, 'base64');
+  }
+
+  const response = await axios.get(reference, { responseType: 'arraybuffer' });
+  return Buffer.from(response.data);
+}
+
+async function convertToSquareDataUri(reference) {
+  const buffer = await loadImageBuffer(reference);
+  const image = sharp(buffer, { failOnError: false });
+  const metadata = await image.metadata();
+  const width = metadata.width || SQUARE_OUTPUT_SIZE;
+  const height = metadata.height || SQUARE_OUTPUT_SIZE;
+  const cropSize = Math.max(1, Math.min(width, height));
+  const targetSize = Math.min(SQUARE_OUTPUT_SIZE, cropSize);
+
+  let pipeline = sharp(buffer, { failOnError: false });
+  if (width !== height && width && height) {
+    const left = Math.max(0, Math.floor((width - cropSize) / 2));
+    const top = Math.max(0, Math.floor((height - cropSize) / 2));
+    pipeline = pipeline.extract({ left, top, width: cropSize, height: cropSize });
+  }
+
+  const squareBuffer = await pipeline
+    .resize(targetSize, targetSize, { fit: 'cover', withoutEnlargement: true })
+    .png()
+    .toBuffer();
+
+  return `data:image/png;base64,${squareBuffer.toString('base64')}`;
+}
+
 function translateUpstreamError(error) {
   const rawMessage =
     error?.response?.data?.error?.message || error?.response?.data?.error || error?.message || 'Request failed';
@@ -129,12 +240,12 @@ function sendAuthResponse(res, user) {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, referralCode } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const user = await registerUser({ name, email, password });
+    const user = await registerUser({ name, email, password, referralCode });
     sendWelcomeEmail({ to: user.email, name: user.name }).catch((error) => {
       console.warn('Welcome email was not sent', error?.message || error);
     });
@@ -248,7 +359,7 @@ function resolvePromptTemplates(promptIds) {
 function buildVariationRequests({ promptIds }) {
   const templates = resolvePromptTemplates(promptIds);
   const baseInstruction =
-    'Create product variations of the provided reference image. Treat the upload as authoritative: preserve the product\'s silhouette, materials, colours, and branding. Do not introduce alternate products, packaging, or text overlays. Maintain garment accuracy.';
+    'Create product variations of the provided reference image. Treat the upload as authoritative: preserve the product\'s silhouette, materials, colours, and branding. Do not introduce alternate products, packaging, or text overlays. Maintain garment accuracy. Ensure the final output is a square (1:1) frame suitable for e-commerce listings.';
 
   return templates.map((template) => ({
     template,
@@ -272,7 +383,7 @@ function getAssetBaseUrl(req) {
 
 async function generateVariationImage({ prompt, imageUrl, base64Fallback }) {
   const systemInstruction =
-    'You are an e-commerce photo retoucher. Use the supplied reference image as the definitive product. Preserve its silhouette, materials, colours, and branding. Only adjust camera angle, lighting, background, or lightweight supporting props. Return exactly one finished image.';
+    'You are an e-commerce photo retoucher. Use the supplied reference image as the definitive product. Preserve its silhouette, materials, colours, and branding. Only adjust camera angle, lighting, background, or lightweight supporting props. Return exactly one finished square (1:1) image ready for online catalogues.';
 
   const userText = `${prompt}\nUse the provided reference image as the base. Preserve the product's silhouette, materials, colours, and branding. Do not introduce alternative products, new logos, or any text overlays.`;
 
@@ -373,7 +484,7 @@ function extractImageFromResponse(data) {
   throw new Error('Model response did not include an output image');
 }
 
-app.post('/api/generate-images', upload.single('image'), async (req, res) => {
+app.post('/api/generate-images', requireAuth, upload.single('image'), async (req, res) => {
   try {
     if (!OPENROUTER_API_KEY) {
       return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured' });
@@ -386,24 +497,44 @@ app.post('/api/generate-images', upload.single('image'), async (req, res) => {
     const promptIds = extractPromptIds(req.body.prompts || req.body.styles);
     const variationRequests = buildVariationRequests({ promptIds });
 
+    const coinsRequired = computeRequiredCoins(variationRequests);
+    const { users, user, index } = await getUserStoreEntry(req.user.id);
+    if (!user || index === -1) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    if ((user.coins || 0) < coinsRequired) {
+      await fsp.unlink(req.file.path).catch(() => {});
+      return res.status(402).json({ error: `You need ${coinsRequired} coin(s) but only have ${user.coins}.` });
+    }
+
     const assetBaseUrl = getAssetBaseUrl(req);
     const imageUrl = `${assetBaseUrl}/uploads/${req.file.filename}`;
     const base64Fallback = await fsp.readFile(req.file.path, { encoding: 'base64' });
 
     const images = await Promise.all(
-      variationRequests.map(({ prompt }, index) =>
-        generateVariationImage({
+      variationRequests.map(async ({ prompt }, index) => {
+        const rawImage = await generateVariationImage({
           prompt: `Variation ${index + 1}: ${prompt}`,
           imageUrl,
           base64Fallback,
-        })
-      )
+        });
+        return convertToSquareDataUri(rawImage);
+      })
     );
+
+    user.coins -= coinsRequired;
+    users[index] = user;
+    await saveUsers(users);
+
+    req.user = sanitizeUser(user);
 
     res.json({
       images,
       sourceImage: imageUrl,
       prompts: variationRequests.map(({ template }) => template),
+      coins: user.coins,
+      coinsCharged: coinsRequired,
     });
   } catch (error) {
     const status = error.response?.status || 500;
@@ -448,7 +579,7 @@ const createDescriptionResponseFormat = (descriptionCount) => ({
   },
 });
 
-app.post('/api/generate-descriptions', async (req, res) => {
+app.post('/api/generate-descriptions', requireAuth, async (req, res) => {
   try {
     if (!OPENROUTER_API_KEY) {
       return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured' });
@@ -619,6 +750,148 @@ app.post('/api/generate-descriptions', async (req, res) => {
     );
     const message = translateUpstreamError(error);
     res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/coins/balance', requireAuth, async (req, res) => {
+  try {
+    const { user } = await getUserStoreEntry(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json({ coins: user.coins || 0 });
+  } catch (error) {
+    console.error('Failed to fetch coin balance', error);
+    res.status(500).json({ error: 'Unable to fetch coin balance.' });
+  }
+});
+
+app.post('/api/coins/create-payment-intent', requireAuth, async (req, res) => {
+  if (!stripeClient) {
+    return res.status(503).json({ error: 'Stripe is not configured yet.' });
+  }
+
+  try {
+    const { amount, currency } = req.body || {};
+    const purchase = calculatePurchase(amount, currency || 'eur');
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: purchase.amount,
+      currency: purchase.currency,
+      metadata: {
+        userId: req.user.id,
+        coins: String(purchase.coins),
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      coins: purchase.coins,
+      amount: purchase.amount,
+      currency: purchase.currency,
+    });
+  } catch (error) {
+    console.error('Failed to create payment intent', error);
+    const message = error?.message || 'Failed to create payment intent.';
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post('/api/coins/redeem', requireAuth, async (req, res) => {
+  if (!stripeClient) {
+    return res.status(503).json({ error: 'Stripe is not configured yet.' });
+  }
+
+  try {
+    const { paymentIntentId } = req.body || {};
+    if (!paymentIntentId) {
+      return res.status(400).json({ error: 'paymentIntentId is required.' });
+    }
+
+    const paymentIntent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
+    if (!paymentIntent) {
+      return res.status(404).json({ error: 'Payment intent not found.' });
+    }
+
+    const ownerId = paymentIntent.metadata?.userId;
+    if (ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'This payment does not belong to your account.' });
+    }
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment has not completed yet.' });
+    }
+
+    const coinsAwarded = Number(paymentIntent.metadata?.coins || 0);
+    if (!Number.isFinite(coinsAwarded) || coinsAwarded <= 0) {
+      return res.status(400).json({ error: 'Coin amount missing from payment metadata.' });
+    }
+
+    const { users, user, index } = await getUserStoreEntry(req.user.id);
+    if (!user || index === -1) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const alreadyProcessed = Array.isArray(user.processedPayments)
+      ? user.processedPayments.some((entry) => entry.paymentIntentId === paymentIntentId)
+      : false;
+
+    if (alreadyProcessed || paymentIntent.metadata?.redeemed === 'true') {
+      req.user = sanitizeUser(user);
+      return res.json({ coins: user.coins || 0, coinsAwarded: 0 });
+    }
+
+    user.coins = (user.coins || 0) + coinsAwarded;
+    user.processedPayments.push({
+      paymentIntentId,
+      coins: coinsAwarded,
+      currency: paymentIntent.currency,
+      amount: paymentIntent.amount,
+      createdAt: new Date().toISOString(),
+    });
+    users[index] = user;
+    await saveUsers(users);
+
+    await stripeClient.paymentIntents.update(paymentIntentId, {
+      metadata: {
+        ...paymentIntent.metadata,
+        redeemed: 'true',
+      },
+    });
+
+    req.user = sanitizeUser(user);
+
+    res.json({ coins: user.coins, coinsAwarded });
+  } catch (error) {
+    console.error('Failed to redeem coins', error);
+    const status = error?.statusCode || error?.status || 500;
+    const message = error?.message || 'Failed to redeem payment.';
+    res.status(status).json({ error: message });
+  }
+});
+
+app.post('/api/referral-code/refresh', requireAuth, async (req, res) => {
+  try {
+    const { users, user, index } = await getUserStoreEntry(req.user.id);
+    if (!user || index === -1) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const nextCode = generateReferralCode(users);
+    user.referralCode = nextCode;
+    users[index] = user;
+    await saveUsers(users);
+
+    req.user = sanitizeUser(user);
+
+    res.json({ referralCode: nextCode });
+  } catch (error) {
+    console.error('Failed to refresh referral code', error);
+    res.status(500).json({ error: 'Unable to refresh referral code.' });
   }
 });
 

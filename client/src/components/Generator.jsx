@@ -36,7 +36,7 @@ function buildSummaryLabel({ genderLabel, categoryLabel, accessoryLabel }) {
   return categoryLabel || genderLabel || ''
 }
 
-function Generator({ onSessionComplete, onViewImage }) {
+function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsChange, onRequestTopUp }) {
   const handleViewImage = (src, alt) => {
     if (typeof onViewImage === 'function') {
       onViewImage({ src, alt })
@@ -60,6 +60,9 @@ function Generator({ onSessionComplete, onViewImage }) {
     () => generatedImages.length > 0 || descriptions.length > 0,
     [generatedImages.length, descriptions.length],
   )
+
+  const coinsRequired = useMemo(() => Math.max(selectedPromptIds.length, 1), [selectedPromptIds.length])
+  const hasEnoughCoins = coins >= coinsRequired
 
   const resetOutputs = () => {
     setGeneratedImages([])
@@ -116,7 +119,7 @@ function Generator({ onSessionComplete, onViewImage }) {
         categoryLabel: standaloneCategory ? '' : activeCategory?.label || '',
         accessoryLabel: standaloneCategory?.label || '',
       }),
-    [activeCategory?.label, selectedGender?.label, standaloneCategory?.label],
+    [activeCategory, selectedGender, standaloneCategory],
   )
 
   const activePromptGroups = activeCategory?.groups || []
@@ -157,7 +160,8 @@ function Generator({ onSessionComplete, onViewImage }) {
     hasPromptSelection &&
     Boolean(imageFile) &&
     focusHasTemplates &&
-    (standaloneCategory || selectedGenderId || accessoriesOnly)
+    (standaloneCategory || selectedGenderId || accessoriesOnly) &&
+    hasEnoughCoins
   const canAdvanceCurrentStep =
     currentStepId === 'reference'
       ? isReferenceComplete
@@ -317,6 +321,11 @@ function Generator({ onSessionComplete, onViewImage }) {
   const handleSubmit = async (evt) => {
     evt.preventDefault()
 
+    if (!token) {
+      updateStatus({ error: 'Your session expired. Please log back in to generate assets.', loading: false })
+      return
+    }
+
     const isStandaloneSelection = Boolean(standaloneCategory)
 
     if (!selectedCategoryId) {
@@ -339,6 +348,16 @@ function Generator({ onSessionComplete, onViewImage }) {
       return
     }
 
+    if (!hasEnoughCoins) {
+      updateStatus({
+        error: `You need ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'} to run this batch. Top up your balance to continue.`,
+      })
+      if (typeof onRequestTopUp === 'function') {
+        onRequestTopUp()
+      }
+      return
+    }
+
     if (selectedPromptIds.length === 0) {
       updateStatus({ error: 'Select at least one prompt direction.' })
       return
@@ -358,19 +377,49 @@ function Generator({ onSessionComplete, onViewImage }) {
       imageForm.append('image', imageFile)
       imageForm.append('prompts', JSON.stringify(selectedPromptIds))
 
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+
       const imageResponse = await fetch(buildApiUrl('/api/generate-images'), {
         method: 'POST',
         body: imageForm,
+        headers: authHeaders,
       })
+
+      if (imageResponse.status === 401) {
+        updateStatus({ error: 'Your session has expired. Please log in again.', loading: false })
+        return
+      }
+
+      if (imageResponse.status === 402) {
+        const errorBody = await imageResponse.json().catch(() => ({}))
+        const message =
+          errorBody?.error ||
+          `You need ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'} for this generation. Top up your wallet.`
+        updateStatus({ error: message, loading: false })
+        if (typeof onRequestTopUp === 'function') {
+          onRequestTopUp()
+        }
+        return
+      }
 
       if (!imageResponse.ok) {
         const errorBody = await imageResponse.json().catch(() => ({}))
         throw new Error(errorBody.error || 'Image generation request failed')
       }
 
-      const { images, sourceImage: sourceImageUrl, prompts: promptMetadata } = await imageResponse.json()
+      const {
+        images,
+        sourceImage: sourceImageUrl,
+        prompts: promptMetadata,
+        coins: remainingCoins,
+        coinsCharged,
+      } = await imageResponse.json()
       setGeneratedImages(Array.isArray(images) ? images : [])
       setSourceImage(typeof sourceImageUrl === 'string' ? sourceImageUrl : '')
+
+      if (typeof remainingCoins === 'number' && typeof onCoinsChange === 'function') {
+        onCoinsChange(remainingCoins)
+      }
 
       updateStatus({
         step: 'descriptions',
@@ -396,9 +445,15 @@ function Generator({ onSessionComplete, onViewImage }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
         body: JSON.stringify(descriptionBody),
       })
+
+      if (descriptionResponse.status === 401) {
+        updateStatus({ error: 'Your session has expired. Please log in again.', loading: false })
+        return
+      }
 
       if (!descriptionResponse.ok) {
         const errorBody = await descriptionResponse.json().catch(() => ({}))
@@ -411,7 +466,14 @@ function Generator({ onSessionComplete, onViewImage }) {
 
       updateStatus({
         step: 'done',
-        message: 'All assets generated successfully.',
+        message:
+          typeof remainingCoins === 'number'
+            ? `All assets generated successfully. You have ${remainingCoins} coin${remainingCoins === 1 ? '' : 's'} remaining${
+                typeof coinsCharged === 'number' && coinsCharged > 0
+                  ? ` after spending ${coinsCharged} coin${coinsCharged === 1 ? '' : 's'}.`
+                  : '.'
+              }`
+            : 'All assets generated successfully.',
         loading: false,
       })
 
@@ -513,14 +575,55 @@ function Generator({ onSessionComplete, onViewImage }) {
             faithful model and product imagery plus e-commerce copy.
           </p>
         </div>
-        <button type="button" className="secondary" onClick={handleReset}>
-          Reset
-        </button>
+        <div className="generator__header-actions">
+          <div className="generator__coins">
+            <span>Coins</span>
+            <strong>{coins}</strong>
+          </div>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              if (typeof onRequestTopUp === 'function') {
+                onRequestTopUp()
+              }
+            }}
+            disabled={typeof onRequestTopUp !== 'function'}
+          >
+            Buy coins
+          </button>
+          <button type="button" className="secondary" onClick={handleReset}>
+            Reset
+          </button>
+        </div>
       </header>
 
       <main className="layout">
         <section className="panel">
           <form className="generator" onSubmit={handleSubmit}>
+          <div className={`coin-alert${hasEnoughCoins ? '' : ' coin-alert--warning'}`}>
+            <div>
+              <span>Coins required</span>
+              <strong>{coinsRequired}</strong>
+            </div>
+            <div>
+              <span>Coins after run</span>
+              <strong>{Math.max(coins - coinsRequired, 0)}</strong>
+            </div>
+            {!hasEnoughCoins && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  if (typeof onRequestTopUp === 'function') {
+                    onRequestTopUp()
+                  }
+                }}
+              >
+                Top up coins
+              </button>
+            )}
+          </div>
           <ol className="funnel-stepper" role="list">
             {stepDescriptors.map((step, index) => {
               const isDisabled = index > currentStepIndex
@@ -875,4 +978,3 @@ function Generator({ onSessionComplete, onViewImage }) {
 }
 
 export default Generator
-

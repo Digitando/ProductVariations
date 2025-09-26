@@ -45,7 +45,7 @@ function readStoredPreferences() {
       preferences: { ...DEFAULT_PREFERENCES, ...(stored.preferences || {}) },
       consented: Boolean(stored.consented),
     }
-  } catch (_error) {
+  } catch {
     return { preferences: DEFAULT_PREFERENCES, consented: false }
   }
 }

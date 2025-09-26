@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { CardElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js'
 import Generator from './components/Generator.jsx'
 import GoogleSignInButton from './components/GoogleSignInButton.jsx'
 import ImageViewer from './components/ImageViewer.jsx'
@@ -8,19 +10,25 @@ import './styles/Profile.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
+const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY) : null
 
 const VIEWS = {
   HOME: 'home',
   GENERATOR: 'generator',
   LIBRARY: 'library',
   PROFILE: 'profile',
+  COOKIE_POLICY: 'cookie-policy',
+  PRIVACY: 'privacy-notice',
 }
 
 const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home' },
-  { id: VIEWS.GENERATOR, label: 'Create' },
+  { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
   { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
   { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
+  { id: VIEWS.COOKIE_POLICY, label: 'Cookie Policy' },
+  { id: VIEWS.PRIVACY, label: 'Privacy Notice' },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
@@ -47,7 +55,7 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
   let data
   try {
     data = text ? JSON.parse(text) : null
-  } catch (error) {
+  } catch {
     data = text
   }
 
@@ -63,7 +71,7 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
 }
 
 function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', referralCode: '' })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -81,10 +89,11 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        referralCode: formData.referralCode,
       })
 
       if (result.success) {
-        setFormData({ name: '', email: '', password: '' })
+        setFormData({ name: '', email: '', password: '', referralCode: '' })
         setError('')
         onClose()
       } else if (result.error) {
@@ -184,6 +193,21 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
                 disabled={submitting}
               />
             </label>
+            {isRegister && (
+              <label className="auth-form__field">
+                <span>Referral code (optional)</span>
+                <input
+                  type="text"
+                  value={formData.referralCode}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, referralCode: event.target.value.toUpperCase() }))
+                  }
+                  placeholder="INVITE123"
+                  disabled={submitting}
+                  autoComplete="off"
+                />
+              </label>
+            )}
             {error && <p className="auth-form__error">{error}</p>}
             <button type="submit" className="primary" disabled={submitting}>
               {submitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
@@ -233,6 +257,7 @@ function Hero({ onGetStarted, user, recentImages = [] }) {
           Upload a reference shot, pick the editorial directions, and let our generator return consistent model imagery,
           close-ups, and conversion-ready product descriptions.
         </p>
+        <p className="hero__tagline">Created by dropshippers for dropshippers, so every launch feels effortless.</p>
         <div className="hero__actions">
           <button type="button" className="primary" onClick={onGetStarted}>
             Start generating
@@ -286,6 +311,161 @@ function Hero({ onGetStarted, user, recentImages = [] }) {
           </li>
         </ul>
       </div>
+    </section>
+  )
+}
+
+function HomeContent({ onStart, onViewCookie, onViewPrivacy }) {
+  return (
+    <section className="home-content">
+      <article className="home-section home-section--primary">
+        <div>
+          <h2>Launch-ready visuals without a full photo team</h2>
+          <p>
+            Product Variations automates model shots, close-ups, and product copy so you can publish faster. Every render
+            is cropped to a perfect 1:1 square, ready for marketplaces and ads.
+          </p>
+        </div>
+        <ul>
+          <li>Upload one clean garment photo and pick your styling cues.</li>
+          <li>Generate consistent hero, detail, and lifestyle angles in a single run.</li>
+          <li>Export paired copy decks that stay true to the fabric and fit.</li>
+        </ul>
+        <div className="home-section__actions">
+          <button type="button" className="primary" onClick={onStart}>
+            Generate a look
+          </button>
+          <span>Every account starts with 2 free coins.</span>
+        </div>
+      </article>
+
+      <article className="home-section home-section--grid">
+        <div className="home-card">
+          <h3>Fair-play coin system</h3>
+          <p>
+            Each generated photo costs 1 coin. Add coins whenever you need them—1 EUR or 1 USD gives you 5 new image
+            credits.
+          </p>
+        </div>
+        <div className="home-card">
+          <h3>Invite and earn more</h3>
+          <p>
+            Share your referral code: new users receive 2 bonus coins and you pocket 4 extra coins every time they join.
+          </p>
+        </div>
+        <div className="home-card">
+          <h3>Built for dropshipping teams</h3>
+          <p>
+            Keep campaigns consistent across regions with reusable prompt sets and a sharable asset library.
+          </p>
+        </div>
+      </article>
+
+      <article className="home-section home-section--policies">
+        <h2>We respect your brand and your data</h2>
+        <p>
+          Learn how we use cookies to improve your sessions and how we safeguard uploads and personal information.
+        </p>
+        <div className="home-policy-links">
+          <button type="button" className="secondary" onClick={onViewCookie}>
+            Read the cookie policy
+          </button>
+          <button type="button" className="secondary" onClick={onViewPrivacy}>
+            Review the privacy notice
+          </button>
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function CookiePolicyView() {
+  return (
+    <section className="policy">
+      <header>
+        <h1>Cookie Policy</h1>
+        <p>Last updated: {new Date().toLocaleDateString()}</p>
+      </header>
+      <article>
+        <h2>1. Purpose of cookies</h2>
+        <p>
+          We use cookies to keep you signed in, remember your generator preferences, and understand how teams use Product
+          Variations. Cookies help us keep your library secure and speed up image generation workflows.
+        </p>
+      </article>
+      <article>
+        <h2>2. Essential cookies</h2>
+        <p>
+          Essential cookies power authentication, session continuity, and the coin checkout process. They are required for
+          the app to function. Disabling them will prevent logins, purchases, and library syncing.
+        </p>
+      </article>
+      <article>
+        <h2>3. Analytics cookies</h2>
+        <p>
+          We collect anonymised usage metrics to identify bottlenecks in the creation funnel. Analytics cookies never
+          track product images or personal data—they only aggregate counts like “steps completed” or “downloads”.
+        </p>
+      </article>
+      <article>
+        <h2>4. Managing cookies</h2>
+        <p>
+          You can adjust your preferences via the cookie banner or in your browser settings. Rejecting non-essential
+          cookies will not stop you from generating images, but certain convenience features may be limited.
+        </p>
+      </article>
+      <article>
+        <h2>5. Contact</h2>
+        <p>
+          Have a question about how we use cookies? Reach out at <a href="mailto:privacy@productvariations.app">privacy@productvariations.app</a> and our team will help.
+        </p>
+      </article>
+    </section>
+  )
+}
+
+function PrivacyNoticeView() {
+  return (
+    <section className="policy">
+      <header>
+        <h1>Privacy Notice</h1>
+        <p>Last updated: {new Date().toLocaleDateString()}</p>
+      </header>
+      <article>
+        <h2>1. Data we collect</h2>
+        <p>
+          When you create an account we store your name, email address, and authentication activity. Uploaded product
+          images are stored securely so you can revisit generations inside your library.
+        </p>
+      </article>
+      <article>
+        <h2>2. How we use your information</h2>
+        <p>
+          We use your details to provide access to the generator, deliver email updates you request, and process coin
+          purchases via Stripe. We never sell personal data or training assets.
+        </p>
+      </article>
+      <article>
+        <h2>3. Sharing with third parties</h2>
+        <p>
+          Payment information is handled by Stripe. AI rendering is performed through OpenRouter. Both providers only
+          receive the minimum data needed to complete each task.
+        </p>
+      </article>
+      <article>
+        <h2>4. Your rights</h2>
+        <p>
+          You can request access, updates, or deletion of your data at any time. Email <a href="mailto:privacy@productvariations.app">privacy@productvariations.app</a> and we will respond within 10
+          business days.
+        </p>
+      </article>
+      <article>
+        <h2>5. Retention and security</h2>
+        <p>
+          Accounts and image assets are retained while you remain active. Idle accounts are archived after 12 months of
+          inactivity. We use encrypted storage and routine audits to keep your files safe.
+        </p>
+      </article>
     </section>
   )
 }
@@ -405,8 +585,245 @@ function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
   )
 }
 
-function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLogout }) {
-  const [activeTab, setActiveTab] = useState('overview')
+function WalletPanel({ user, token, onUserUpdate }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [amount, setAmount] = useState(1)
+  const [currency, setCurrency] = useState('eur')
+  const [status, setStatus] = useState({ loading: false, error: '', success: '' })
+  const [referralStatus, setReferralStatus] = useState({ loading: false, error: '', message: '' })
+
+  const coins = user?.coins ?? 0
+  const referralCode = user?.referralCode || ''
+  const referralCount = user?.referralCount ?? 0
+
+  const cardOptions = useMemo(
+    () => ({
+      style: {
+        base: {
+          fontSize: '16px',
+          color: '#1f2937',
+          '::placeholder': {
+            color: '#94a3b8',
+          },
+        },
+        invalid: {
+          color: '#ef4444',
+        },
+      },
+    }),
+    [],
+  )
+
+  const resetStatus = () => setStatus({ loading: false, error: '', success: '' })
+
+  const handlePurchase = async (event) => {
+    event.preventDefault()
+    resetStatus()
+
+    if (!stripe || !elements) {
+      setStatus({ loading: false, error: 'Stripe is not ready yet. Please try again in a moment.', success: '' })
+      return
+    }
+
+    const numericAmount = Number(amount)
+    if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
+      setStatus({ loading: false, error: 'Enter a whole number amount (e.g. 1, 5, 10).', success: '' })
+      return
+    }
+
+    setStatus({ loading: true, error: '', success: '' })
+
+    try {
+      const createIntent = await apiRequest('/api/coins/create-payment-intent', {
+        method: 'POST',
+        body: { amount: numericAmount, currency },
+        token,
+      })
+
+      if (!createIntent?.clientSecret) {
+        throw new Error('Unable to start checkout.')
+      }
+
+      const cardElement = elements.getElement(CardElement)
+      if (!cardElement) {
+        throw new Error('Card input is not ready. Please reload the page and try again.')
+      }
+
+      const confirmation = await stripe.confirmCardPayment(createIntent.clientSecret, {
+        payment_method: {
+          card: cardElement,
+        },
+      })
+
+      if (confirmation.error) {
+        throw new Error(confirmation.error.message || 'Payment failed. Please double-check your details.')
+      }
+
+      const paymentIntentId = createIntent.paymentIntentId || confirmation.paymentIntent?.id
+      if (!paymentIntentId) {
+        throw new Error('Payment completed but we could not confirm the transaction ID. Contact support.')
+      }
+
+      const redeem = await apiRequest('/api/coins/redeem', {
+        method: 'POST',
+        body: { paymentIntentId },
+        token,
+      })
+
+      const coinsAwarded = Number(redeem?.coinsAwarded || 0)
+      const remaining = Number(redeem?.coins ?? coins)
+
+      if (typeof onUserUpdate === 'function') {
+        onUserUpdate({ coins: remaining })
+      }
+
+      if (cardElement.clear) {
+        cardElement.clear()
+      }
+
+      setStatus({
+        loading: false,
+        error: '',
+        success:
+          coinsAwarded > 0
+            ? `Success! ${coinsAwarded} coin${coinsAwarded === 1 ? '' : 's'} added to your balance.`
+            : 'Payment confirmed. Your balance is up to date.',
+      })
+    } catch (error) {
+      setStatus({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Coin purchase failed. Please try again.',
+        success: '',
+      })
+    }
+  }
+
+  const handleRefreshReferral = async () => {
+    setReferralStatus({ loading: true, error: '', message: '' })
+    try {
+      const response = await apiRequest('/api/referral-code/refresh', {
+        method: 'POST',
+        token,
+      })
+      if (response?.referralCode && typeof onUserUpdate === 'function') {
+        onUserUpdate({ referralCode: response.referralCode })
+      }
+      setReferralStatus({ loading: false, error: '', message: 'Referral code refreshed.' })
+    } catch (error) {
+      setReferralStatus({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Unable to refresh referral code. Please try again later.',
+        message: '',
+      })
+    }
+  }
+
+  const handleCopyReferral = async () => {
+    if (!referralCode) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(referralCode)
+      setReferralStatus({ loading: false, error: '', message: 'Referral code copied to your clipboard.' })
+    } catch (error) {
+      console.warn('Clipboard access is blocked', error)
+      setReferralStatus({ loading: false, error: 'Clipboard access is blocked. Copy manually instead.', message: '' })
+    }
+  }
+
+  return (
+    <div className="wallet">
+      <section className="wallet__balance">
+        <div>
+          <span>Coins available</span>
+          <strong>{coins}</strong>
+        </div>
+        <p>Each generated photo costs 1 coin. Every EUR or USD you add gives you 5 coins.</p>
+      </section>
+
+      <form className="wallet__form" onSubmit={handlePurchase}>
+        <div className="wallet__fields">
+          <label>
+            <span>Amount to purchase</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              onChange={(event) => {
+                const nextValue = Number(event.target.value)
+                if (Number.isFinite(nextValue) && nextValue > 0) {
+                  setAmount(Math.floor(nextValue))
+                } else {
+                  setAmount(1)
+                }
+              }}
+              required
+            />
+          </label>
+          <label>
+            <span>Currency</span>
+            <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
+              <option value="eur">EUR</option>
+              <option value="usd">USD</option>
+            </select>
+          </label>
+        </div>
+
+        <label className="wallet__card">
+          <span>Card details</span>
+          <div className="wallet__card-input">
+            <CardElement options={cardOptions} />
+          </div>
+        </label>
+
+        <button type="submit" className="primary" disabled={status.loading || !stripe || !elements}>
+          {status.loading ? 'Processing…' : `Pay ${amount} ${currency.toUpperCase()} for ${amount * 5} coins`}
+        </button>
+
+        {status.error && <p className="wallet__status wallet__status--error">{status.error}</p>}
+        {status.success && <p className="wallet__status wallet__status--success">{status.success}</p>}
+      </form>
+
+      <section className="wallet__referral">
+        <div className="wallet__referral-header">
+          <h2>Referral rewards</h2>
+          <button type="button" className="secondary" onClick={handleRefreshReferral} disabled={referralStatus.loading}>
+            {referralStatus.loading ? 'Generating…' : 'Generate new code'}
+          </button>
+        </div>
+        <p>
+          Share your code so new teammates start with 2 bonus coins. Every accepted invite gives you 4 extra coins. You have
+          referred {referralCount} creator{referralCount === 1 ? '' : 's'} so far.
+        </p>
+        <div className="wallet__referral-code">
+          <code>{referralCode || 'No code yet'}</code>
+          <button type="button" className="secondary" onClick={handleCopyReferral} disabled={!referralCode}>
+            Copy
+          </button>
+        </div>
+        {referralStatus.error && <p className="wallet__status wallet__status--error">{referralStatus.error}</p>}
+        {referralStatus.message && <p className="wallet__status wallet__status--success">{referralStatus.message}</p>}
+      </section>
+    </div>
+  )
+}
+
+function ProfileView({
+  user,
+  sessions = [],
+  status,
+  onRefresh,
+  onViewImage,
+  onLogout,
+  token,
+  onUserUpdate,
+  stripePromise,
+  initialTab = 'overview',
+}) {
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [isEditing, setIsEditing] = useState(false)
   const [profileSettings, setProfileSettings] = useState({
     name: user?.name || '',
@@ -417,6 +834,10 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
   useEffect(() => {
     setProfileSettings({ name: user?.name || '', email: user?.email || '' })
   }, [user])
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
 
   useEffect(() => {
     if (!feedback) {
@@ -443,6 +864,7 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
   }, [sessions])
 
   const joinedAt = user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : null
+  const coins = user?.coins ?? 0
 
   const handleSettingsUpdate = (event) => {
     event.preventDefault()
@@ -480,9 +902,18 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
           <p>Review your creator activity, manage saved sessions, and adjust contact preferences.</p>
           {joinedAt && <span className="profile__meta">Member since {joinedAt}</span>}
         </div>
-        <button type="button" className="secondary" onClick={onLogout}>
-          Sign out
-        </button>
+        <div className="profile__hero-actions">
+          <div className="profile__coin-pill">
+            <span>Coins</span>
+            <strong>{coins}</strong>
+          </div>
+          <button type="button" className="secondary" onClick={() => setActiveTab('wallet')}>
+            Buy coins
+          </button>
+          <button type="button" className="secondary" onClick={onLogout}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <section className="profile__stats">
@@ -501,6 +932,11 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
           <p className="profile-stat__number">{metrics.totalDescriptions}</p>
           <p className="profile-stat__hint">High-converting copy stored alongside each session.</p>
         </article>
+        <article className="profile-stat">
+          <h2>Coins available</h2>
+          <p className="profile-stat__number">{coins}</p>
+          <p className="profile-stat__hint">Each variation uses 1 coin. Keep your balance ready before campaign drops.</p>
+        </article>
       </section>
 
       <nav className="profile__tabs" aria-label="Profile sections">
@@ -517,6 +953,13 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
           onClick={() => setActiveTab('library')}
         >
           Library
+        </button>
+        <button
+          type="button"
+          className={`profile-tab${activeTab === 'wallet' ? ' profile-tab--active' : ''}`}
+          onClick={() => setActiveTab('wallet')}
+        >
+          Wallet
         </button>
         <button
           type="button"
@@ -664,6 +1107,19 @@ function ProfileView({ user, sessions = [], status, onRefresh, onViewImage, onLo
           </div>
         )}
 
+        {activeTab === 'wallet' && (
+          stripePromise ? (
+            <Elements stripe={stripePromise} key={stripePromise ? 'wallet-enabled' : 'wallet-disabled'}>
+              <WalletPanel user={user} token={token} onUserUpdate={onUserUpdate} />
+            </Elements>
+          ) : (
+            <div className="profile-panel__empty">
+              <p>Connect your Stripe publishable key to enable in-app coin purchases.</p>
+              <p className="profile-panel__hint">Set VITE_STRIPE_PUBLISHABLE_KEY in the client environment.</p>
+            </div>
+          )
+        )}
+
         {activeTab === 'settings' && (
           <div className="profile-settings">
             <form className="profile-settings__form" onSubmit={handleSettingsUpdate}>
@@ -740,6 +1196,7 @@ function App() {
   const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
+  const [profileInitialTab, setProfileInitialTab] = useState('overview')
 
   const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
   const navigationItems = useMemo(
@@ -774,6 +1231,47 @@ function App() {
     return shuffled.slice(0, 12)
   }, [currentSessions])
 
+  const updateUserSnapshot = useCallback(
+    (partial) => {
+      setUser((previous) => (previous ? { ...previous, ...partial } : previous))
+    },
+    [setUser],
+  )
+
+  const handleCoinsChange = useCallback(
+    (balance) => {
+      if (typeof balance !== 'number' || Number.isNaN(balance)) {
+        return
+      }
+      updateUserSnapshot({ coins: balance })
+    },
+    [updateUserSnapshot],
+  )
+
+  const openWallet = useCallback(() => {
+    setProfileInitialTab('wallet')
+    setView(VIEWS.PROFILE)
+  }, [])
+
+  const loadSessions = useCallback(
+    async (authToken) => {
+      const effectiveToken = authToken || token
+      if (!effectiveToken) {
+        return
+      }
+
+      setLibraryStatus({ loading: true, error: '' })
+      try {
+        const data = await apiRequest('/api/sessions', { token: effectiveToken })
+        setSessions(data?.sessions || [])
+        setLibraryStatus({ loading: false, error: '' })
+      } catch (error) {
+        setLibraryStatus({ loading: false, error: error.message })
+      }
+    },
+    [token],
+  )
+
   useEffect(() => {
     const storedToken = localStorage.getItem('pv_auth_token')
     if (!storedToken) {
@@ -795,22 +1293,7 @@ function App() {
         setToken('')
       }
     })()
-  }, [])
-
-  const loadSessions = async (authToken = token) => {
-    if (!authToken) {
-      return
-    }
-
-    setLibraryStatus({ loading: true, error: '' })
-    try {
-      const data = await apiRequest('/api/sessions', { token: authToken })
-      setSessions(data?.sessions || [])
-      setLibraryStatus({ loading: false, error: '' })
-    } catch (error) {
-      setLibraryStatus({ loading: false, error: error.message })
-    }
-  }
+  }, [loadSessions])
 
   const openAuthModal = (mode) => {
     setAuthModal({ open: true, mode })
@@ -818,7 +1301,7 @@ function App() {
 
   const closeAuthModal = () => setAuthModal((prev) => ({ ...prev, open: false }))
 
-  const handleAuthenticate = async ({ provider, mode, name, email, password, credential }) => {
+  const handleAuthenticate = async ({ provider, mode, name, email, password, credential, referralCode }) => {
     try {
       let data
 
@@ -833,7 +1316,7 @@ function App() {
       } else if (mode === 'register') {
         data = await apiRequest('/auth/register', {
           method: 'POST',
-          body: { name, email, password },
+          body: { name, email, password, referralCode },
         })
       } else {
         data = await apiRequest('/auth/login', {
@@ -862,6 +1345,7 @@ function App() {
     setSessions([])
     localStorage.removeItem('pv_auth_token')
     setView(VIEWS.HOME)
+    setProfileInitialTab('overview')
   }
 
   const openImageViewer = ({ src, alt }) => {
@@ -871,6 +1355,14 @@ function App() {
 
   const closeImageViewer = () => {
     setViewerState({ open: false, src: '', alt: '' })
+  }
+
+  const handleStartGenerating = () => {
+    if (!user || !token) {
+      openAuthModal(user ? 'login' : 'register')
+      return
+    }
+    setView(VIEWS.GENERATOR)
   }
 
   const handleSessionComplete = async (session) => {
@@ -907,6 +1399,9 @@ function App() {
     if (target?.requiresAuth && !user) {
       openAuthModal('login')
       return
+    }
+    if (nextView !== VIEWS.PROFILE) {
+      setProfileInitialTab('overview')
     }
     setView(nextView)
     if (
@@ -953,6 +1448,10 @@ function App() {
         <div className="topbar__actions">
           {user ? (
             <>
+              <span className="topbar__coins">Coins: {user.coins ?? 0}</span>
+              <button type="button" className="secondary" onClick={openWallet}>
+                Buy coins
+              </button>
               <span className="topbar__user">{user.name || user.email}</span>
               <button type="button" className="secondary" onClick={handleLogout}>
                 Log out
@@ -973,14 +1472,24 @@ function App() {
 
       <main className="app-main">
         {view === VIEWS.HOME && (
-          <Hero
-            onGetStarted={() => setView(VIEWS.GENERATOR)}
-            user={user}
-            recentImages={heroImages}
-          />
+          <>
+            <Hero onGetStarted={handleStartGenerating} user={user} recentImages={heroImages} />
+            <HomeContent
+              onStart={handleStartGenerating}
+              onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
+              onViewPrivacy={() => setView(VIEWS.PRIVACY)}
+            />
+          </>
         )}
         {view === VIEWS.GENERATOR && (
-          <Generator onSessionComplete={handleSessionComplete} onViewImage={openImageViewer} />
+          <Generator
+            onSessionComplete={handleSessionComplete}
+            onViewImage={openImageViewer}
+            token={token}
+            coins={user?.coins ?? 0}
+            onCoinsChange={handleCoinsChange}
+            onRequestTopUp={openWallet}
+          />
         )}
         {view === VIEWS.LIBRARY && (
           <LibraryView
@@ -999,8 +1508,14 @@ function App() {
             onRefresh={() => loadSessions()}
             onViewImage={(src, alt) => openImageViewer({ src, alt })}
             onLogout={handleLogout}
+            token={token}
+            onUserUpdate={updateUserSnapshot}
+            stripePromise={stripePromise}
+            initialTab={profileInitialTab}
           />
         )}
+        {view === VIEWS.COOKIE_POLICY && <CookiePolicyView />}
+        {view === VIEWS.PRIVACY && <PrivacyNoticeView />}
       </main>
 
       {authModal.open && (
