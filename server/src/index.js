@@ -24,7 +24,9 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 const CLIENT_DIST_DIR = path.resolve(__dirname, '../../client/dist');
 const CLIENT_INDEX_FILE = path.join(CLIENT_DIST_DIR, 'index.html');
+const CLIENT_FAVICON_FILE = path.join(CLIENT_DIST_DIR, 'favicon.ico');
 const hasClientBuild = fs.existsSync(CLIENT_INDEX_FILE);
+const hasClientFavicon = hasClientBuild && fs.existsSync(CLIENT_FAVICON_FILE);
 
 if (!hasClientBuild) {
   console.warn(
@@ -40,6 +42,18 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 
 if (hasClientBuild) {
   app.use(express.static(CLIENT_DIST_DIR, { index: false, maxAge: '1h' }));
+}
+
+if (hasClientBuild) {
+  if (hasClientFavicon) {
+    app.get('/favicon.ico', (_req, res) => {
+      res.sendFile(CLIENT_FAVICON_FILE);
+    });
+  } else {
+    app.get('/favicon.ico', (_req, res) => {
+      res.status(204).set('Cache-Control', 'public, max-age=60').end();
+    });
+  }
 }
 
 const storage = multer.diskStorage({

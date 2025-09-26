@@ -2,6 +2,6 @@
   "name": "product-generator",
   "private": true,
   "scripts": {
-    "start": "cd server && npm install && npm run start"
+    "start": "npm --prefix client install && npm --prefix client run build && npm --prefix server install && npm --prefix server run start"
   }
 }
