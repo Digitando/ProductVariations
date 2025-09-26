@@ -38,7 +38,7 @@ const stripeClient = STRIPE_SECRET_KEY
   : null;
 
 const COINS_PER_CURRENCY_UNIT = 5;
-const SUPPORTED_PURCHASE_CURRENCIES = new Set(['eur', 'usd']);
+const SUPPORTED_PURCHASE_CURRENCIES = new Set(['eur']);
 const SQUARE_OUTPUT_SIZE = 1024;
 const DEFAULT_STRIPE_DECIMAL_FACTOR = 100;
 

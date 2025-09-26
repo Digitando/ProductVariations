@@ -23,12 +23,12 @@ const VIEWS = {
 }
 
 const NAV_ITEMS = [
-  { id: VIEWS.HOME, label: 'Home' },
-  { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
-  { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
-  { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
-  { id: VIEWS.COOKIE_POLICY, label: 'Cookie Policy' },
-  { id: VIEWS.PRIVACY, label: 'Privacy Notice' },
+  { id: VIEWS.HOME, label: 'Home', icon: '🏠' },
+  { id: VIEWS.GENERATOR, label: 'Create', icon: '✨', requiresAuth: true },
+  { id: VIEWS.LIBRARY, label: 'Library', icon: '🗂️', requiresAuth: true },
+  { id: VIEWS.PROFILE, label: 'Profile', icon: '🙍', requiresAuth: true },
+  { id: VIEWS.COOKIE_POLICY, label: 'Cookie Policy', icon: '🍪' },
+  { id: VIEWS.PRIVACY, label: 'Privacy Notice', icon: '🔒' },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
@@ -342,10 +342,10 @@ function HomeContent({ onStart, onViewCookie, onViewPrivacy }) {
       <article className="home-section home-section--grid">
         <div className="home-card">
           <h3>Fair-play coin system</h3>
-          <p>
-            Each generated photo costs 1 coin. Add coins whenever you need them—1 EUR or 1 USD gives you 5 new image
-            credits.
-          </p>
+        <p>
+          Each generated photo costs 1 coin. Add coins whenever you need them—every 1&nbsp;EUR tops up 5 fresh image
+          credits.
+        </p>
         </div>
         <div className="home-card">
           <h3>Invite and earn more</h3>
@@ -740,7 +740,7 @@ function WalletPanel({ user, token, onUserUpdate }) {
           <span>Coins available</span>
           <strong>{coins}</strong>
         </div>
-        <p>Each generated photo costs 1 coin. Every EUR or USD you add gives you 5 coins.</p>
+        <p>Each generated photo costs 1 coin. Every 1&nbsp;EUR you add gives you 5 coins.</p>
       </section>
 
       <form className="wallet__form" onSubmit={handlePurchase}>
@@ -767,7 +767,6 @@ function WalletPanel({ user, token, onUserUpdate }) {
             <span>Currency</span>
             <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
               <option value="eur">EUR</option>
-              <option value="usd">USD</option>
             </select>
           </label>
         </div>
@@ -1197,6 +1196,7 @@ function App() {
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
   const [profileInitialTab, setProfileInitialTab] = useState('overview')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
   const navigationItems = useMemo(
@@ -1404,6 +1404,7 @@ function App() {
       setProfileInitialTab('overview')
     }
     setView(nextView)
+    setMobileMenuOpen(false)
     if (
       (nextView === VIEWS.LIBRARY || nextView === VIEWS.PROFILE) &&
       user &&
@@ -1413,6 +1414,22 @@ function App() {
       loadSessions()
     }
   }
+
+  const renderNavItems = ({ showLabels = false } = {}) =>
+    navigationItems.map((item) => (
+      <button
+        key={item.id}
+        type="button"
+        className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
+        onClick={() => handleNavigate(item.id)}
+        title={item.label}
+      >
+        <span className="topbar__link-icon" aria-hidden="true">
+          {item.icon}
+        </span>
+        <span className={showLabels ? 'topbar__link-label' : 'sr-only'}>{item.label}</span>
+      </button>
+    ))
 
   return (
     <div className="app-shell">
@@ -1434,17 +1451,19 @@ function App() {
           <span className="topbar__title">Product Variations</span>
         </div>
         <nav className="topbar__nav" aria-label="Primary">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
-              onClick={() => handleNavigate(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+          {renderNavItems()}
         </nav>
+        <button
+          type="button"
+          className="topbar__menu"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
         <div className="topbar__actions">
           {user ? (
             <>
@@ -1469,6 +1488,48 @@ function App() {
           )}
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="mobile-nav" role="dialog" aria-modal="true">
+          <div className="mobile-nav__content">
+            <div className="mobile-nav__header">
+              <span>Menu</span>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                ×
+              </button>
+            </div>
+            <nav className="mobile-nav__links" aria-label="Mobile primary">
+              {renderNavItems({ showLabels: true })}
+            </nav>
+            <div className="mobile-nav__actions">
+              {user ? (
+                <>
+                  <button type="button" className="secondary" onClick={openWallet}>
+                    Buy coins
+                  </button>
+                  <button type="button" className="secondary" onClick={handleLogout}>
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
+                    Log in
+                  </button>
+                  <button type="button" className="primary" onClick={() => openAuthModal('register')}>
+                    Register
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="app-main">
         {view === VIEWS.HOME && (

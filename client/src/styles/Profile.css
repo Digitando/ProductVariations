@@ -575,6 +575,17 @@
     align-items: stretch;
   }
 
+  .profile__hero-actions {
+    width: 100%;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .profile__coin-pill {
+    width: 100%;
+    align-items: flex-start;
+  }
+
   .profile__tabs {
     align-self: stretch;
     justify-content: space-between;
@@ -582,6 +593,10 @@
 
   .profile__panel {
     padding: 24px;
+  }
+
+  .profile__stats {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .profile-session-card__meta {
@@ -592,6 +607,15 @@
   .profile-session-card__thumbs img {
     width: 80px;
     height: 80px;
+  }
+
+  .wallet__form,
+  .wallet__referral {
+    padding: 20px;
+  }
+
+  .wallet__fields {
+    gap: 12px;
   }
 }
 
@@ -606,5 +630,25 @@
 
   .profile-card__preview {
     flex-wrap: wrap;
+  }
+
+  .profile-session-card header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .wallet__balance {
+    padding: 18px;
+  }
+
+  .wallet__balance strong {
+    font-size: 24px;
+  }
+
+  .wallet__referral-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }

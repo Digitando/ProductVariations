@@ -90,6 +90,60 @@
   border-color: rgba(239, 68, 68, 0.2);
 }
 
+@media (max-width: 1024px) {
+  .page {
+    padding: 36px 16px 56px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+
+  .generator__header-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .page__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .generator__header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .coin-alert {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .coin-alert div {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .funnel-stepper {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .upload {
+    padding: 12px;
+  }
+
+  .upload-summary {
+    margin-top: 18px;
+  }
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
