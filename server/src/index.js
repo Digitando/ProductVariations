@@ -18,7 +18,7 @@ const {
 } = require('./auth');
 const { getSessions, saveSessions } = require('./storage');
 const { sendWelcomeEmail } = require('./mailer');
-const promptCatalog = require('../../shared/promptCatalog.js');
+const promptCatalog = require('../../shared/promptCatalog.cjs');
 
 dotenv.config();
 

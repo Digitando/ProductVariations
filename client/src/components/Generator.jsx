@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import * as promptCatalogModule from '@shared/promptCatalog.js'
+import * as promptCatalogModule from '@shared/promptCatalog.cjs'
 import '../styles/Generator.css'
 
 const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule['default'] : promptCatalogModule
