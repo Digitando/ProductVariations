@@ -22,11 +22,25 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+const CLIENT_DIST_DIR = path.resolve(__dirname, '../../client/dist');
+const CLIENT_INDEX_FILE = path.join(CLIENT_DIST_DIR, 'index.html');
+const hasClientBuild = fs.existsSync(CLIENT_INDEX_FILE);
+
+if (!hasClientBuild) {
+  console.warn(
+    'Client build assets not found. Static site responses will return 404 until the client is built.'
+  );
+}
+
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || '*',
 }));
 app.use(express.json({ limit: '20mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR));
+
+if (hasClientBuild) {
+  app.use(express.static(CLIENT_DIST_DIR, { index: false, maxAge: '1h' }));
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
@@ -627,6 +641,23 @@ app.post('/api/generate-descriptions', async (req, res) => {
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+if (hasClientBuild) {
+  const SPA_ROUTE_PREFIXES = ['/api', '/uploads', '/health'];
+
+  app.get('*', (req, res, next) => {
+    if (req.method !== 'GET') {
+      return next();
+    }
+
+    const pathToMatch = req.path || '';
+    if (SPA_ROUTE_PREFIXES.some((prefix) => pathToMatch === prefix || pathToMatch.startsWith(`${prefix}/`))) {
+      return next();
+    }
+
+    res.sendFile(CLIENT_INDEX_FILE);
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);
