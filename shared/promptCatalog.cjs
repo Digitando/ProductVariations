@@ -955,6 +955,461 @@ const standaloneCategories = {
       ],
     },
   },
+  phoneCases: {
+    label: 'Phone Cases',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_Front_Elevated',
+          prompt:
+            "Create a studio product photo of my phone case positioned upright on a minimalist pedestal block. Background is seamless light grey. Soft diffused lighting with a gentle rim highlights case color and texture. Screen is blank neutral. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_Angled_Pair',
+          prompt:
+            "Generate a studio shot of two of my phone cases leaned against each other at a three-quarter angle on a clean white surface. Warm directional light reveals material finish and camera cut-outs. Shadows soft and controlled. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_Flatlay_Array',
+          prompt:
+            "Create a top-down flatlay of three of my phone cases arranged diagonally on a neutral taupe background. Lighting is even and diffused to showcase colors and texture. Include subtle soft shadows for depth. No text, logos, or watermarks.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_DeskScene',
+          prompt:
+            "Generate a lifestyle image of my phone case resting on a modern desk beside a laptop and espresso cup. Natural window light with soft shadowing. Colors muted so case is the focal point. No text, logos, or additional devices.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_HandHeld',
+          prompt:
+            "Create a lifestyle photo showing a hand holding my phone case at a 45-degree angle outdoors. Background softly blurred city street. Golden hour lighting adds warmth while case details stay crisp. No text or logos.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_Bedside',
+          prompt:
+            "Generate a lifestyle shot of my phone case placed on a linen-covered bedside table with a candle and book. Soft morning light entering from the left. Styling minimal so the case remains hero. No text, logos, or screens lit.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_CameraCutout',
+          prompt:
+            "Create a macro detail of my phone case camera cut-out showing precision edges and raised lip. Background seamless neutral. Use directional light to emphasize contours. No text or logos.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_Texture',
+          prompt:
+            "Generate a macro shot of my phone case material texture, focusing on pattern and finish. Case placed on a neutral matte surface with soft raking light to reveal depth. No text, logos, or device screen.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_PortAccess',
+          prompt:
+            "Create a close-up of my phone case bottom edge showing ports and speaker openings. Background seamless grey. Lighting controlled and diffused for sharp clarity. No text or logos.",
+        },
+      ],
+    },
+  },
+  hats: {
+    label: 'Hats',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_SideProfile',
+          prompt:
+            "Generate a studio product shot of my hat placed on a minimal stand, side profile angle. Background seamless off-white. Soft diffused lighting with subtle rim to show brim shape and crown texture. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_TopDown',
+          prompt:
+            "Create a studio top-down shot of my hat resting on a neutral matte surface. Lighting evenly distributed to reveal material grain and panel seams. Soft shadow underneath for depth. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_ThreeQuarter',
+          prompt:
+            "Generate a studio image of my hat at a three-quarter front angle with brim slightly tilted. Background seamless light grey. Cinematic but soft lighting emphasises crown structure and trim detail. No text, logos, or watermarks.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_ModelOutdoor',
+          prompt:
+            "Create a lifestyle photo of a European model wearing my hat on a minimalist city street. Crop shoulders up. Soft daylight with shallow depth of field so architecture is blurred. Hat color accurate and in focus. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_FlatlayWardrobe',
+          prompt:
+            "Generate a flatlay of my hat paired with complementary wardrobe pieces (neutral knit, sunglasses) on a textured linen surface. Natural window light from top left with gentle shadows. Styling minimal to keep hat in focus. No text or logos.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_Bench',
+          prompt:
+            "Create a lifestyle shot of my hat resting on a wooden bench beside a coffee cup. Early morning light with warm tones. Background softly blurred. Hat material sharp and true to color. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_BrimStitch',
+          prompt:
+            "Generate a macro shot of my hat brim, showing stitching and edge binding. Neutral backdrop. Directional light from right emphasises craftsmanship. No text, logos, or additional props.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_CrownTexture',
+          prompt:
+            "Create a macro detail of my hat crown texture and fabric grain. Soft diffused light to highlight tactile quality. Background seamless warm grey. No text or logos.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_Label',
+          prompt:
+            "Generate a close-up of my hat interior sweatband and brand label area. Lighting controlled and even, background blurred neutral. Emphasize quality stitching and materials. No text or logos added beyond the label.",
+        },
+      ],
+    },
+  },
+  earrings: {
+    label: 'Earrings',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_Pair_Hanging',
+          prompt:
+            "Generate a studio product photo of my earrings hanging from a minimal matte metal stand against a seamless ivory background. Focus sharp on gemstones and metal finish. Lighting soft with subtle highlights, shadows controlled. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_Pair_Flatlay',
+          prompt:
+            "Create a top-down studio shot of my earrings resting on a neutral stone surface with delicate shadowing. Diffused overhead light to reveal sparkle without harsh reflections. No additional props, text, or logos.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_Single_Macro',
+          prompt:
+            "Generate a macro studio photo of a single earring displayed at a three-quarter angle. Background seamless blush gradient. Lighting focused to reveal facets and metal polish. No text, logos, or watermarks.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_ModelProfile',
+          prompt:
+            "Create a lifestyle portrait of a European female model wearing my earrings. Crop from temple to collarbone. Background softly blurred neutral interior. Warm window light glancing across earrings to emphasize sparkle. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_VanityFlatlay',
+          prompt:
+            "Generate a flatlay of my earrings arranged on a marble vanity with minimal cosmetics nearby. Soft morning light from left creating gentle shadows. Colors muted so earrings remain hero. No text, logos, or mirror reflections of camera.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_JewelryBox',
+          prompt:
+            "Create a lifestyle shot of my earrings resting inside a velvet jewelry box on a wooden dresser. Warm ambient light with a focused highlight on the earrings. Background softly blurred. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_Clasp',
+          prompt:
+            "Generate a macro detail of my earring clasp showing closure mechanism. Neutral seamless background. Lighting controlled to avoid glare while highlighting metal finish. No text or logos.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_Gemstone',
+          prompt:
+            "Create a macro shot focusing on the primary gemstone of my earring. Background soft gradient. Highlight facets with precise specular highlights. No text, logos, or extra props.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_MetalTexture',
+          prompt:
+            "Generate a macro detail showing the metal texture and engravings on my earring hoop. Soft side light to emphasize depth. Background seamless cool grey. No text or logos.",
+        },
+      ],
+    },
+  },
+  necklaces: {
+    label: 'Necklaces',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_BustForm',
+          prompt:
+            "Create a studio product photo of my necklace displayed on a matte black bust form against a seamless charcoal background. Soft directional key light from above highlights metal and gemstones, with subtle fill to control shadows. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_Flatlay',
+          prompt:
+            "Generate a studio flatlay of my necklace arranged in a neat curve on a neutral ivory surface. Diffused overhead light to reveal chain texture and pendant detail. Include gentle shadows for depth. No text, logos, or additional props.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_PendantClose',
+          prompt:
+            "Create a studio close-up of my necklace pendant suspended in front of a soft gradient background. Lighting focused to illuminate stones and metal polish with controlled reflections. No text, logos, or watermarks.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_ModelChest',
+          prompt:
+            "Generate a lifestyle portrait of a European female model wearing my necklace. Crop from collarbone to mid-chest. Background softly blurred neutral interior. Warm daylight highlights pendant without glare. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_VanityScene',
+          prompt:
+            "Create a lifestyle image of my necklace draped over a ceramic tray on a vanity with a candle and perfume bottle. Morning window light creates delicate highlights. Palette muted to keep jewelry hero. No text, logos, or reflections of camera.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_GiftBox',
+          prompt:
+            "Generate a lifestyle shot of my necklace nestled inside an open gift box on a linen surface. Soft ambient light with a subtle spotlight on the pendant. Ribbon and box colors neutral. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_Clasp',
+          prompt:
+            "Create a macro detail of my necklace clasp and extender chain laid on a neutral matte surface. Lighting directional to reveal craftsmanship. No text, logos, or props.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_ChainTexture',
+          prompt:
+            "Generate a macro shot focusing on the chain texture of my necklace. Background soft gradient. Highlight individual links with diffused light. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_PendantGem',
+          prompt:
+            "Create a macro detail of my necklace pendant gemstone showing facets and setting. Lighting crisp but controlled to avoid hotspots. Background neutral dark grey. No text or logos.",
+        },
+      ],
+    },
+  },
+  rings: {
+    label: 'Rings',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_Stacked',
+          prompt:
+            "Generate a studio product shot of three of my rings stacked upright on a matte stone block. Background seamless warm grey. Focus sharp on metal and gemstone finishes. Lighting soft with controlled specular highlights. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_SingleMacro',
+          prompt:
+            "Create a studio macro photo of my ring positioned at a three-quarter angle on a neutral reflective surface. Lighting cinematic yet diffused to show facets without harsh glare. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_PairFlatlay',
+          prompt:
+            "Generate a flatlay of my ring set arranged in a gentle curve on a textured paper background. Soft overhead light casts subtle shadows. No additional props, text, or logos.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_HandClose',
+          prompt:
+            "Create a lifestyle image of a hand wearing my ring, fingers gently relaxed over a linen surface. Warm natural light from window, shallow depth of field. Skin tones neutral, ring in crisp focus. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_BoxDisplay',
+          prompt:
+            "Generate a lifestyle shot of my ring presented inside an open velvet ring box atop a marble tray. Soft overhead lighting with gentle highlight on ring. Background blurred neutral décor. No text or logos.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_FlatlayPair',
+          prompt:
+            "Create a lifestyle flatlay of my ring set beside wedding stationery and florals on a linen background. Natural daylight from left, muted palette so rings stay primary. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_BandEngraving',
+          prompt:
+            "Generate a macro detail of my ring band showing engraving and interior polish. Background seamless charcoal. Lighting directional to reveal depth. No text or logos.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_GemCluster',
+          prompt:
+            "Create a macro shot focusing on the gemstone cluster setting of my ring. Highlight facets with precise specular lighting. Background dark neutral gradient. No text or logos.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_Profile',
+          prompt:
+            "Generate a side profile macro of my ring showing height of setting and prongs. Background seamless warm grey. Lighting soft but directional for clarity. No text or logos.",
+        },
+      ],
+    },
+  },
+  bracelets: {
+    label: 'Bracelets',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_Coiled',
+          prompt:
+            "Create a studio product photo of my bracelet coiled neatly on a matte pedestal with seamless light grey background. Diffused key light from above highlights metal or bead texture. Subtle shadow for depth. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_Flatlay',
+          prompt:
+            "Generate a studio flatlay of my bracelet laid straight across a textured paper surface with slight diagonal placement. Lighting even and soft to reveal material details. No text, logos, or additional props.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_Stack',
+          prompt:
+            "Create a studio shot of multiple bracelets stacked on a clear acrylic cylinder against a seamless white background. Lighting soft but bright to highlight finishes without glare. No text, logos, or watermarks.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_WristClose',
+          prompt:
+            "Generate a lifestyle image of a wrist wearing my bracelet, resting on a café table with a notebook nearby. Warm natural light, shallow depth of field. Bracelet in sharp focus, surroundings muted. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_FlatlayDesk',
+          prompt:
+            "Create a lifestyle flatlay of my bracelet arranged with watch and keys on a wooden desk. Soft overhead lighting, neutral palette. Bracelet positioned centrally as hero. No text or logos.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_DisplayTray',
+          prompt:
+            "Generate a lifestyle image of my bracelet draped across a ceramic jewelry tray with minimal décor. Ambient daylight from side creating gentle highlights. Background softly blurred. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_Clasp',
+          prompt:
+            "Create a macro detail of my bracelet clasp and jump ring on a neutral matte surface. Lighting directional to emphasize hardware. No text or logos.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_BeadTexture',
+          prompt:
+            "Generate a macro shot focusing on bead or link texture of my bracelet. Background soft gradient. Controlled highlights to show material quality. No text or logos.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_Charm',
+          prompt:
+            "Create a macro detail of the charm element on my bracelet, highlighting engraving. Lighting precise but soft to reveal depth. Background neutral dark. No text or logos.",
+        },
+      ],
+    },
+  },
+  bags: {
+    label: 'Bags',
+    groups: {
+      'Studio Presentation': [
+        {
+          idSuffix: '01',
+          name: 'Studio_FrontHero',
+          prompt:
+            "Generate a studio product photo of my bag standing upright front-facing on a seamless light grey background. Soft diffused lighting with subtle rim to define silhouette. Bag centered, shadow controlled. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '02',
+          name: 'Studio_ThreeQuarter',
+          prompt:
+            "Create a studio shot of my bag at a three-quarter angle on a minimalist pedestal. Lighting cinematic yet soft to show texture and hardware. Background seamless warm neutral. No text, logos, or watermarks.",
+        },
+        {
+          idSuffix: '03',
+          name: 'Studio_Flatlay',
+          prompt:
+            "Generate a flatlay of my bag with straps arranged neatly on a textured stone surface. Diffused overhead light, gentle shadows for depth. No props beyond a subtle key fob if desired. No text or logos.",
+        },
+      ],
+      'Lifestyle Context': [
+        {
+          idSuffix: '04',
+          name: 'Lifestyle_ModelShoulder',
+          prompt:
+            "Create a lifestyle image of a European model carrying my bag on shoulder while walking past minimalist architecture. Crop mid torso to mid thigh. Natural daylight, shallow depth of field. Bag in sharp focus, background muted. No text or logos.",
+        },
+        {
+          idSuffix: '05',
+          name: 'Lifestyle_CaféTable',
+          prompt:
+            "Generate a lifestyle scene of my bag placed on a café table beside a coffee cup. Warm morning light through window, soft shadows. Bag angled to showcase hardware. No text or logos.",
+        },
+        {
+          idSuffix: '06',
+          name: 'Lifestyle_Bench',
+          prompt:
+            "Create a lifestyle shot of my bag resting on a park bench with a neutral scarf tucked inside. Overcast daylight, background softly blurred greenery. No text or logos.",
+        },
+      ],
+      'Detail Highlights': [
+        {
+          idSuffix: '07',
+          name: 'Detail_Hardware',
+          prompt:
+            "Generate a macro detail of my bag hardware and stitching. Background seamless dark neutral. Lighting directional to highlight metal and leather texture. No text or logos.",
+        },
+        {
+          idSuffix: '08',
+          name: 'Detail_Interior',
+          prompt:
+            "Create a close-up of my bag interior showing lining, pockets, and zipper detail. Bag propped open on neutral surface. Soft even lighting for clarity. No text or logos.",
+        },
+        {
+          idSuffix: '09',
+          name: 'Detail_Straps',
+          prompt:
+            "Generate a macro shot focusing on my bag strap attachment and edge paint. Background blurred neutral. Lighting soft but directional to show craftsmanship. No text or logos.",
+        },
+      ],
+    },
+  },
 };
 
 const MAX_DEFAULT_PROMPTS = 5;

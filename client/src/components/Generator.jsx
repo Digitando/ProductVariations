@@ -43,6 +43,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     }
   }
 
+  const [productScope, setProductScope] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
   const [selectedGenderId, setSelectedGenderId] = useState('')
@@ -52,9 +53,8 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   const [sourceImage, setSourceImage] = useState('')
   const [descriptions, setDescriptions] = useState([])
   const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
-  const selectionSnapshotRef = useRef({ genderId: '', categoryId: '' })
+  const selectionSnapshotRef = useRef({ scope: '', genderId: '', categoryId: '' })
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const [accessoriesOnly, setAccessoriesOnly] = useState(false)
 
   const hasResults = useMemo(
     () => generatedImages.length > 0 || descriptions.length > 0,
@@ -95,29 +95,25 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     [],
   )
 
-  const accessoryOptionsForDisplay = useMemo(() => {
-    if (selectedGenderId) {
-      return accessoryOptions.filter((option) => option.id !== 'sunglasses')
-    }
-    return accessoryOptions
-  }, [accessoryOptions, selectedGenderId])
-
   const selectedGender = useMemo(
     () => genderOptions.find((option) => option.id === selectedGenderId) || null,
     [genderOptions, selectedGenderId],
   )
 
   const standaloneCategory = useMemo(
-    () => getStandaloneDefinition(selectedCategoryId),
-    [selectedCategoryId],
+    () => (productScope === 'accessory' ? getStandaloneDefinition(selectedCategoryId) : null),
+    [productScope, selectedCategoryId],
   )
 
   const activeCategory = useMemo(() => {
-    if (standaloneCategory) {
+    if (productScope === 'accessory') {
       return standaloneCategory
     }
-    return getCategoryDefinition(selectedGenderId, selectedCategoryId)
-  }, [standaloneCategory, selectedGenderId, selectedCategoryId])
+    if (productScope === 'apparel') {
+      return getCategoryDefinition(selectedGenderId, selectedCategoryId)
+    }
+    return null
+  }, [productScope, standaloneCategory, selectedGenderId, selectedCategoryId])
 
   const activeCategoryLabel = useMemo(
     () =>
@@ -137,15 +133,18 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     [selectedPromptIds],
   )
 
-  const stepOrder = ['reference', 'focus', 'prompts', 'upload']
   const stepMeta = {
-    reference: {
+    scope: {
+      title: 'Product type',
+      description: 'Choose whether you want to generate apparel looks or accessories renders.',
+    },
+    gender: {
       title: 'Model reference',
-      description: 'Select a model gender or continue with accessories only.',
+      description: 'Pick the model fit for apparel looks.',
     },
     focus: {
       title: 'Product focus',
-      description: 'Choose the garment zone or accessory you want to visualise.',
+      description: 'Select the garment zone or accessory to visualise.',
     },
     prompts: {
       title: 'Prompt cues',
@@ -156,27 +155,47 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       description: 'Review your inputs, add the photo, and create assets.',
     },
   }
-  const currentStepId = stepOrder[currentStepIndex]
+
+  const stepOrder = useMemo(
+    () => (productScope === 'accessory' ? ['scope', 'focus', 'prompts', 'upload'] : ['scope', 'gender', 'focus', 'prompts', 'upload']),
+    [productScope],
+  )
+
+  useEffect(() => {
+    setCurrentStepIndex((prev) => {
+      const maxIndex = Math.max(stepOrder.length - 1, 0)
+      return prev > maxIndex ? maxIndex : prev
+    })
+  }, [stepOrder])
+
+  const currentStepId = stepOrder[currentStepIndex] || stepOrder[0]
   const focusHasTemplates = Boolean(activeCategory) && availablePromptCount > 0
-  const isReferenceComplete = accessoriesOnly || Boolean(selectedGenderId)
+  const isScopeComplete = productScope === 'apparel' || productScope === 'accessory'
+  const isGenderComplete = productScope === 'accessory' ? true : Boolean(selectedGenderId)
   const isFocusComplete = Boolean(selectedCategoryId) && focusHasTemplates
   const hasPromptSelection = selectedPromptIds.length > 0
   const isReadyToGenerate =
-    isReferenceComplete &&
+    Boolean(productScope) &&
+    (productScope === 'accessory' || Boolean(selectedGenderId)) &&
     Boolean(selectedCategoryId) &&
     hasPromptSelection &&
     Boolean(imageFile) &&
     focusHasTemplates &&
-    (standaloneCategory || selectedGenderId || accessoriesOnly) &&
     hasEnoughCoins
-  const canAdvanceCurrentStep =
-    currentStepId === 'reference'
-      ? isReferenceComplete
-      : currentStepId === 'focus'
-      ? isFocusComplete
-      : currentStepId === 'prompts'
-      ? hasPromptSelection
-      : false
+  const canAdvanceCurrentStep = (() => {
+    switch (currentStepId) {
+      case 'scope':
+        return isScopeComplete
+      case 'gender':
+        return isGenderComplete
+      case 'focus':
+        return isFocusComplete
+      case 'prompts':
+        return hasPromptSelection
+      default:
+        return false
+    }
+  })()
   const stepDescriptors = stepOrder.map((id, index) => ({
     id,
     title: stepMeta[id].title,
@@ -186,84 +205,96 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
 
   useEffect(() => {
     const previous = selectionSnapshotRef.current
-    if (previous.genderId === selectedGenderId && previous.categoryId === selectedCategoryId) {
-      return
-    }
 
-    selectionSnapshotRef.current = { genderId: selectedGenderId, categoryId: selectedCategoryId }
-
-    if (!selectedGenderId && !selectedCategoryId) {
-      return
-    }
-
-    setSelectedPromptIds([])
-    setGeneratedImages([])
-    setDescriptions([])
-    setSourceImage('')
-    setCurrentStepIndex((prev) => (!selectedCategoryId ? Math.min(prev, 1) : Math.min(prev, 2)))
-    setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
-  }, [selectedGenderId, selectedCategoryId])
-
-  useEffect(() => {
-    if (!isReferenceComplete) {
+    if (previous.scope !== productScope) {
+      selectionSnapshotRef.current = { scope: productScope, genderId: '', categoryId: '' }
+      if (!productScope) {
+        return
+      }
+      setSelectedGenderId('')
+      setSelectedCategoryId('')
+      setSelectedPromptIds([])
+      setGeneratedImages([])
+      setDescriptions([])
+      setSourceImage('')
+      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
       setCurrentStepIndex(0)
+      return
     }
-  }, [isReferenceComplete])
 
-  useEffect(() => {
-    if (selectedPromptIds.length === 0 && currentStepIndex > 2) {
-      setCurrentStepIndex(2)
+    if (productScope === 'apparel' && previous.genderId !== selectedGenderId) {
+      selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: '' }
+      setSelectedCategoryId('')
+      setSelectedPromptIds([])
+      setGeneratedImages([])
+      setDescriptions([])
+      setSourceImage('')
+      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
+      setCurrentStepIndex((prev) => {
+        const focusIndex = stepOrder.indexOf('focus')
+        return focusIndex === -1 ? prev : Math.min(prev, focusIndex)
+      })
+      return
     }
-  }, [selectedPromptIds.length, currentStepIndex])
+
+    if (previous.categoryId !== selectedCategoryId) {
+      selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: selectedCategoryId }
+      setSelectedPromptIds([])
+      setGeneratedImages([])
+      setDescriptions([])
+      setSourceImage('')
+      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
+      return
+    }
+
+    selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: selectedCategoryId }
+  }, [productScope, selectedGenderId, selectedCategoryId, stepOrder])
+
+  const handleScopeSelect = (scope) => {
+    if (productScope === scope) {
+      return
+    }
+    updateStatus({ error: '' })
+    setProductScope(scope)
+  }
 
   const handleSelectGender = (genderId) => {
     if (selectedGenderId === genderId) {
       return
     }
+    if (productScope !== 'apparel') {
+      setProductScope('apparel')
+    }
     updateStatus({ error: '' })
-    setAccessoriesOnly(false)
     setSelectedGenderId(genderId)
     setSelectedCategoryId('')
   }
 
   const handleSelectCategory = (categoryId, scope) => {
-    if (scope !== 'standalone' && !selectedGenderId) {
-      updateStatus({ error: 'Choose male or female product pictures first.' })
-      return
-    }
     updateStatus({ error: '' })
-    if (scope === 'standalone') {
-      if (selectedGenderId && categoryId === 'sunglasses') {
-        updateStatus({
-          error: 'Switch to accessories-only mode to generate sunglasses looks.',
-        })
+
+    if (scope === 'gendered') {
+      if (productScope !== 'apparel') {
+        setProductScope('apparel')
+      }
+      if (!selectedGenderId) {
+        updateStatus({ error: 'Choose male or female product pictures first.' })
         return
       }
-      setAccessoriesOnly(true)
-    } else {
-      setAccessoriesOnly(false)
+    } else if (scope === 'standalone') {
+      if (productScope !== 'accessory') {
+        setProductScope('accessory')
+      }
     }
+
     setSelectedCategoryId(categoryId)
   }
 
   const stepErrorMessages = {
-    reference: 'Choose male or female product pictures first, or continue with accessories only.',
+    scope: 'Select whether you need apparel looks or accessories first.',
+    gender: 'Choose male or female product pictures first.',
     focus: 'Select a product focus to continue.',
     prompts: 'Select at least one prompt direction.',
-  }
-
-  const handleAccessoriesOnly = () => {
-    setAccessoriesOnly((prev) => {
-      const next = !prev
-      if (next) {
-        setSelectedGenderId('')
-        setSelectedCategoryId('')
-        setSelectedPromptIds([])
-      }
-      return next
-    })
-    resetOutputs()
-    updateStatus({ error: '' })
   }
 
   const handleStepClick = (index) => {
@@ -339,15 +370,18 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       return
     }
 
-    const isStandaloneSelection = Boolean(standaloneCategory)
-
-    if (!selectedCategoryId) {
-      updateStatus({ error: 'Select a product focus to continue.' })
+    if (!productScope) {
+      updateStatus({ error: 'Select whether you need apparel looks or accessories first.' })
       return
     }
 
-    if (!isStandaloneSelection && !selectedGenderId) {
+    if (productScope === 'apparel' && !selectedGenderId) {
       updateStatus({ error: 'Choose male or female product pictures first.' })
+      return
+    }
+
+    if (!selectedCategoryId) {
+      updateStatus({ error: 'Select a product focus to continue.' })
       return
     }
 
@@ -510,15 +544,17 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   }
 
   const handleReset = () => {
+    setProductScope('')
     setImageFile(null)
     setImagePreview('')
     setSelectedGenderId('')
     setSelectedCategoryId('')
     setSelectedPromptIds([])
-    setAccessoriesOnly(false)
+    setGeneratedImages([])
+    setDescriptions([])
+    setSourceImage('')
     setCurrentStepIndex(0)
-    selectionSnapshotRef.current = { genderId: '', categoryId: '' }
-    resetOutputs()
+    selectionSnapshotRef.current = { scope: '', genderId: '', categoryId: '' }
     updateStatus({ step: '', message: '', loading: false, error: '' })
   }
 
@@ -576,7 +612,15 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     }
   }
 
-  const apparelCategories = selectedGender ? selectedGender.categories : []
+  const apparelCategories = useMemo(() => {
+    if (!selectedGender) {
+      return []
+    }
+    const order = ['upper', 'lower', 'footwear']
+    return selectedGender.categories
+      .filter((category) => order.includes(category.id))
+      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
+  }, [selectedGender])
 
   return (
     <div className="page">
@@ -660,12 +704,36 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
           </ol>
 
           <div className="funnel-content">
-            {currentStepId === 'reference' && (
+            {currentStepId === 'scope' && (
+              <div className="selector-group">
+                <h2>What do you need?</h2>
+                <p className="selector-note">Choose between apparel looks or accessories renders.</p>
+                <div className="selector-row" role="radiogroup" aria-label="Product type">
+                  {[
+                    { id: 'apparel', label: 'Apparel looks' },
+                    { id: 'accessory', label: 'Accessories' },
+                  ].map((option) => {
+                    const isSelected = productScope === option.id
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                        onClick={() => handleScopeSelect(option.id)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="selector-btn__label">{option.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {currentStepId === 'gender' && (
               <div className="selector-group">
                 <h2>Model reference</h2>
-                <p className="selector-note">
-                  Choose the model gender for apparel shots, or continue with accessories only.
-                </p>
+                <p className="selector-note">Pick a model fit so we can frame the apparel correctly.</p>
                 <div className="selector-row" role="radiogroup" aria-label="Model reference">
                   {genderOptions.map((option) => {
                     const isSelected = option.id === selectedGenderId
@@ -684,70 +752,53 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                     )
                   })}
                 </div>
-                <div className="selector-shortcut">
-                  <button
-                    type="button"
-                    className={`selector-btn selector-btn--compact${accessoriesOnly ? ' selector-btn--selected' : ''}`}
-                    onClick={handleAccessoriesOnly}
-                  >
-                    I&apos;m generating accessories only
-                  </button>
-                  <p className={`selector-note${accessoriesOnly ? ' selector-note--success' : ''}`}>
-                    {accessoriesOnly
-                      ? 'Accessories unlocked. You can choose sunglasses on the next step.'
-                      : 'Select this if you only need sunglasses or other accessories.'}
-                  </p>
-                </div>
               </div>
             )}
 
             {currentStepId === 'focus' && (
               <div className="selector-group">
                 <h2>Product focus</h2>
-                <p className="selector-note">Load tailored prompt cues for the garment zone you need.</p>
-                {selectedGender ? (
-                  <div className="selector-subgroup">
-                    <span className="selector-subheading">{selectedGender.label} apparel</span>
-                    <div className="selector-row" role="radiogroup" aria-label="Garment type">
-                      {apparelCategories.map((category) => {
-                        const isSelected = selectedCategoryId === category.id
-                        return (
-                          <button
-                            key={`${selectedGender.id}-${category.id}`}
-                            type="button"
-                            className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                            onClick={() => handleSelectCategory(category.id, 'gendered')}
-                            aria-pressed={isSelected}
-                            disabled={!category.hasPrompts}
-                          >
-                            <span className="selector-btn__label">{category.label}</span>
-                            {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  !accessoriesOnly && (
-                    <p className="selector-placeholder">
-                      Select a model reference to unlock apparel prompt sets.
-                    </p>
-                  )
-                )}
+                <p className="selector-note">Load tailored prompt cues for the item you need.</p>
 
-                {accessoryOptionsForDisplay.length > 0 && (
+                {productScope === 'apparel' ? (
+                  selectedGender ? (
+                    <div className="selector-subgroup">
+                      <span className="selector-subheading">{selectedGender.label} apparel</span>
+                      <div className="selector-row" role="radiogroup" aria-label="Apparel categories">
+                        {apparelCategories.map((category) => {
+                          const isSelected = selectedCategoryId === category.id
+                          return (
+                            <button
+                              key={`${selectedGender.id}-${category.id}`}
+                              type="button"
+                              className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                              onClick={() => handleSelectCategory(category.id, 'gendered')}
+                              aria-pressed={isSelected}
+                              disabled={!category.hasPrompts}
+                            >
+                              <span className="selector-btn__label">{category.label}</span>
+                              {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="selector-placeholder">Choose a model fit first to unlock apparel options.</p>
+                  )
+                ) : null}
+
+                {productScope === 'accessory' && (
                   <div className="selector-subgroup">
                     <span className="selector-subheading">Accessories</span>
                     <div className="selector-row" role="radiogroup" aria-label="Accessories">
-                      {accessoryOptionsForDisplay.map((option) => {
+                      {accessoryOptions.map((option) => {
                         const isSelected = selectedCategoryId === option.id
                         return (
                           <button
                             key={`standalone-${option.id}`}
                             type="button"
-                            className={`selector-btn selector-btn--compact${
-                              isSelected ? ' selector-btn--selected' : ''
-                            }`}
+                            className={`selector-btn selector-btn--compact${isSelected ? ' selector-btn--selected' : ''}`}
                             onClick={() => handleSelectCategory(option.id, 'standalone')}
                             aria-pressed={isSelected}
                             disabled={!option.hasPrompts}
@@ -819,7 +870,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
               <div className="upload-step">
                 <div className="upload">
                   <label htmlFor="image" className="upload__label">
-                    <span>Garment photo*</span>
+                    <span>Product photo*</span>
                     <input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
                   </label>
                   {imagePreview ? (
@@ -834,9 +885,21 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                   <h3>Review selections</h3>
                   <ul className="funnel-summary">
                     <li>
-                      <span>Model reference</span>
-                      <strong>{accessoriesOnly ? 'Accessories only' : selectedGender?.label || 'Not set'}</strong>
+                      <span>Product type</span>
+                      <strong>
+                        {productScope === 'apparel'
+                          ? 'Apparel looks'
+                          : productScope === 'accessory'
+                          ? 'Accessories'
+                          : 'Not set'}
+                      </strong>
                     </li>
+                    {productScope === 'apparel' && (
+                      <li>
+                        <span>Model reference</span>
+                        <strong>{selectedGender?.label || 'Not set'}</strong>
+                      </li>
+                    )}
                     <li>
                       <span>Product focus</span>
                       <strong>{activeCategoryLabel || 'Not set'}</strong>
