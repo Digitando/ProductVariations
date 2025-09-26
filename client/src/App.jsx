@@ -11,12 +11,14 @@ const VIEWS = {
   HOME: 'home',
   GENERATOR: 'generator',
   LIBRARY: 'library',
+  PROFILE: 'profile',
 }
 
 const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home' },
   { id: VIEWS.GENERATOR, label: 'Create' },
   { id: VIEWS.LIBRARY, label: 'Library' },
+  { id: VIEWS.PROFILE, label: 'Profile' },
 ]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
@@ -325,6 +327,7 @@ function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
                   <ul>
                     {session.descriptions.map((item, index) => (
                       <li key={`${session.id}-desc-${index}`}>
+                        {item.title && <strong className="description-title">{item.title}</strong>}
                         <strong>{item.headline}</strong>
                         <p>{item.body}</p>
                       </li>
@@ -346,6 +349,134 @@ function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
         ))}
       </div>
     </section>
+  )
+}
+
+function ProfileView({ user, onLogout }) {
+  const [activeTab, setActiveTab] = useState('library')
+  const [profileSettings, setProfileSettings] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+  })
+  const [isEditing, setIsEditing] = useState(false)
+
+  if (!user) {
+    return (
+      <section className="empty-state">
+        <h2>Sign in to access your profile</h2>
+        <p>Create an account or sign in to manage your profile and settings.</p>
+      </section>
+    )
+  }
+
+  const handleSettingsUpdate = (e) => {
+    e.preventDefault()
+    // In a real app, this would make an API call to update user settings
+    setIsEditing(false)
+    // For now, just simulate the update
+    alert('Profile settings updated!')
+  }
+
+  return (
+    <div className="profile">
+      <header className="profile__header">
+        <div>
+          <h1>Profile</h1>
+          <p>Manage your account settings and view your library</p>
+        </div>
+      </header>
+
+      <div className="profile__tabs">
+        <button
+          type="button"
+          className={`tab ${activeTab === 'library' ? 'tab--active' : ''}`}
+          onClick={() => setActiveTab('library')}
+        >
+          My Library
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'settings' ? 'tab--active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          Settings
+        </button>
+      </div>
+
+      <div className="profile__content">
+        {activeTab === 'library' && (
+          <div className="profile-library">
+            <h2>Your Saved Sessions</h2>
+            <p>This shows the same content as the Library tab. You can view all your generated variations here.</p>
+            <div className="profile-library__stats">
+              <div className="stat-card">
+                <h3>Total Sessions</h3>
+                <p className="stat-number">0</p>
+              </div>
+              <div className="stat-card">
+                <h3>Images Generated</h3>
+                <p className="stat-number">0</p>
+              </div>
+              <div className="stat-card">
+                <h3>Descriptions Created</h3>
+                <p className="stat-number">0</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="profile-settings">
+            <div className="settings-section">
+              <h2>Account Information</h2>
+              <form onSubmit={handleSettingsUpdate}>
+                <div className="form-group">
+                  <label htmlFor="profile-name">Full Name</label>
+                  <input
+                    id="profile-name"
+                    type="text"
+                    value={profileSettings.name}
+                    onChange={(e) => setProfileSettings(prev => ({...prev, name: e.target.value}))}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="profile-email">Email</label>
+                  <input
+                    id="profile-email"
+                    type="email"
+                    value={profileSettings.email}
+                    onChange={(e) => setProfileSettings(prev => ({...prev, email: e.target.value}))}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="form-actions">
+                  {isEditing ? (
+                    <>
+                      <button type="submit" className="primary">Save Changes</button>
+                      <button type="button" className="secondary" onClick={() => setIsEditing(false)}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="primary" onClick={() => setIsEditing(true)}>
+                      Edit Profile
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="settings-section">
+              <h2>Account Actions</h2>
+              <button type="button" className="secondary" onClick={onLogout}>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -560,6 +691,12 @@ function App() {
             status={libraryStatus}
             onRefresh={() => loadSessions()}
             onViewImage={(src, alt) => openImageViewer({ src, alt })}
+          />
+        )}
+        {view === VIEWS.PROFILE && (
+          <ProfileView
+            user={user}
+            onLogout={handleLogout}
           />
         )}
       </main>

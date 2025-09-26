@@ -375,10 +375,14 @@ function resolvePromptTemplates(promptIds) {
   };
 
   promptIds.forEach(pushTemplate);
-  DEFAULT_PROMPT_SEQUENCE.forEach(pushTemplate);
-  PROMPT_TEMPLATES.forEach((template) => pushTemplate(template.id));
+  
+  // If no prompts selected, use defaults
+  if (resolved.length === 0) {
+    DEFAULT_PROMPT_SEQUENCE.forEach(pushTemplate);
+  }
 
-  return resolved.slice(0, 5);
+  // No longer limit to 5 - return all selected prompts
+  return resolved;
 }
 
 function buildVariationRequests({ promptIds }) {
@@ -553,7 +557,7 @@ app.post('/api/generate-images', upload.single('image'), async (req, res) => {
   }
 });
 
-const descriptionResponseFormat = {
+const createDescriptionResponseFormat = (descriptionCount) => ({
   type: 'json_schema',
   json_schema: {
     name: 'product_descriptions',
@@ -562,12 +566,13 @@ const descriptionResponseFormat = {
       properties: {
         descriptions: {
           type: 'array',
-          minItems: 3,
-          maxItems: 3,
+          minItems: descriptionCount,
+          maxItems: descriptionCount,
           items: {
             type: 'object',
-            required: ['headline', 'tagline', 'body', 'tone'],
+            required: ['title', 'headline', 'tagline', 'body', 'tone'],
             properties: {
+              title: { type: 'string' },
               headline: { type: 'string' },
               tagline: { type: 'string' },
               body: { type: 'string' },
@@ -581,7 +586,7 @@ const descriptionResponseFormat = {
       additionalProperties: false,
     },
   },
-};
+});
 
 app.post('/api/generate-descriptions', async (req, res) => {
   try {
@@ -589,7 +594,7 @@ app.post('/api/generate-descriptions', async (req, res) => {
       return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured' });
     }
 
-    const { referenceImage, referenceImageFallback, prompts: rawPrompts } = req.body;
+    const { referenceImage, referenceImageFallback, prompts: rawPrompts, imageCount } = req.body;
 
     const referenceImageUrl =
       typeof referenceImage === 'string' && referenceImage.trim().startsWith('http')
@@ -604,6 +609,15 @@ app.post('/api/generate-descriptions', async (req, res) => {
       return res.status(400).json({ error: 'referenceImage is required' });
     }
 
+    // Determine number of descriptions based on image count
+    const numImages = imageCount || 1;
+    let descriptionCount = 1;
+    if (numImages >= 10) {
+      descriptionCount = 3;
+    } else if (numImages >= 4) {
+      descriptionCount = 2;
+    }
+
     const promptIds = extractPromptIds(rawPrompts);
     const selectedTemplates = resolvePromptTemplates(promptIds);
 
@@ -614,9 +628,10 @@ app.post('/api/generate-descriptions', async (req, res) => {
       : 'Describe the product exactly as it appears in the reference photo, highlighting colour, materials, finish, and likely use context.';
 
     const instructionLines = [
-      'Use the attached product reference photo to craft three concise, conversion-oriented e-commerce descriptions.',
+      `Use the attached product reference photo to craft ${descriptionCount} concise, conversion-oriented e-commerce descriptions.`,
       sceneSummaryLine,
       'Each description must include:',
+      '- A product title (max 8 words) suitable for e-commerce listings.',
       '- A short headline (max 10 words).',
       '- A tagline (max 15 words). Use an empty string if it is not needed.',
       '- A body paragraph (max 120 words) written for online shopping.',
@@ -654,6 +669,8 @@ app.post('/api/generate-descriptions', async (req, res) => {
       },
     ];
 
+    const descriptionResponseFormat = createDescriptionResponseFormat(descriptionCount);
+    
     let data;
     try {
       ({ data } = await openRouterClient.post('/chat/completions', {

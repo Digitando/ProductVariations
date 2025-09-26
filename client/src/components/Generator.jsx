@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import '../styles/Generator.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-const MAX_PROMPT_SELECTION = 5
+// Removed MAX_PROMPT_SELECTION limit - users can select as many variations as they want
 
 const PROMPT_TEMPLATES = [
   // Studio Editorials
@@ -220,11 +220,6 @@ function Generator({ onSessionComplete, onViewImage }) {
         return prev.filter((value) => value !== promptId)
       }
 
-      if (prev.length >= MAX_PROMPT_SELECTION) {
-        updateStatus({ error: `Select up to ${MAX_PROMPT_SELECTION} prompt directions.` })
-        return prev
-      }
-
       return [...prev, promptId]
     })
   }
@@ -289,6 +284,7 @@ function Generator({ onSessionComplete, onViewImage }) {
         prompts: selectedPromptIds,
         referenceImage: sourceImageUrl || referenceImagePayload,
         referenceImageFallback: referenceImagePayload,
+        imageCount: images.length,
       }
 
       const descriptionResponse = await fetch(buildApiUrl('/api/generate-descriptions'), {
@@ -341,13 +337,64 @@ function Generator({ onSessionComplete, onViewImage }) {
     updateStatus({ step: '', message: '', loading: false, error: '' })
   }
 
+  const downloadImage = async (imageUrl, filename) => {
+    try {
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || 'generated-image.png'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Failed to download image. Please try again.')
+    }
+  }
+
+  const downloadAllImages = async () => {
+    if (generatedImages.length === 0) return
+    
+    updateStatus({ loading: true, message: 'Preparing bulk download...' })
+    
+    try {
+      const JSZip = await import('jszip')
+      const zip = new JSZip.default()
+      
+      for (let i = 0; i < generatedImages.length; i++) {
+        const imageUrl = generatedImages[i]
+        const response = await fetch(imageUrl)
+        const blob = await response.blob()
+        zip.file(`variation-${i + 1}.png`, blob)
+      }
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const url = window.URL.createObjectURL(zipBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'product-variations.zip'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      updateStatus({ loading: false, message: 'Bulk download completed!' })
+    } catch (error) {
+      console.error('Bulk download failed:', error)
+      updateStatus({ loading: false, error: 'Failed to download images. Please try individual downloads.' })
+    }
+  }
+
   return (
     <div className="page">
       <header className="page__header">
         <div>
           <h1>Photo-first Garment Generator</h1>
           <p>
-            Upload a single garment photo, choose up to five editorial prompt directions, and let OpenRouter craft
+            Upload a single garment photo, choose as many editorial prompt directions as you want, and let OpenRouter craft
             faithful model and product imagery plus e-commerce copy.
           </p>
         </div>
@@ -376,10 +423,10 @@ function Generator({ onSessionComplete, onViewImage }) {
             <div className="styles">
               <div className="styles__header">
                 <h2>Prompt directions</h2>
-                <span>{selectedPromptIds.length}/{MAX_PROMPT_SELECTION} selected</span>
+                <span>{selectedPromptIds.length} selected</span>
               </div>
               <p className="styles__hint">
-                Choose up to {MAX_PROMPT_SELECTION} prompts. They steer the scenarios while the garment stays unchanged.
+                Choose as many prompts as you want. They steer the scenarios while the garment stays unchanged.
               </p>
               {PROMPT_GROUPS.map((group) => (
                 <div key={group} className="prompt-group">
@@ -449,7 +496,19 @@ function Generator({ onSessionComplete, onViewImage }) {
 
           {generatedImages.length > 0 && (
             <div>
-              <h2>Image variations</h2>
+              <div className="images-header">
+                <h2>Image variations</h2>
+                <div className="download-actions">
+                  <button 
+                    type="button" 
+                    className="secondary"
+                    onClick={downloadAllImages}
+                    disabled={status.loading}
+                  >
+                    Download All ({generatedImages.length})
+                  </button>
+                </div>
+              </div>
               <div className="image-grid">
                 {generatedImages.map((src, index) => (
                   <figure key={`${src}-${index}`}>
@@ -460,7 +519,17 @@ function Generator({ onSessionComplete, onViewImage }) {
                     >
                       <img src={src} alt={`Generated variation ${index + 1}`} loading="lazy" />
                     </button>
-                    <figcaption>Variation {index + 1}</figcaption>
+                    <div className="image-actions">
+                      <figcaption>Variation {index + 1}</figcaption>
+                      <button
+                        type="button"
+                        className="download-btn"
+                        onClick={() => downloadImage(src, `variation-${index + 1}.png`)}
+                        title="Download this image"
+                      >
+                        ⬇
+                      </button>
+                    </div>
                   </figure>
                 ))}
               </div>
@@ -477,6 +546,7 @@ function Generator({ onSessionComplete, onViewImage }) {
                       <span className="description-index">#{index + 1}</span>
                       <p className="description-tone">Tone: {item.tone}</p>
                     </header>
+                    {item.title && <h2 className="description-title">{item.title}</h2>}
                     <h3>{item.headline}</h3>
                     {item.tagline && <p className="description-tagline">{item.tagline}</p>}
                     <p>{item.body}</p>
