@@ -630,21 +630,30 @@ app.post('/api/generate-descriptions', async (req, res) => {
       }
     }
 
-    const messageContent = data?.choices?.[0]?.message?.content;
-    if (!Array.isArray(messageContent) || !messageContent.length) {
-      throw new Error('Model returned no description content');
+    const message = data?.choices?.[0]?.message;
+    let contentText = '';
+
+    if (Array.isArray(message?.content) && message.content.length) {
+      const textBlock = message.content.find(
+        (item) => (item.type === 'output_text' || item.type === 'text') && item.text
+      );
+      if (textBlock?.text) {
+        contentText = textBlock.text;
+      }
+    } else if (typeof message?.content === 'string') {
+      contentText = message.content;
+    } else if (typeof message?.content?.[0]?.text === 'string') {
+      // Handle nested content arrays with direct text field
+      contentText = message.content[0].text;
     }
 
-    const textBlock = messageContent.find(
-      (item) => (item.type === 'output_text' || item.type === 'text') && item.text
-    );
-    if (!textBlock) {
-      throw new Error('Unexpected description format from model');
+    if (!contentText) {
+      throw new Error('Model returned no description content');
     }
 
     let parsed;
     try {
-      parsed = JSON.parse(textBlock.text);
+      parsed = JSON.parse(contentText);
     } catch (parseError) {
       console.error('Description JSON parse error', parseError);
       throw new Error('Failed to parse description output');
