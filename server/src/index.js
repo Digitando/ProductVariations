@@ -659,7 +659,7 @@ app.get('/health', (_req, res) => {
 if (hasClientBuild) {
   const SPA_ROUTE_PREFIXES = ['/api', '/uploads', '/health'];
 
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.method !== 'GET') {
       return next();
     }
