@@ -53,6 +53,8 @@ function Generator({ onSessionComplete, onViewImage }) {
   const [descriptions, setDescriptions] = useState([])
   const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
   const selectionSnapshotRef = useRef({ genderId: '', categoryId: '' })
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [accessoriesOnly, setAccessoriesOnly] = useState(false)
 
   const hasResults = useMemo(
     () => generatedImages.length > 0 || descriptions.length > 0,
@@ -125,6 +127,52 @@ function Generator({ onSessionComplete, onViewImage }) {
     [selectedPromptIds],
   )
 
+  const stepOrder = ['reference', 'focus', 'prompts', 'upload']
+  const stepMeta = {
+    reference: {
+      title: 'Model reference',
+      description: 'Select a model gender or continue with accessories only.',
+    },
+    focus: {
+      title: 'Product focus',
+      description: 'Choose the garment zone or accessory you want to visualise.',
+    },
+    prompts: {
+      title: 'Prompt cues',
+      description: 'Pick the creative directions for the generated shots.',
+    },
+    upload: {
+      title: 'Upload & generate',
+      description: 'Review your inputs, add the photo, and create assets.',
+    },
+  }
+  const currentStepId = stepOrder[currentStepIndex]
+  const focusHasTemplates = Boolean(activeCategory) && availablePromptCount > 0
+  const isReferenceComplete = accessoriesOnly || Boolean(selectedGenderId)
+  const isFocusComplete = Boolean(selectedCategoryId) && focusHasTemplates
+  const hasPromptSelection = selectedPromptIds.length > 0
+  const isReadyToGenerate =
+    isReferenceComplete &&
+    Boolean(selectedCategoryId) &&
+    hasPromptSelection &&
+    Boolean(imageFile) &&
+    focusHasTemplates &&
+    (standaloneCategory || selectedGenderId || accessoriesOnly)
+  const canAdvanceCurrentStep =
+    currentStepId === 'reference'
+      ? isReferenceComplete
+      : currentStepId === 'focus'
+      ? isFocusComplete
+      : currentStepId === 'prompts'
+      ? hasPromptSelection
+      : false
+  const stepDescriptors = stepOrder.map((id, index) => ({
+    id,
+    title: stepMeta[id].title,
+    description: stepMeta[id].description,
+    status: index < currentStepIndex ? 'complete' : index === currentStepIndex ? 'current' : 'upcoming',
+  }))
+
   useEffect(() => {
     const previous = selectionSnapshotRef.current
     if (previous.genderId === selectedGenderId && previous.categoryId === selectedCategoryId) {
@@ -141,14 +189,28 @@ function Generator({ onSessionComplete, onViewImage }) {
     setGeneratedImages([])
     setDescriptions([])
     setSourceImage('')
+    setCurrentStepIndex((prev) => (!selectedCategoryId ? Math.min(prev, 1) : Math.min(prev, 2)))
     setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
   }, [selectedGenderId, selectedCategoryId])
+
+  useEffect(() => {
+    if (!isReferenceComplete) {
+      setCurrentStepIndex(0)
+    }
+  }, [isReferenceComplete])
+
+  useEffect(() => {
+    if (selectedPromptIds.length === 0 && currentStepIndex > 2) {
+      setCurrentStepIndex(2)
+    }
+  }, [selectedPromptIds.length, currentStepIndex])
 
   const handleSelectGender = (genderId) => {
     if (selectedGenderId === genderId) {
       return
     }
     updateStatus({ error: '' })
+    setAccessoriesOnly(false)
     setSelectedGenderId(genderId)
     setSelectedCategoryId('')
   }
@@ -159,7 +221,60 @@ function Generator({ onSessionComplete, onViewImage }) {
       return
     }
     updateStatus({ error: '' })
+    if (scope === 'standalone') {
+      setAccessoriesOnly(true)
+    } else {
+      setAccessoriesOnly(false)
+    }
     setSelectedCategoryId(categoryId)
+  }
+
+  const stepErrorMessages = {
+    reference: 'Choose male or female product pictures first, or continue with accessories only.',
+    focus: 'Select a product focus to continue.',
+    prompts: 'Select at least one prompt direction.',
+  }
+
+  const handleAccessoriesOnly = () => {
+    setAccessoriesOnly((prev) => {
+      const next = !prev
+      if (next) {
+        setSelectedGenderId('')
+        setSelectedCategoryId('')
+        setSelectedPromptIds([])
+      }
+      return next
+    })
+    resetOutputs()
+    updateStatus({ error: '' })
+  }
+
+  const handleStepClick = (index) => {
+    if (index > currentStepIndex || status.loading) {
+      return
+    }
+    setCurrentStepIndex(index)
+    updateStatus({ error: '' })
+  }
+
+  const handleNext = () => {
+    if (!canAdvanceCurrentStep) {
+      const message = stepErrorMessages[currentStepId]
+      if (message) {
+        updateStatus({ error: message })
+      }
+      return
+    }
+    updateStatus({ error: '' })
+    setCurrentStepIndex((prev) => Math.min(prev + 1, stepOrder.length - 1))
+  }
+
+  const handleBack = () => {
+    if (currentStepIndex === 0) {
+      return
+    }
+    updateStatus({ error: '' })
+    setCurrentStepIndex((prev) => Math.max(prev - 1, 0))
   }
 
   const handleFileChange = (evt) => {
@@ -325,6 +440,8 @@ function Generator({ onSessionComplete, onViewImage }) {
     setSelectedGenderId('')
     setSelectedCategoryId('')
     setSelectedPromptIds([])
+    setAccessoriesOnly(false)
+    setCurrentStepIndex(0)
     selectionSnapshotRef.current = { genderId: '', categoryId: '' }
     resetOutputs()
     updateStatus({ step: '', message: '', loading: false, error: '' })
@@ -404,155 +521,261 @@ function Generator({ onSessionComplete, onViewImage }) {
       <main className="layout">
         <section className="panel">
           <form className="generator" onSubmit={handleSubmit}>
-            <div className="upload">
-              <label htmlFor="image" className="upload__label">
-                <span>Garment photo*</span>
-                <input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
-              </label>
-              {imagePreview ? (
-                <img src={imagePreview} alt="Upload preview" className="upload__preview" />
-              ) : (
-                <p className="upload__placeholder">
-                  Drop or browse for a clear garment shot. This anchors every variation and the marketing copy.
+          <ol className="funnel-stepper" role="list">
+            {stepDescriptors.map((step, index) => {
+              const isDisabled = index > currentStepIndex
+              return (
+                <li key={step.id} className={`funnel-step funnel-step--${step.status}`}>
+                  <button
+                    type="button"
+                    className="funnel-step__button"
+                    onClick={() => handleStepClick(index)}
+                    disabled={isDisabled}
+                  >
+                    <span className="funnel-step__index">{index + 1}</span>
+                    <span className="funnel-step__text">
+                      <span className="funnel-step__title">{step.title}</span>
+                      <span className="funnel-step__description">{step.description}</span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ol>
+
+          <div className="funnel-content">
+            {currentStepId === 'reference' && (
+              <div className="selector-group">
+                <h2>Model reference</h2>
+                <p className="selector-note">
+                  Choose the model gender for apparel shots, or continue with accessories only.
                 </p>
-              )}
-            </div>
-
-            <div className="selector-group">
-              <h2>1. Model reference</h2>
-              <p className="selector-note">Pick whether you want male or female model imagery.</p>
-              <div className="selector-row" role="radiogroup" aria-label="Model reference">
-                {genderOptions.map((option) => {
-                  const isSelected = option.id === selectedGenderId
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                      onClick={() => handleSelectGender(option.id)}
-                      aria-pressed={isSelected}
-                      disabled={!option.hasPrompts}
-                    >
-                      <span className="selector-btn__label">{option.label}</span>
-                      {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="selector-group">
-              <h2>2. Product focus</h2>
-              <p className="selector-note">Load tailored prompt cues for the garment zone you need.</p>
-              {selectedGender ? (
-                <div className="selector-subgroup">
-                  <span className="selector-subheading">{selectedGender.label} apparel</span>
-                  <div className="selector-row" role="radiogroup" aria-label="Garment type">
-                    {apparelCategories.map((category) => {
-                      const isSelected = selectedCategoryId === category.id
-                      return (
-                        <button
-                          key={`${selectedGender.id}-${category.id}`}
-                          type="button"
-                          className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                          onClick={() => handleSelectCategory(category.id, 'gendered')}
-                          aria-pressed={isSelected}
-                          disabled={!category.hasPrompts}
-                        >
-                          <span className="selector-btn__label">{category.label}</span>
-                          {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
+                <div className="selector-row" role="radiogroup" aria-label="Model reference">
+                  {genderOptions.map((option) => {
+                    const isSelected = option.id === selectedGenderId
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                        onClick={() => handleSelectGender(option.id)}
+                        aria-pressed={isSelected}
+                        disabled={!option.hasPrompts}
+                      >
+                        <span className="selector-btn__label">{option.label}</span>
+                        {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                      </button>
+                    )
+                  })}
                 </div>
-              ) : (
-                <p className="selector-placeholder">Select a model reference to unlock apparel prompt sets.</p>
-              )}
-
-              {accessoryOptions.length > 0 && (
-                <div className="selector-subgroup">
-                  <span className="selector-subheading">Accessories</span>
-                  <div className="selector-row" role="radiogroup" aria-label="Accessories">
-                    {accessoryOptions.map((option) => {
-                      const isSelected = selectedCategoryId === option.id
-                      return (
-                        <button
-                          key={`standalone-${option.id}`}
-                          type="button"
-                          className={`selector-btn selector-btn--compact${
-                            isSelected ? ' selector-btn--selected' : ''
-                          }`}
-                          onClick={() => handleSelectCategory(option.id, 'standalone')}
-                          aria-pressed={isSelected}
-                          disabled={!option.hasPrompts}
-                        >
-                          <span className="selector-btn__label">{option.label}</span>
-                          {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="styles">
-              <div className="styles__header">
-                <div>
-                  <h2>Prompt directions</h2>
-                  {activeCategoryLabel && <p className="styles__context">{activeCategoryLabel}</p>}
-                </div>
-                <span>{selectedPromptIds.length} selected</span>
-              </div>
-              {!activeCategory && (
-                <p className="styles__hint">Choose a product focus to load suggested prompt cues.</p>
-              )}
-              {activeCategory && availablePromptCount === 0 && (
-                <p className="styles__hint">Prompt templates for this selection are coming soon.</p>
-              )}
-              {activeCategory && availablePromptCount > 0 && (
-                <>
-                  <p className="styles__hint">
-                    Choose as many prompts as you want. They steer the scenarios while the product stays consistent.
+                <div className="selector-shortcut">
+                  <button
+                    type="button"
+                    className={`selector-btn selector-btn--compact${accessoriesOnly ? ' selector-btn--selected' : ''}`}
+                    onClick={handleAccessoriesOnly}
+                  >
+                    I&apos;m generating accessories only
+                  </button>
+                  <p className={`selector-note${accessoriesOnly ? ' selector-note--success' : ''}`}>
+                    {accessoriesOnly
+                      ? 'Accessories unlocked. You can choose sunglasses on the next step.'
+                      : 'Select this if you only need sunglasses or other accessories.'}
                   </p>
-                  {activePromptGroups.map((group) => (
-                    <div key={group.id} className="prompt-group">
-                      <h3>{group.label}</h3>
-                      <div className="style-grid">
-                        {group.prompts.map((option) => {
-                          const isChecked = selectedPromptIds.includes(option.id)
-                          return (
-                            <label
-                              key={option.id}
-                              className={`style-option${isChecked ? ' style-option--selected' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                value={option.id}
-                                checked={isChecked}
-                                onChange={() => togglePrompt(option.id)}
-                              />
-                              <div className="style-option__content">
-                                <span className="style-option__title">{option.title}</span>
-                                <span className="style-option__description">{option.description}</span>
-                              </div>
-                            </label>
-                          )
-                        })}
+                </div>
+              </div>
+            )}
+
+            {currentStepId === 'focus' && (
+              <div className="selector-group">
+                <h2>Product focus</h2>
+                <p className="selector-note">Load tailored prompt cues for the garment zone you need.</p>
+                {selectedGender ? (
+                  <div className="selector-subgroup">
+                    <span className="selector-subheading">{selectedGender.label} apparel</span>
+                    <div className="selector-row" role="radiogroup" aria-label="Garment type">
+                      {apparelCategories.map((category) => {
+                        const isSelected = selectedCategoryId === category.id
+                        return (
+                          <button
+                            key={`${selectedGender.id}-${category.id}`}
+                            type="button"
+                            className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
+                            onClick={() => handleSelectCategory(category.id, 'gendered')}
+                            aria-pressed={isSelected}
+                            disabled={!category.hasPrompts}
+                          >
+                            <span className="selector-btn__label">{category.label}</span>
+                            {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  !accessoriesOnly && (
+                    <p className="selector-placeholder">
+                      Select a model reference to unlock apparel prompt sets.
+                    </p>
+                  )
+                )}
+
+                {accessoryOptions.length > 0 && (
+                  <div className="selector-subgroup">
+                    <span className="selector-subheading">Accessories</span>
+                    <div className="selector-row" role="radiogroup" aria-label="Accessories">
+                      {accessoryOptions.map((option) => {
+                        const isSelected = selectedCategoryId === option.id
+                        return (
+                          <button
+                            key={`standalone-${option.id}`}
+                            type="button"
+                            className={`selector-btn selector-btn--compact${
+                              isSelected ? ' selector-btn--selected' : ''
+                            }`}
+                            onClick={() => handleSelectCategory(option.id, 'standalone')}
+                            aria-pressed={isSelected}
+                            disabled={!option.hasPrompts}
+                          >
+                            <span className="selector-btn__label">{option.label}</span>
+                            {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentStepId === 'prompts' && (
+              <div className="styles">
+                <div className="styles__header">
+                  <div>
+                    <h2>Prompt directions</h2>
+                    {activeCategoryLabel && <p className="styles__context">{activeCategoryLabel}</p>}
+                  </div>
+                  <span>{selectedPromptIds.length} selected</span>
+                </div>
+                {!activeCategory && (
+                  <p className="styles__hint">Choose a product focus to load suggested prompt cues.</p>
+                )}
+                {activeCategory && availablePromptCount === 0 && (
+                  <p className="styles__hint">Prompt templates for this selection are coming soon.</p>
+                )}
+                {activeCategory && availablePromptCount > 0 && (
+                  <>
+                    <p className="styles__hint">
+                      Choose as many prompts as you want. They steer the scenarios while the product stays consistent.
+                    </p>
+                    {activePromptGroups.map((group) => (
+                      <div key={group.id} className="prompt-group">
+                        <h3>{group.label}</h3>
+                        <div className="style-grid">
+                          {group.prompts.map((option) => {
+                            const isChecked = selectedPromptIds.includes(option.id)
+                            return (
+                              <label
+                                key={option.id}
+                                className={`style-option${isChecked ? ' style-option--selected' : ''}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  value={option.id}
+                                  checked={isChecked}
+                                  onChange={() => togglePrompt(option.id)}
+                                />
+                                <div className="style-option__content">
+                                  <span className="style-option__title">{option.title}</span>
+                                  <span className="style-option__description">{option.description}</span>
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+
+            {currentStepId === 'upload' && (
+              <div className="upload-step">
+                <div className="upload">
+                  <label htmlFor="image" className="upload__label">
+                    <span>Garment photo*</span>
+                    <input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
+                  </label>
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Upload preview" className="upload__preview" />
+                  ) : (
+                    <p className="upload__placeholder">
+                      Drop or browse for a clear product shot. This anchors every variation and the marketing copy.
+                    </p>
+                  )}
+                </div>
+                <aside className="upload-summary">
+                  <h3>Review selections</h3>
+                  <ul className="funnel-summary">
+                    <li>
+                      <span>Model reference</span>
+                      <strong>{accessoriesOnly ? 'Accessories only' : selectedGender?.label || 'Not set'}</strong>
+                    </li>
+                    <li>
+                      <span>Product focus</span>
+                      <strong>{activeCategoryLabel || 'Not set'}</strong>
+                    </li>
+                    <li>
+                      <span>Prompts selected</span>
+                      <strong>{selectedPromptIds.length}</strong>
+                    </li>
+                  </ul>
+                  {selectedPromptDetails.length > 0 && (
+                    <div className="selected-styles selected-styles--inline">
+                      <h4>Cues</h4>
+                      <div className="style-chip-row">
+                        {selectedPromptDetails.map((prompt) => (
+                          <span key={prompt.id} className="style-chip">
+                            {prompt.title}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </>
-              )}
-            </div>
+                  )}
+                </aside>
+              </div>
+            )}
+          </div>
 
-            <button className="primary" type="submit" disabled={status.loading}>
-              {status.loading ? 'Generating...' : 'Generate product assets'}
+          <div className="funnel-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleBack}
+              disabled={currentStepIndex === 0 || status.loading}
+            >
+              Back
             </button>
-            {status.message && !status.error && <p className="status status--info">{status.message}</p>}
-            {status.error && <p className="status status--error">{status.error}</p>}
-          </form>
+            <div className="funnel-actions__spacer" />
+            {currentStepIndex < stepOrder.length - 1 ? (
+              <button
+                type="button"
+                className="primary"
+                onClick={handleNext}
+                disabled={!canAdvanceCurrentStep || status.loading}
+              >
+                Next step
+              </button>
+            ) : (
+              <button className="primary" type="submit" disabled={status.loading || !isReadyToGenerate}>
+                {status.loading ? 'Generating...' : 'Generate product assets'}
+              </button>
+            )}
+          </div>
+
+          {status.message && !status.error && <p className="status status--info">{status.message}</p>}
+          {status.error && <p className="status status--error">{status.error}</p>}
+        </form>
         </section>
 
         <section className="panel results">
@@ -652,3 +875,4 @@ function Generator({ onSessionComplete, onViewImage }) {
 }
 
 export default Generator
+
