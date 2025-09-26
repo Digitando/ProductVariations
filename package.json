@@ -1,0 +1,7 @@
+{
+  "name": "product-generator",
+  "private": true,
+  "scripts": {
+    "start": "cd server && npm install && npm run start"
+  }
+}
