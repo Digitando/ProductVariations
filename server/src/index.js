@@ -326,6 +326,46 @@ app.get('/auth/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
 
+app.get('/api/public/gallery', async (_req, res) => {
+  try {
+    const sessions = await getSessions();
+    const pool = [];
+
+    sessions.forEach((session) => {
+      if (!session || !Array.isArray(session.generatedImages)) {
+        return;
+      }
+      session.generatedImages.forEach((url) => {
+        if (typeof url === 'string' && url.startsWith('http')) {
+          pool.push(url);
+        }
+      });
+    });
+
+    if (pool.length === 0) {
+      return res.json({ images: [] });
+    }
+
+    const limit = Math.min(24, pool.length);
+    const selected = [];
+    const used = new Set();
+
+    while (selected.length < limit) {
+      const index = Math.floor(Math.random() * pool.length);
+      if (used.has(index)) {
+        continue;
+      }
+      used.add(index);
+      selected.push(pool[index]);
+    }
+
+    res.json({ images: selected });
+  } catch (error) {
+    console.error('Failed to load public gallery', error.message || error);
+    res.status(500).json({ error: 'Unable to load gallery images.' });
+  }
+});
+
 function normalizeBase64Payload(input) {
   if (typeof input !== 'string') {
     return '';

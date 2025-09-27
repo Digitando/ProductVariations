@@ -109,3 +109,4 @@ Two-part web app that turns a single product reference photo into five OpenRoute
 
 - During registration users must accept the privacy policy/GDPR disclaimer and can optionally opt in to promotional emails. These preferences are stored on their profile and surfaced through the API.
 - Security hardening: the Express server now applies Helmet for secure headers, rate limiting for `/auth/*` and `/api/*` routes, and disables the default `x-powered-by` header. Keep the proxy setting (`app.set('trust proxy', 1)`) if you deploy behind a load balancer so limits work correctly.
+- Public gallery endpoint `/api/public/gallery` returns a rotating sample of generated images across all users. The home hero and About page pull from this source so everyone sees community results—even when browsing without an account.
