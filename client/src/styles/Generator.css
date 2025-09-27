@@ -602,32 +602,34 @@
 .funnel-stepper {
   display: flex;
   flex-wrap: nowrap;
-  gap: 12px;
+  gap: 16px;
   margin: 0;
-  padding: 0;
+  padding: 4px 0 8px;
   list-style: none;
   overflow-x: auto;
-  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .funnel-step {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: 210px;
   border: 1px solid #d9dce8;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8f9ff;
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
+
 .funnel-step--complete {
-  border-color: #9da3f3;
-  background: #eef2ff;
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.07);
 }
 
 .funnel-step--current {
   border-color: #6366f1;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 16px 40px rgba(99, 102, 241, 0.18);
 }
 
 .funnel-step--upcoming {
@@ -638,10 +640,10 @@
   width: 100%;
   border: none;
   background: transparent;
-  padding: 12px 14px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   text-align: left;
   color: inherit;
   cursor: pointer;
@@ -652,8 +654,8 @@
 }
 
 .funnel-step__index {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #d9dce8;
   display: inline-flex;
@@ -661,6 +663,7 @@
   justify-content: center;
   font-weight: 600;
   color: #1f2230;
+  font-size: 0.95rem;
 }
 
 .funnel-step--current .funnel-step__index,
@@ -672,18 +675,32 @@
 .funnel-step__title {
   font-weight: 600;
   color: #1f2230;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   white-space: nowrap;
 }
 
 @media (max-width: 960px) {
   .funnel-step {
-    flex: 0 0 180px;
-    min-width: 180px;
+    min-width: 190px;
   }
 
   .funnel-step__title {
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .funnel-stepper {
+    gap: 12px;
+  }
+
+  .funnel-step {
+    min-width: 170px;
+  }
+
+  .funnel-step__button {
+    padding: 12px 14px;
+    gap: 10px;
   }
 }
 
