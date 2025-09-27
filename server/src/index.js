@@ -366,6 +366,39 @@ app.get('/api/public/gallery', async (_req, res) => {
   }
 });
 
+app.get('/api/public/prompts', (_req, res) => {
+  try {
+    const promptList = Object.values(PROMPTS_BY_ID);
+    if (promptList.length === 0) {
+      return res.json({ prompts: [] });
+    }
+
+    const limit = Math.min(12, promptList.length);
+    const selected = [];
+    const used = new Set();
+
+    while (selected.length < limit) {
+      const index = Math.floor(Math.random() * promptList.length);
+      if (used.has(index)) {
+        continue;
+      }
+      used.add(index);
+      const prompt = promptList[index];
+      selected.push({
+        id: prompt.id,
+        title: prompt.title,
+        description: prompt.description,
+        prompt: prompt.prompt,
+      });
+    }
+
+    res.json({ prompts: selected });
+  } catch (error) {
+    console.error('Failed to load prompt spotlight', error.message || error);
+    res.status(500).json({ error: 'Unable to load prompt spotlight.' });
+  }
+});
+
 function normalizeBase64Payload(input) {
   if (typeof input !== 'string') {
     return '';

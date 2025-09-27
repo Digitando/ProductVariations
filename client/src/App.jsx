@@ -387,7 +387,34 @@ function Hero({ onGetStarted, user, recentImages = [] }) {
   )
 }
 
-function HomeContent({ onStart, onViewCookie, onViewPrivacy }) {
+function HomeContent({
+  onStart,
+  onViewCookie,
+  onViewPrivacy,
+  galleryImages = [],
+  galleryStatus = { loading: false, error: '' },
+  onRefreshGallery,
+  promptSpotlight = [],
+  promptStatus = { loading: false, error: '' },
+  onRefreshPrompts,
+}) {
+  const [copiedPromptId, setCopiedPromptId] = useState('')
+
+  const previewImages = useMemo(() => galleryImages.slice(0, 8), [galleryImages])
+
+  const handleCopyPrompt = async (prompt) => {
+    if (!prompt?.prompt) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(prompt.prompt)
+      setCopiedPromptId(prompt.id)
+      setTimeout(() => setCopiedPromptId(''), 2000)
+    } catch (error) {
+      console.warn('Failed to copy prompt', error)
+    }
+  }
+
   return (
     <section className="home-content">
       <article className="home-section home-section--primary">
@@ -431,6 +458,64 @@ function HomeContent({ onStart, onViewCookie, onViewPrivacy }) {
             Keep campaigns consistent across regions with reusable prompt sets and a sharable asset library.
           </p>
         </div>
+      </article>
+
+      <article className="home-section home-section--community">
+        <div className="home-section__header">
+          <div>
+            <h2>Community gallery</h2>
+            <p>Peek at what other merchants ship with Product Variations.</p>
+          </div>
+          <button type="button" className="secondary" onClick={onRefreshGallery} disabled={galleryStatus.loading}>
+            {galleryStatus.loading ? 'Refreshing…' : 'Shuffle gallery'}
+          </button>
+        </div>
+        {galleryStatus.error && previewImages.length === 0 && (
+          <p className="home-section__status home-section__status--error">{galleryStatus.error}</p>
+        )}
+        {previewImages.length > 0 ? (
+          <div className="home-gallery" role="list" aria-label="Community gallery">
+            {previewImages.map((url) => (
+              <figure key={url} role="listitem" className="home-gallery__item">
+                <img src={url} alt="Community generated product" loading="lazy" />
+              </figure>
+            ))}
+          </div>
+        ) : (
+          !galleryStatus.loading && <p className="home-section__status">Gallery will populate as soon as images are generated.</p>
+        )}
+      </article>
+
+      <article className="home-section home-section--spotlight">
+        <div className="home-section__header">
+          <div>
+            <h2>Prompt spotlight</h2>
+            <p>Borrow these curated art directions to speed up your next batch.</p>
+          </div>
+          <button type="button" className="secondary" onClick={onRefreshPrompts} disabled={promptStatus.loading}>
+            {promptStatus.loading ? 'Refreshing…' : 'Refresh prompts'}
+          </button>
+        </div>
+        {promptStatus.error && promptSpotlight.length === 0 && (
+          <p className="home-section__status home-section__status--error">{promptStatus.error}</p>
+        )}
+        {promptSpotlight.length > 0 ? (
+          <ul className="spotlight-list">
+            {promptSpotlight.map((item) => (
+              <li key={item.id} className="spotlight-card">
+                <header>
+                  <h3>{item.title}</h3>
+                  <button type="button" className="link-button" onClick={() => handleCopyPrompt(item)}>
+                    {copiedPromptId === item.id ? 'Copied!' : 'Copy prompt'}
+                  </button>
+                </header>
+                <p>{item.description}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          !promptStatus.loading && <p className="home-section__status">Prompt suggestions will appear shortly.</p>
+        )}
       </article>
 
       <article className="home-section home-section--policies">
@@ -1342,6 +1427,8 @@ function App() {
   const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
   const [galleryImages, setGalleryImages] = useState([])
   const [galleryStatus, setGalleryStatus] = useState({ loading: false, error: '' })
+  const [spotlightPrompts, setSpotlightPrompts] = useState([])
+  const [spotlightStatus, setSpotlightStatus] = useState({ loading: false, error: '' })
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
   const [profileInitialTab, setProfileInitialTab] = useState('overview')
@@ -1363,6 +1450,21 @@ function App() {
       setGalleryStatus({
         loading: false,
         error: error instanceof Error ? error.message : 'Unable to load gallery.',
+      })
+    }
+  }, [])
+
+  const loadPromptSpotlight = useCallback(async () => {
+    setSpotlightStatus((prev) => ({ ...prev, loading: true }))
+    try {
+      const response = await apiRequest('/api/public/prompts')
+      const prompts = Array.isArray(response?.prompts) ? response.prompts : []
+      setSpotlightPrompts(prompts)
+      setSpotlightStatus({ loading: false, error: '' })
+    } catch (error) {
+      setSpotlightStatus({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Unable to load prompt spotlight.',
       })
     }
   }, [])
@@ -1412,6 +1514,7 @@ function App() {
     const storedToken = localStorage.getItem('pv_auth_token')
     if (!storedToken) {
       loadPublicGallery()
+      loadPromptSpotlight()
       return
     }
 
@@ -1430,9 +1533,10 @@ function App() {
         setToken('')
       } finally {
         loadPublicGallery()
+        loadPromptSpotlight()
       }
     })()
-  }, [loadSessions, loadPublicGallery])
+  }, [loadSessions, loadPublicGallery, loadPromptSpotlight])
 
   const openAuthModal = (mode) => {
     setAuthModal({ open: true, mode })
@@ -1492,7 +1596,7 @@ function App() {
       setToken(data.token)
       setUser(data.user)
       localStorage.setItem('pv_auth_token', data.token)
-      await Promise.all([loadSessions(data.token), loadPublicGallery()])
+      await Promise.all([loadSessions(data.token), loadPublicGallery(), loadPromptSpotlight()])
       return { success: true }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Authentication failed.' }
@@ -1529,6 +1633,7 @@ function App() {
     if (!user || !token) {
       setGuestSessions((prev) => [session, ...prev].slice(0, 5))
       loadPublicGallery()
+      loadPromptSpotlight()
       setView(VIEWS.LIBRARY)
       return
     }
@@ -1553,6 +1658,7 @@ function App() {
     }
 
     loadPublicGallery()
+    loadPromptSpotlight()
 
     setView(VIEWS.LIBRARY)
   }
@@ -1711,6 +1817,12 @@ function App() {
               onStart={handleStartGenerating}
               onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
               onViewPrivacy={() => setView(VIEWS.PRIVACY)}
+              galleryImages={galleryImages}
+              galleryStatus={galleryStatus}
+              onRefreshGallery={loadPublicGallery}
+              promptSpotlight={spotlightPrompts}
+              promptStatus={spotlightStatus}
+              onRefreshPrompts={loadPromptSpotlight}
             />
           </>
         )}
