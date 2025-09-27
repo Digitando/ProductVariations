@@ -80,6 +80,32 @@ function mapSupabaseSession(row) {
     prompts: parse(row.prompts, []),
     generatedImages: parse(row.generatedImages, []),
     descriptions: parse(row.descriptions, []),
+    promptSummaries: parse(row.promptSummaries, []),
+    creator: (() => {
+      const raw = row.creator || null;
+      if (!raw) {
+        return null;
+      }
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return {
+            id: parsed?.id || null,
+            name: parsed?.name || '',
+          };
+        } catch (_error) {
+          return null;
+        }
+      }
+      if (typeof raw === 'object') {
+        return {
+          id: raw.id || null,
+          name: raw.name || '',
+        };
+      }
+      return null;
+    })(),
+    categories: parse(row.categories, []),
   };
 }
 
@@ -90,6 +116,15 @@ function mapSessionForSupabase(session) {
     prompts: Array.isArray(session.prompts) ? session.prompts : [],
     generatedImages: Array.isArray(session.generatedImages) ? session.generatedImages : [],
     descriptions: Array.isArray(session.descriptions) ? session.descriptions : [],
+    promptSummaries: Array.isArray(session.promptSummaries) ? session.promptSummaries : [],
+    creator:
+      session.creator && typeof session.creator === 'object'
+        ? {
+            id: session.creator.id || null,
+            name: session.creator.name || '',
+          }
+        : null,
+    categories: Array.isArray(session.categories) ? session.categories : [],
   };
 }
 

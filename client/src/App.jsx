@@ -391,7 +391,7 @@ function HomeContent({
   onStart,
   onViewCookie,
   onViewPrivacy,
-  galleryImages = [],
+  galleryEntries = [],
   galleryStatus = { loading: false, error: '' },
   onRefreshGallery,
   promptSpotlight = [],
@@ -399,8 +399,19 @@ function HomeContent({
   onRefreshPrompts,
 }) {
   const [copiedPromptId, setCopiedPromptId] = useState('')
+  const [galleryFilter, setGalleryFilter] = useState('all')
 
-  const previewImages = useMemo(() => galleryImages.slice(0, 8), [galleryImages])
+  const filteredGallery = useMemo(() => {
+    if (!Array.isArray(galleryEntries)) {
+      return []
+    }
+    if (galleryFilter === 'all') {
+      return galleryEntries
+    }
+    return galleryEntries.filter((entry) => Array.isArray(entry.categories) && entry.categories.includes(galleryFilter))
+  }, [galleryEntries, galleryFilter])
+
+  const previewEntries = useMemo(() => filteredGallery.slice(0, 8), [filteredGallery])
 
   const handleCopyPrompt = async (prompt) => {
     if (!prompt?.prompt) {
@@ -412,6 +423,18 @@ function HomeContent({
       setTimeout(() => setCopiedPromptId(''), 2000)
     } catch (error) {
       console.warn('Failed to copy prompt', error)
+    }
+  }
+
+  const triggerGalleryRefresh = () => {
+    if (typeof onRefreshGallery === 'function') {
+      onRefreshGallery()
+    }
+  }
+
+  const triggerPromptRefresh = () => {
+    if (typeof onRefreshPrompts === 'function') {
+      onRefreshPrompts()
     }
   }
 
@@ -466,23 +489,59 @@ function HomeContent({
             <h2>Community gallery</h2>
             <p>Peek at what other merchants ship with Product Variations.</p>
           </div>
-          <button type="button" className="secondary" onClick={onRefreshGallery} disabled={galleryStatus.loading}>
+          <button type="button" className="secondary" onClick={triggerGalleryRefresh} disabled={galleryStatus.loading}>
             {galleryStatus.loading ? 'Refreshing…' : 'Shuffle gallery'}
           </button>
         </div>
-        {galleryStatus.error && previewImages.length === 0 && (
+        <div className="filter-tabs" role="tablist" aria-label="Gallery filters">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'apparel', label: 'Apparel' },
+            { id: 'accessory', label: 'Accessories' },
+          ].map((option) => {
+            const isActive = galleryFilter === option.id
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`filter-tab${isActive ? ' filter-tab--active' : ''}`}
+                onClick={() => setGalleryFilter(option.id)}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+        {galleryStatus.error && previewEntries.length === 0 && (
           <p className="home-section__status home-section__status--error">{galleryStatus.error}</p>
         )}
-        {previewImages.length > 0 ? (
+        {previewEntries.length > 0 ? (
           <div className="home-gallery" role="list" aria-label="Community gallery">
-            {previewImages.map((url) => (
-              <figure key={url} role="listitem" className="home-gallery__item">
-                <img src={url} alt="Community generated product" loading="lazy" />
-              </figure>
-            ))}
+            {previewEntries.map((entry) => {
+              const primaryPrompt = entry?.prompts?.[0]
+              return (
+                <figure key={entry.url} role="listitem" className="home-gallery__item">
+                  <img src={entry.url} alt="Community generated product" loading="lazy" />
+                  {(primaryPrompt || entry.creator?.name) && (
+                    <figcaption className="home-gallery__caption">
+                      {primaryPrompt && <strong>{primaryPrompt.title}</strong>}
+                      {entry.creator?.name && <span>by {entry.creator.name}</span>}
+                    </figcaption>
+                  )}
+                </figure>
+              )
+            })}
           </div>
         ) : (
-          !galleryStatus.loading && <p className="home-section__status">Gallery will populate as soon as images are generated.</p>
+          !galleryStatus.loading && (
+            <p className="home-section__status">
+              {filteredGallery.length === 0 && galleryEntries.length > 0
+                ? 'No items match this filter yet.'
+                : 'Gallery will populate as soon as images are generated.'}
+            </p>
+          )
         )}
       </article>
 
@@ -492,7 +551,7 @@ function HomeContent({
             <h2>Prompt spotlight</h2>
             <p>Borrow these curated art directions to speed up your next batch.</p>
           </div>
-          <button type="button" className="secondary" onClick={onRefreshPrompts} disabled={promptStatus.loading}>
+          <button type="button" className="secondary" onClick={triggerPromptRefresh} disabled={promptStatus.loading}>
             {promptStatus.loading ? 'Refreshing…' : 'Refresh prompts'}
           </button>
         </div>
@@ -536,8 +595,8 @@ function HomeContent({
   )
 }
 
-function AboutView({ onStart, galleryImages = [], galleryStatus = { loading: false, error: '' } }) {
-  const galleryPreview = useMemo(() => galleryImages.slice(0, 12), [galleryImages])
+function AboutView({ onStart, galleryEntries = [], galleryStatus = { loading: false, error: '' } }) {
+  const galleryPreview = useMemo(() => galleryEntries.slice(0, 12), [galleryEntries])
   return (
     <section className="about">
       <header className="about__hero">
@@ -591,9 +650,9 @@ function AboutView({ onStart, galleryImages = [], galleryStatus = { loading: fal
         )}
         {galleryPreview.length > 0 && (
           <div className="about__gallery" role="list" aria-label="Generated image showcase">
-            {galleryPreview.map((url) => (
-              <figure key={url} role="listitem" className="about__gallery-item">
-                <img src={url} alt="AI generated product showcase" loading="lazy" />
+            {galleryPreview.map((entry) => (
+              <figure key={entry.url} role="listitem" className="about__gallery-item">
+                <img src={entry.url} alt="AI generated product showcase" loading="lazy" />
               </figure>
             ))}
           </div>
@@ -1425,7 +1484,7 @@ function App() {
   const [sessions, setSessions] = useState([])
   const [guestSessions, setGuestSessions] = useState([])
   const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
-  const [galleryImages, setGalleryImages] = useState([])
+  const [galleryEntries, setGalleryEntries] = useState([])
   const [galleryStatus, setGalleryStatus] = useState({ loading: false, error: '' })
   const [spotlightPrompts, setSpotlightPrompts] = useState([])
   const [spotlightStatus, setSpotlightStatus] = useState({ loading: false, error: '' })
@@ -1439,12 +1498,35 @@ function App() {
     () => NAV_ITEMS.filter((item) => !item.requiresAuth || user),
     [user],
   )
+  const heroImages = useMemo(() => {
+    const shared = galleryEntries
+      .map((entry) => entry?.url)
+      .filter((url) => typeof url === 'string')
+      .slice(0, 12)
+
+    if (shared.length > 0) {
+      return shared
+    }
+
+    const fallback = []
+    const seen = new Set()
+    currentSessions.forEach((session) => {
+      ;(session?.generatedImages || []).forEach((url) => {
+        if (typeof url === 'string' && url && !seen.has(url)) {
+          seen.add(url)
+          fallback.push(url)
+        }
+      })
+    })
+
+    return fallback.slice(0, 12)
+  }, [galleryEntries, currentSessions])
   const loadPublicGallery = useCallback(async () => {
     setGalleryStatus((prev) => ({ ...prev, loading: true }))
     try {
       const response = await apiRequest('/api/public/gallery')
-      const images = Array.isArray(response?.images) ? response.images : []
-      setGalleryImages(images)
+      const entries = Array.isArray(response?.images) ? response.images : []
+      setGalleryEntries(entries)
       setGalleryStatus({ loading: false, error: '' })
     } catch (error) {
       setGalleryStatus({
@@ -1812,12 +1894,12 @@ function App() {
       <main className="app-main">
         {view === VIEWS.HOME && (
           <>
-            <Hero onGetStarted={handleStartGenerating} user={user} recentImages={galleryImages} />
+            <Hero onGetStarted={handleStartGenerating} user={user} recentImages={heroImages} />
             <HomeContent
               onStart={handleStartGenerating}
               onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
               onViewPrivacy={() => setView(VIEWS.PRIVACY)}
-              galleryImages={galleryImages}
+              galleryEntries={galleryEntries}
               galleryStatus={galleryStatus}
               onRefreshGallery={loadPublicGallery}
               promptSpotlight={spotlightPrompts}
@@ -1829,7 +1911,7 @@ function App() {
         {view === VIEWS.ABOUT && (
           <AboutView
             onStart={handleStartGenerating}
-            galleryImages={galleryImages}
+            galleryEntries={galleryEntries}
             galleryStatus={galleryStatus}
           />
         )}

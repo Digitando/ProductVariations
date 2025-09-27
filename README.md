@@ -111,3 +111,5 @@ Two-part web app that turns a single product reference photo into five OpenRoute
 - Security hardening: the Express server now applies Helmet for secure headers, rate limiting for `/auth/*` and `/api/*` routes, and disables the default `x-powered-by` header. Keep the proxy setting (`app.set('trust proxy', 1)`) if you deploy behind a load balancer so limits work correctly.
 - Public gallery endpoint `/api/public/gallery` returns a rotating sample of generated images across all users. The home hero and About page pull from this source so everyone sees community results—even when browsing without an account.
 - Prompt spotlight endpoint `/api/public/prompts` provides a randomised set of prompt templates. The home page highlights these suggestions with one-click copy to speed up new generations.
+- Both public endpoints are cached in-memory for 60 seconds to reduce load during traffic spikes; caches automatically invalidate when new sessions are saved.
+- Community gallery entries now include creator names, prompt summaries, and product-type flags so the frontend can filter between apparel and accessory renders.
