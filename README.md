@@ -98,4 +98,14 @@ Two-part web app that turns a single product reference photo into five OpenRoute
   ```
 
   If the Supabase variables are omitted the server falls back to the file-based store under `server/data/`.
+- Updating an existing Supabase project? Run the snippet below to add the newer columns introduced for consent/marketing tracking without touching your existing data:
+
+  ```sql
+  alter table users
+    add column if not exists "marketingOptIn" boolean default false;
+  alter table users
+    add column if not exists "privacyAcceptedAt" timestamptz;
+  ```
+
 - During registration users must accept the privacy policy/GDPR disclaimer and can optionally opt in to promotional emails. These preferences are stored on their profile and surfaced through the API.
+- Security hardening: the Express server now applies Helmet for secure headers, rate limiting for `/auth/*` and `/api/*` routes, and disables the default `x-powered-by` header. Keep the proxy setting (`app.set('trust proxy', 1)`) if you deploy behind a load balancer so limits work correctly.

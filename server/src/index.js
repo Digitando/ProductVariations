@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const axios = require('axios');
 const multer = require('multer');
 const dotenv = require('dotenv');
@@ -27,6 +29,8 @@ const promptCatalog = require('../../shared/promptCatalog.cjs');
 dotenv.config();
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
@@ -41,6 +45,18 @@ const COINS_PER_CURRENCY_UNIT = 5;
 const SUPPORTED_PURCHASE_CURRENCIES = new Set(['eur']);
 const SQUARE_OUTPUT_SIZE = 1024;
 const DEFAULT_STRIPE_DECIMAL_FACTOR = 100;
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function normalizeCurrency(input) {
   return String(input || '').trim().toLowerCase();
@@ -88,12 +104,21 @@ if (!hasClientBuild) {
   );
 }
 
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || '*',
 }));
 app.use(express.json({ limit: '20mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(optionalAuth);
+app.use(['/auth/register', '/auth/login', '/auth/google'], authLimiter);
+app.use('/api/', apiLimiter);
 
 if (hasClientBuild) {
   app.use(express.static(CLIENT_DIST_DIR, { index: false, maxAge: '1h' }));

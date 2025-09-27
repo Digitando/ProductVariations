@@ -676,6 +676,9 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
           <ol className="funnel-stepper" role="list">
             {stepDescriptors.map((step, index) => {
               const isDisabled = index > currentStepIndex
+              const ariaLabel = step.description
+                ? `${step.title}. ${step.description}`
+                : step.title
               return (
                 <li key={step.id} className={`funnel-step funnel-step--${step.status}`}>
                   <button
@@ -683,12 +686,10 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                     className="funnel-step__button"
                     onClick={() => handleStepClick(index)}
                     disabled={isDisabled}
+                    aria-label={ariaLabel}
                   >
                     <span className="funnel-step__index">{index + 1}</span>
-                    <span className="funnel-step__text">
-                      <span className="funnel-step__title">{step.title}</span>
-                      <span className="funnel-step__description">{step.description}</span>
-                    </span>
+                    <span className="funnel-step__title">{step.title}</span>
                   </button>
                 </li>
               )

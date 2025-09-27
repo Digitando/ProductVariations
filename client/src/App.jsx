@@ -15,6 +15,7 @@ const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY
 
 const VIEWS = {
   HOME: 'home',
+  ABOUT: 'about',
   GENERATOR: 'generator',
   LIBRARY: 'library',
   PROFILE: 'profile',
@@ -24,6 +25,7 @@ const VIEWS = {
 
 const NAV_ITEMS = [
   { id: VIEWS.HOME, label: 'Home' },
+  { id: VIEWS.ABOUT, label: 'About' },
   { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
   { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
   { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
@@ -445,6 +447,56 @@ function HomeContent({ onStart, onViewCookie, onViewPrivacy }) {
           </button>
         </div>
       </article>
+    </section>
+  )
+}
+
+function AboutView({ onStart }) {
+  return (
+    <section className="about">
+      <header className="about__hero">
+        <p className="eyebrow">Why Product Variations</p>
+        <h1>We streamline product storytelling for fast-moving commerce teams.</h1>
+        <p>
+          The studio is built by dropshippers who needed consistent visuals, compelling copy, and faster experimentation.
+          We obsess over keeping your assets accurate to the fabric, cut, and finish so every launch feels polished.
+        </p>
+        <button type="button" className="primary" onClick={onStart}>
+          Generate your first collection
+        </button>
+      </header>
+
+      <div className="about__grid">
+        <article className="about-card">
+          <h2>Grounded in your source image</h2>
+          <p>
+            Upload one product shot. We auto-crop to a perfect 1:1 frame, preserve texture detail, and reuse your image as
+            context for both visuals and copy so every output matches the actual garment.
+          </p>
+        </article>
+        <article className="about-card">
+          <h2>Prompt catalog curated by stylists</h2>
+          <p>
+            Apparel and accessory funnels guide you through editorial looks, close-ups, and lifestyle scenes. All cues are
+            written with clear art direction to avoid guesswork and keep results on brand.
+          </p>
+        </article>
+        <article className="about-card">
+          <h2>Ready for scaling teams</h2>
+          <p>
+            Coins keep generation costs predictable, Stripe handles secure checkout, and referral bonuses help you bring in
+            collaborators. Profiles track sessions, balances, and invite performance in one place.
+          </p>
+        </article>
+      </div>
+
+      <div className="about__cta">
+        <h2>Need a tailored workflow?</h2>
+        <p>
+          We love partnering with teams on bespoke prompt packs, brand-safe fine tuning, and API integrations. Reach out at
+          <a href="mailto:team@productvariations.app"> team@productvariations.app</a> and we&apos;ll schedule a walkthrough.
+        </p>
+      </div>
     </section>
   )
 }
@@ -1642,6 +1694,7 @@ function App() {
             />
           </>
         )}
+        {view === VIEWS.ABOUT && <AboutView onStart={handleStartGenerating} />}
         {view === VIEWS.GENERATOR && (
           <Generator
             onSessionComplete={handleSessionComplete}

@@ -459,6 +459,88 @@ button {
   gap: 12px;
 }
 
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.about__hero {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 960px;
+}
+
+.about__hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.6rem);
+}
+
+.about__hero p {
+  margin: 0;
+  color: #475569;
+}
+
+.about__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.about-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.about-card h2 {
+  margin: 0;
+}
+
+.about-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.about__cta {
+  background: linear-gradient(140deg, rgba(99, 102, 241, 0.16), rgba(30, 64, 175, 0.28));
+  border-radius: 28px;
+  padding: 36px;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 1.05rem;
+}
+
+.about__cta a {
+  color: #312e81;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .about__hero {
+    padding: 32px 24px;
+  }
+
+  .about-card {
+    padding: 24px;
+  }
+
+  .about__cta {
+    padding: 28px;
+  }
+}
+
 .policy {
   background: #ffffff;
   border-radius: 24px;
