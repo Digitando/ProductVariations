@@ -134,16 +134,13 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
       return
     }
 
-    const consentPrivacy = isRegister ? true : formData.consentPrivacy
-    const consentMarketing = isRegister ? true : formData.consentMarketing
-
-    if (isRegister && (!formData.consentPrivacy || !formData.consentMarketing)) {
-      setFormData((previous) => ({
-        ...previous,
-        consentPrivacy: true,
-        consentMarketing: true,
-      }))
+    if (isRegister && !formData.consentPrivacy) {
+      setError('Please acknowledge the privacy policy and GDPR terms to continue.')
+      return
     }
+
+    const consentPrivacy = Boolean(formData.consentPrivacy)
+    const consentMarketing = Boolean(formData.consentMarketing)
 
     setSubmitting(true)
     setError('')
