@@ -553,13 +553,13 @@ function getAssetBaseUrl(req) {
   return `${scheme}://${host}`;
 }
 
-async function generateVariationImage({ prompt, imageUrl, base64Fallback }) {
+async function generateVariationImage({ prompt, imageUrl }) {
   const systemInstruction =
     'You are an e-commerce photo retoucher. Use the supplied reference image as the definitive product. Preserve its silhouette, materials, colours, and branding. Only adjust camera angle, lighting, background, or lightweight supporting props. Return exactly one finished square (1:1) image ready for online catalogues.';
 
   const userText = `${prompt}\nUse the provided reference image as the base. Preserve the product's silhouette, materials, colours, and branding. Do not introduce alternative products, new logos, or any text overlays.`;
 
-  const urlMessages = [
+  const buildMessages = (attachment) => [
     {
       role: 'system',
       content: systemInstruction,
@@ -571,10 +571,7 @@ async function generateVariationImage({ prompt, imageUrl, base64Fallback }) {
           type: 'text',
           text: userText,
         },
-        {
-          type: 'image_url',
-          image_url: { url: imageUrl },
-        },
+        attachment,
       ],
     },
   ];
@@ -582,39 +579,11 @@ async function generateVariationImage({ prompt, imageUrl, base64Fallback }) {
   try {
     const { data } = await openRouterClient.post('/chat/completions', {
       model: 'google/gemini-2.5-flash-image-preview',
-      messages: urlMessages,
+      messages: buildMessages({ type: 'image_url', image_url: { url: imageUrl } }),
     });
+
     return extractImageFromResponse(data);
   } catch (error) {
-    if (error.response?.status === 400 && base64Fallback) {
-      console.warn('Variation request failed with image_url; retrying with base64 payload');
-      const base64Messages = [
-        {
-          role: 'system',
-          content: systemInstruction,
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: userText,
-            },
-            {
-              type: 'image',
-              image_base64: base64Fallback,
-            },
-          ],
-        },
-      ];
-
-      const { data } = await openRouterClient.post('/chat/completions', {
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: base64Messages,
-      });
-      return extractImageFromResponse(data);
-    }
-
     throw error;
   }
 }
@@ -682,14 +651,11 @@ app.post('/api/generate-images', requireAuth, upload.single('image'), async (req
 
     const assetBaseUrl = getAssetBaseUrl(req);
     const imageUrl = `${assetBaseUrl}/uploads/${req.file.filename}`;
-    const base64Fallback = await fsp.readFile(req.file.path, { encoding: 'base64' });
-
     const images = await Promise.all(
       variationRequests.map(async ({ prompt }, index) => {
         const rawImage = await generateVariationImage({
           prompt: `Variation ${index + 1}: ${prompt}`,
           imageUrl,
-          base64Fallback,
         });
         return convertToSquareDataUri(rawImage);
       })
