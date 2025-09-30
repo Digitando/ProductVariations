@@ -7,33 +7,14 @@ const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule['de
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 const PROMPTS_BY_ID = promptCatalog.promptsById || {}
-const GENDER_DEFINITIONS = promptCatalog.genders || []
 const STANDALONE_DEFINITIONS = promptCatalog.standaloneCategories || []
-const CATEGORY_LOOKUP = promptCatalog.categoryLookup || {}
 const STANDALONE_LOOKUP = promptCatalog.standaloneLookup || {}
-
-const getCategoryDefinition = (genderId, categoryId) => {
-  if (!genderId || !categoryId) {
-    return null
-  }
-  return CATEGORY_LOOKUP[`${genderId}:${categoryId}`] || null
-}
 
 const getStandaloneDefinition = (categoryId) => {
   if (!categoryId) {
     return null
   }
   return STANDALONE_LOOKUP[categoryId] || null
-}
-
-function buildSummaryLabel({ genderLabel, categoryLabel, accessoryLabel }) {
-  if (accessoryLabel) {
-    return accessoryLabel
-  }
-  if (genderLabel && categoryLabel) {
-    return `${genderLabel} - ${categoryLabel}`
-  }
-  return categoryLabel || genderLabel || ''
 }
 
 function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsChange, onRequestTopUp }) {
@@ -43,17 +24,16 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     }
   }
 
-  const [productScope, setProductScope] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
-  const [selectedGenderId, setSelectedGenderId] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('')
   const [selectedPromptIds, setSelectedPromptIds] = useState([])
   const [generatedImages, setGeneratedImages] = useState([])
   const [sourceImage, setSourceImage] = useState('')
   const [descriptions, setDescriptions] = useState([])
   const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
-  const selectionSnapshotRef = useRef({ scope: '', genderId: '', categoryId: '' })
+  const selectionSnapshotRef = useRef({ categoryId: '', subcategoryId: '' })
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
   const hasResults = useMemo(
@@ -74,18 +54,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     setStatus((prev) => ({ ...prev, ...partial }))
   }
 
-  const genderOptions = useMemo(
-    () =>
-      GENDER_DEFINITIONS.map((gender) => ({
-        id: gender.id,
-        label: gender.label,
-        hasPrompts: gender.categories.some((category) => category.hasPrompts),
-        categories: gender.categories,
-      })),
-    [],
-  )
-
-  const accessoryOptions = useMemo(
+  const categoryOptions = useMemo(
     () =>
       STANDALONE_DEFINITIONS.map((category) => ({
         id: category.id,
@@ -95,35 +64,17 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     [],
   )
 
-  const selectedGender = useMemo(
-    () => genderOptions.find((option) => option.id === selectedGenderId) || null,
-    [genderOptions, selectedGenderId],
+  const activeCategory = useMemo(
+    () => getStandaloneDefinition(selectedCategoryId),
+    [selectedCategoryId],
   )
 
-  const standaloneCategory = useMemo(
-    () => (productScope === 'accessory' ? getStandaloneDefinition(selectedCategoryId) : null),
-    [productScope, selectedCategoryId],
-  )
-
-  const activeCategory = useMemo(() => {
-    if (productScope === 'accessory') {
-      return standaloneCategory
-    }
-    if (productScope === 'apparel') {
-      return getCategoryDefinition(selectedGenderId, selectedCategoryId)
-    }
-    return null
-  }, [productScope, standaloneCategory, selectedGenderId, selectedCategoryId])
-
-  const activeCategoryLabel = useMemo(
-    () =>
-      buildSummaryLabel({
-        genderLabel: selectedGender?.label || '',
-        categoryLabel: standaloneCategory ? '' : activeCategory?.label || '',
-        accessoryLabel: standaloneCategory?.label || '',
-      }),
-    [activeCategory, selectedGender, standaloneCategory],
-  )
+  const activeCategoryLabel = activeCategory?.label || ''
+  const activeSubcategories = activeCategory?.subcategories || []
+  const activeSubcategoryLabel =
+    activeSubcategories.find((option) => option.id === selectedSubcategoryId)?.label || ''
+  const hasSubcategoryOptions = activeSubcategories.length > 0
+  const hasSubcategorySelection = !hasSubcategoryOptions || Boolean(selectedSubcategoryId)
 
   const activePromptGroups = activeCategory?.groups || []
   const availablePromptCount = activeCategory?.prompts?.length || 0
@@ -134,17 +85,9 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   )
 
   const stepMeta = {
-    scope: {
-      title: 'Product type',
-      description: 'Choose whether you want to generate apparel looks or accessories renders.',
-    },
-    gender: {
-      title: 'Model reference',
-      description: 'Pick the model fit for apparel looks.',
-    },
     focus: {
-      title: 'Product focus',
-      description: 'Select the garment zone or accessory to visualise.',
+      title: 'Product category',
+      description: 'Select what kind of product imagery you want to create.',
     },
     prompts: {
       title: 'Prompt cues',
@@ -156,10 +99,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     },
   }
 
-  const stepOrder = useMemo(
-    () => (productScope === 'accessory' ? ['scope', 'focus', 'prompts', 'upload'] : ['scope', 'gender', 'focus', 'prompts', 'upload']),
-    [productScope],
-  )
+  const stepOrder = ['focus', 'prompts', 'upload']
 
   useEffect(() => {
     setCurrentStepIndex((prev) => {
@@ -170,24 +110,17 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
 
   const currentStepId = stepOrder[currentStepIndex] || stepOrder[0]
   const focusHasTemplates = Boolean(activeCategory) && availablePromptCount > 0
-  const isScopeComplete = productScope === 'apparel' || productScope === 'accessory'
-  const isGenderComplete = productScope === 'accessory' ? true : Boolean(selectedGenderId)
-  const isFocusComplete = Boolean(selectedCategoryId) && focusHasTemplates
+  const isFocusComplete = Boolean(selectedCategoryId) && focusHasTemplates && hasSubcategorySelection
   const hasPromptSelection = selectedPromptIds.length > 0
   const isReadyToGenerate =
-    Boolean(productScope) &&
-    (productScope === 'accessory' || Boolean(selectedGenderId)) &&
     Boolean(selectedCategoryId) &&
+    hasSubcategorySelection &&
     hasPromptSelection &&
     Boolean(imageFile) &&
     focusHasTemplates &&
     hasEnoughCoins
   const canAdvanceCurrentStep = (() => {
     switch (currentStepId) {
-      case 'scope':
-        return isScopeComplete
-      case 'gender':
-        return isGenderComplete
       case 'focus':
         return isFocusComplete
       case 'prompts':
@@ -206,23 +139,11 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   useEffect(() => {
     const previous = selectionSnapshotRef.current
 
-    if (previous.scope !== productScope) {
-      selectionSnapshotRef.current = { scope: productScope, genderId: '', categoryId: '' }
-      if (!productScope) {
-        return
+    if (previous.categoryId !== selectedCategoryId) {
+      selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: '' }
+      if (selectedSubcategoryId !== '') {
+        setSelectedSubcategoryId('')
       }
-      setSelectedGenderId('')
-      setSelectedCategoryId('')
-      setSelectedPromptIds([])
-      resetOutputs()
-      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
-      setCurrentStepIndex(0)
-      return
-    }
-
-    if (productScope === 'apparel' && previous.genderId !== selectedGenderId) {
-      selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: '' }
-      setSelectedCategoryId('')
       setSelectedPromptIds([])
       resetOutputs()
       setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
@@ -233,61 +154,39 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       return
     }
 
-    if (previous.categoryId !== selectedCategoryId) {
-      selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: selectedCategoryId }
+    if (previous.subcategoryId !== selectedSubcategoryId) {
+      selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: selectedSubcategoryId }
       setSelectedPromptIds([])
       resetOutputs()
       setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
+      setCurrentStepIndex((prev) => {
+        const promptsIndex = stepOrder.indexOf('prompts')
+        return promptsIndex === -1 ? prev : Math.min(prev, promptsIndex)
+      })
       return
     }
 
-    selectionSnapshotRef.current = { scope: productScope, genderId: selectedGenderId, categoryId: selectedCategoryId }
-  }, [productScope, selectedGenderId, selectedCategoryId, stepOrder])
+    selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: selectedSubcategoryId }
+  }, [selectedCategoryId, selectedSubcategoryId, stepOrder])
 
-  const handleScopeSelect = (scope) => {
-    if (productScope === scope) {
+  const handleSelectCategory = (categoryId) => {
+    if (categoryId === selectedCategoryId) {
       return
     }
     updateStatus({ error: '' })
-    setProductScope(scope)
-  }
-
-  const handleSelectGender = (genderId) => {
-    if (selectedGenderId === genderId) {
-      return
-    }
-    if (productScope !== 'apparel') {
-      setProductScope('apparel')
-    }
-    updateStatus({ error: '' })
-    setSelectedGenderId(genderId)
-    setSelectedCategoryId('')
-  }
-
-  const handleSelectCategory = (categoryId, scope) => {
-    updateStatus({ error: '' })
-
-    if (scope === 'gendered') {
-      if (productScope !== 'apparel') {
-        setProductScope('apparel')
-      }
-      if (!selectedGenderId) {
-        updateStatus({ error: 'Choose male or female product pictures first.' })
-        return
-      }
-    } else if (scope === 'standalone') {
-      if (productScope !== 'accessory') {
-        setProductScope('accessory')
-      }
-    }
-
     setSelectedCategoryId(categoryId)
   }
 
+  const handleSelectSubcategory = (subcategoryId) => {
+    if (!hasSubcategoryOptions || subcategoryId === selectedSubcategoryId) {
+      return
+    }
+    updateStatus({ error: '' })
+    setSelectedSubcategoryId(subcategoryId)
+  }
+
   const stepErrorMessages = {
-    scope: 'Select whether you need apparel looks or accessories first.',
-    gender: 'Choose male or female product pictures first.',
-    focus: 'Select a product focus to continue.',
+    focus: 'Select a product category and subcategory to continue.',
     prompts: 'Select at least one prompt direction.',
   }
 
@@ -364,18 +263,13 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
       return
     }
 
-    if (!productScope) {
-      updateStatus({ error: 'Select whether you need apparel looks or accessories first.' })
-      return
-    }
-
-    if (productScope === 'apparel' && !selectedGenderId) {
-      updateStatus({ error: 'Choose male or female product pictures first.' })
-      return
-    }
-
     if (!selectedCategoryId) {
-      updateStatus({ error: 'Select a product focus to continue.' })
+      updateStatus({ error: 'Select a product category to continue.' })
+      return
+    }
+
+    if (hasSubcategoryOptions && !selectedSubcategoryId) {
+      updateStatus({ error: 'Select a subcategory to continue.' })
       return
     }
 
@@ -408,7 +302,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
 
     updateStatus({
       step: 'images',
-      message: 'Generating editorials and close-ups...',
+      message: 'Generating product photography variations...',
       loading: true,
       error: '',
     })
@@ -522,6 +416,10 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
         onSessionComplete({
           id: crypto.randomUUID(),
           createdAt: new Date().toISOString(),
+          categoryId: selectedCategoryId,
+          categoryLabel: activeCategoryLabel,
+          subcategoryId: selectedSubcategoryId,
+          subcategoryLabel: activeSubcategoryLabel,
           prompts: promptMetadata || selectedPromptDetails,
           sourceImage: typeof sourceImageUrl === 'string' ? sourceImageUrl : '',
           generatedImages: Array.isArray(images) ? images : [],
@@ -538,15 +436,14 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   }
 
   const handleReset = () => {
-    setProductScope('')
     setImageFile(null)
     setImagePreview('')
-    setSelectedGenderId('')
     setSelectedCategoryId('')
+    setSelectedSubcategoryId('')
     setSelectedPromptIds([])
     resetOutputs()
     setCurrentStepIndex(0)
-    selectionSnapshotRef.current = { scope: '', genderId: '', categoryId: '' }
+    selectionSnapshotRef.current = { categoryId: '', subcategoryId: '' }
     updateStatus({ step: '', message: '', loading: false, error: '' })
   }
 
@@ -604,24 +501,14 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
     }
   }
 
-  const apparelCategories = useMemo(() => {
-    if (!selectedGender) {
-      return []
-    }
-    const order = ['upper', 'lower', 'footwear']
-    return selectedGender.categories
-      .filter((category) => order.includes(category.id))
-      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
-  }, [selectedGender])
-
   return (
     <div className="page">
       <header className="page__header">
         <div>
-          <h1>Photo-first Garment Generator</h1>
+          <h1>Photo-first Product Generator</h1>
           <p>
-            Upload a single garment photo, choose as many editorial prompt directions as you want, and let OpenRouter craft
-            faithful model and product imagery plus e-commerce copy.
+            Upload a product photo, choose tailored photography prompts for your category, and let OpenRouter craft on-brand
+            marketing visuals and copy.
           </p>
         </div>
         <div className="generator__header-actions">
@@ -697,107 +584,57 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
           </ol>
 
           <div className="funnel-content">
-            {currentStepId === 'scope' && (
-              <div className="selector-group">
-                <h2>What do you need?</h2>
-                <p className="selector-note">Choose between apparel looks or accessories renders.</p>
-                <div className="selector-row" role="radiogroup" aria-label="Product type">
-                  {[
-                    { id: 'apparel', label: 'Apparel looks' },
-                    { id: 'accessory', label: 'Accessories' },
-                  ].map((option) => {
-                    const isSelected = productScope === option.id
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                        onClick={() => handleScopeSelect(option.id)}
-                        aria-pressed={isSelected}
-                      >
-                        <span className="selector-btn__label">{option.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {currentStepId === 'gender' && (
-              <div className="selector-group">
-                <h2>Model reference</h2>
-                <p className="selector-note">Pick a model fit so we can frame the apparel correctly.</p>
-                <div className="selector-row" role="radiogroup" aria-label="Model reference">
-                  {genderOptions.map((option) => {
-                    const isSelected = option.id === selectedGenderId
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                        onClick={() => handleSelectGender(option.id)}
-                        aria-pressed={isSelected}
-                        disabled={!option.hasPrompts}
-                      >
-                        <span className="selector-btn__label">{option.label}</span>
-                        {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
             {currentStepId === 'focus' && (
               <div className="selector-group">
-                <h2>Product focus</h2>
-                <p className="selector-note">Load tailored prompt cues for the item you need.</p>
+                <h2>Product category</h2>
+                <p className="selector-note">
+                  Pick a category to load tailored product photography prompts, then choose the subcategory focus for your
+                  product.
+                </p>
 
-                {productScope === 'apparel' ? (
-                  selectedGender ? (
-                    <div className="selector-subgroup">
-                      <span className="selector-subheading">{selectedGender.label} apparel</span>
-                      <div className="selector-row" role="radiogroup" aria-label="Apparel categories">
-                        {apparelCategories.map((category) => {
-                          const isSelected = selectedCategoryId === category.id
-                          return (
-                            <button
-                              key={`${selectedGender.id}-${category.id}`}
-                              type="button"
-                              className={`selector-btn${isSelected ? ' selector-btn--selected' : ''}`}
-                              onClick={() => handleSelectCategory(category.id, 'gendered')}
-                              aria-pressed={isSelected}
-                              disabled={!category.hasPrompts}
-                            >
-                              <span className="selector-btn__label">{category.label}</span>
-                              {!category.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="selector-placeholder">Choose a model fit first to unlock apparel options.</p>
-                  )
-                ) : null}
+                <div className="selector-subgroup">
+                  <span className="selector-subheading">Available categories</span>
+                  <div className="selector-row" role="radiogroup" aria-label="Product categories">
+                    {categoryOptions.map((option) => {
+                      const isSelected = selectedCategoryId === option.id
+                      return (
+                        <button
+                          key={`standalone-${option.id}`}
+                          type="button"
+                          className={`selector-btn selector-btn--compact${isSelected ? ' selector-btn--selected' : ''}`}
+                          onClick={() => handleSelectCategory(option.id)}
+                          aria-pressed={isSelected}
+                          disabled={!option.hasPrompts}
+                        >
+                          <span className="selector-btn__label">{option.label}</span>
+                          {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
 
-                {productScope === 'accessory' && (
+                {hasSubcategoryOptions && (
                   <div className="selector-subgroup">
-                    <span className="selector-subheading">Accessories</span>
-                    <div className="selector-row" role="radiogroup" aria-label="Accessories">
-                      {accessoryOptions.map((option) => {
-                        const isSelected = selectedCategoryId === option.id
+                    <span className="selector-subheading">Subcategories</span>
+                    <div
+                      className="selector-row"
+                      role="radiogroup"
+                      aria-label={`${activeCategoryLabel || 'Selected category'} subcategories`}
+                    >
+                      {activeSubcategories.map((option) => {
+                        const isSelected = selectedSubcategoryId === option.id
                         return (
                           <button
-                            key={`standalone-${option.id}`}
+                            key={`subcategory-${option.id}`}
                             type="button"
-                            className={`selector-btn selector-btn--compact${isSelected ? ' selector-btn--selected' : ''}`}
-                            onClick={() => handleSelectCategory(option.id, 'standalone')}
+                            className={`selector-btn selector-btn--compact${
+                              isSelected ? ' selector-btn--selected' : ''
+                            }`}
+                            onClick={() => handleSelectSubcategory(option.id)}
                             aria-pressed={isSelected}
-                            disabled={!option.hasPrompts}
                           >
                             <span className="selector-btn__label">{option.label}</span>
-                            {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
                           </button>
                         )
                       })}
@@ -817,7 +654,7 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                   <span>{selectedPromptIds.length} selected</span>
                 </div>
                 {!activeCategory && (
-                  <p className="styles__hint">Choose a product focus to load suggested prompt cues.</p>
+                  <p className="styles__hint">Choose a product category to load suggested prompt cues.</p>
                 )}
                 {activeCategory && availablePromptCount === 0 && (
                   <p className="styles__hint">Prompt templates for this selection are coming soon.</p>
@@ -878,25 +715,15 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
                   <h3>Review selections</h3>
                   <ul className="funnel-summary">
                     <li>
-                      <span>Product type</span>
-                      <strong>
-                        {productScope === 'apparel'
-                          ? 'Apparel looks'
-                          : productScope === 'accessory'
-                          ? 'Accessories'
-                          : 'Not set'}
-                      </strong>
-                    </li>
-                    {productScope === 'apparel' && (
-                      <li>
-                        <span>Model reference</span>
-                        <strong>{selectedGender?.label || 'Not set'}</strong>
-                      </li>
-                    )}
-                    <li>
-                      <span>Product focus</span>
+                      <span>Product category</span>
                       <strong>{activeCategoryLabel || 'Not set'}</strong>
                     </li>
+                    {hasSubcategoryOptions && (
+                      <li>
+                        <span>Subcategory</span>
+                        <strong>{activeSubcategoryLabel || 'Not set'}</strong>
+                      </li>
+                    )}
                     <li>
                       <span>Prompts selected</span>
                       <strong>{selectedPromptIds.length}</strong>
