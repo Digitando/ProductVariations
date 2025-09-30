@@ -90,38 +90,55 @@ function mapSupabaseSession(row) {
     return fallback;
   };
 
-  return {
+  const coalesce = (...keys) => {
+    for (const key of keys) {
+      if (key in row && row[key] !== undefined && row[key] !== null) {
+        return row[key];
+      }
+    }
+    return undefined;
+  };
+
+  const rawCreator = coalesce('creator', 'creator_info');
+  const normalized = {
     ...row,
-    prompts: parse(row.prompts, []),
-    generatedImages: parse(row.generatedImages, []),
-    descriptions: parse(row.descriptions, []),
-    promptSummaries: parse(row.promptSummaries, []),
-    creator: (() => {
-      const raw = row.creator || null;
-      if (!raw) {
+    id: row.id || row.session_id || null,
+    userId: coalesce('userId', 'user_id') || null,
+    createdAt: coalesce('createdAt', 'created_at') || null,
+    sourceImage: coalesce('sourceImage', 'source_image') || '',
+    prompts: parse(coalesce('prompts', 'prompt_ids'), []),
+    generatedImages: parse(coalesce('generatedImages', 'generated_images'), []),
+    descriptions: parse(coalesce('descriptions', 'description_entries', 'description'), []),
+    promptSummaries: parse(coalesce('promptSummaries', 'prompt_summaries'), []),
+    categories: parse(coalesce('categories', 'category_scopes'), []),
+  };
+
+  normalized.creator = (() => {
+    const raw = rawCreator || null;
+    if (!raw) {
+      return null;
+    }
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return {
+          id: parsed?.id || null,
+          name: parsed?.name || '',
+        };
+      } catch (_error) {
         return null;
       }
-      if (typeof raw === 'string') {
-        try {
-          const parsed = JSON.parse(raw);
-          return {
-            id: parsed?.id || null,
-            name: parsed?.name || '',
-          };
-        } catch (_error) {
-          return null;
-        }
-      }
-      if (typeof raw === 'object') {
-        return {
-          id: raw.id || null,
-          name: raw.name || '',
-        };
-      }
-      return null;
-    })(),
-    categories: parse(row.categories, []),
-  };
+    }
+    if (typeof raw === 'object') {
+      return {
+        id: raw.id || null,
+        name: raw.name || '',
+      };
+    }
+    return null;
+  })();
+
+  return normalized;
 }
 
 function mapSessionForSupabase(session) {

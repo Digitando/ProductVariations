@@ -77,6 +77,33 @@ describe('mapSupabaseSession', () => {
       creator: { id: 'user-1', name: 'Jane' },
     });
   });
+
+  it('maps snake_case columns from Supabase responses', () => {
+    const mapped = mapSupabaseSession({
+      session_id: 'session-3',
+      user_id: 'user-9',
+      created_at: '2024-01-01T00:00:00.000Z',
+      prompts: '["p-9"]',
+      generated_images: '["img-9"]',
+      description_entries: '["desc-9"]',
+      prompt_summaries: '["summary-9"]',
+      category_scopes: '["apparel"]',
+      source_image: 'https://example.com/source.png',
+      creator_info: '{"id":"user-9","name":"Casey"}',
+    });
+
+    expect(mapped).toMatchObject({
+      id: 'session-3',
+      userId: 'user-9',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      generatedImages: ['img-9'],
+      descriptions: ['desc-9'],
+      promptSummaries: ['summary-9'],
+      categories: ['apparel'],
+      sourceImage: 'https://example.com/source.png',
+      creator: { id: 'user-9', name: 'Casey' },
+    });
+  });
 });
 
 describe('mapSessionForSupabase', () => {
