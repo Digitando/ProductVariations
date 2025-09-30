@@ -50,11 +50,26 @@ function mapSupabaseUser(row) {
 
 function mapUserForSupabase(user) {
   if (!user) return user;
+  const normalizeBoolean = (value) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true') {
+        return true;
+      }
+      if (normalized === 'false') {
+        return false;
+      }
+    }
+    return Boolean(value);
+  };
   return {
     ...user,
     referrals: Array.isArray(user.referrals) ? user.referrals : [],
     processedPayments: Array.isArray(user.processedPayments) ? user.processedPayments : [],
-    marketingOptIn: Boolean(user.marketingOptIn),
+    marketingOptIn: normalizeBoolean(user.marketingOptIn),
     privacyAcceptedAt: user.privacyAcceptedAt || null,
   };
 }
@@ -270,4 +285,8 @@ module.exports = {
   saveUsers,
   getSessions,
   saveSessions,
+  mapSupabaseUser,
+  mapUserForSupabase,
+  mapSupabaseSession,
+  mapSessionForSupabase,
 };
