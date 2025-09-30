@@ -809,7 +809,7 @@
   },
 };
 
-const standaloneCategories = {
+const legacyStandaloneCategories = {
   sunglasses: {
     label: 'Sunglasses',
     groups: {
@@ -1475,10 +1475,53 @@ function createTitle({ title, name, categoryLabel }) {
 function normalizeCategory({ scope, ownerId, categoryId, definition }) {
   const groups = [];
   const prompts = [];
+  const subcategories = Array.isArray(definition.subcategories)
+    ? definition.subcategories
+        .map((entry, index) => {
+          if (!entry) {
+            return null;
+          }
+
+          if (typeof entry === 'string') {
+            return {
+              id: `${categoryId}_${index}`,
+              label: entry,
+            };
+          }
+
+          const normalizedId =
+            typeof entry.id === 'string' && entry.id.trim().length > 0
+              ? entry.id.trim()
+              : `${categoryId}_${index}`;
+          const normalizedLabel =
+            typeof entry.label === 'string' && entry.label.trim().length > 0
+              ? entry.label.trim()
+              : typeof entry.id === 'string' && entry.id.trim().length > 0
+              ? entry.id.trim()
+              : `Option ${index + 1}`;
+
+          return {
+            id: normalizedId,
+            label: normalizedLabel,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  const subcategoryIdSet = new Set(subcategories.map((subcategory) => subcategory.id))
 
   Object.entries(definition.groups || {}).forEach(([groupLabel, groupPrompts = []]) => {
     const normalizedPrompts = groupPrompts.map((entry, index) => {
       const promptId = buildPromptId(scope, ownerId, categoryId, entry.idSuffix, index);
+      const rawSubcategoryIds = Array.isArray(entry.subcategoryIds)
+        ? entry.subcategoryIds
+        : typeof entry.subcategoryIds === 'string'
+        ? entry.subcategoryIds
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : [];
+      const normalizedSubcategoryIds = rawSubcategoryIds.filter((id) => subcategoryIdSet.has(id));
       const record = {
         id: promptId,
         scope,
@@ -1490,6 +1533,7 @@ function normalizeCategory({ scope, ownerId, categoryId, definition }) {
         description: entry.description || createDescription(entry.prompt),
         prompt: entry.prompt,
         order: index,
+        subcategoryIds: normalizedSubcategoryIds,
       };
       prompts.push(record);
       return record;
@@ -1513,6 +1557,7 @@ function normalizeCategory({ scope, ownerId, categoryId, definition }) {
     ownerId,
     groups,
     prompts,
+    subcategories,
     hasPrompts: prompts.length > 0,
     defaultPromptIds: defaultIdsFromDefinition.length > 0 ? defaultIdsFromDefinition : fallbackDefault,
   };
@@ -1540,6 +1585,8 @@ const genders = Object.entries(rawCatalog).map(([genderId, genderDefinition]) =>
     categories,
   };
 });
+
+const standaloneCategories = require('./standaloneProductCategories.cjs');
 
 const standalone = Object.entries(standaloneCategories).map(([categoryId, definition]) => {
   const category = normalizeCategory({
@@ -1584,9 +1631,9 @@ function getPromptsForSelection({ genderId, categoryId }) {
     return [];
   }
 
-  if (categoryId === 'sunglasses') {
-    const standaloneCategory = getStandaloneCategory(categoryId);
-    return standaloneCategory ? standaloneCategory.prompts : [];
+  const standaloneCategory = getStandaloneCategory(categoryId);
+  if (standaloneCategory) {
+    return standaloneCategory.prompts || [];
   }
 
   const category = getCategory(genderId, categoryId);
