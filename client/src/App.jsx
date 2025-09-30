@@ -134,7 +134,7 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
       return
     }
 
-    if (!formData.consentPrivacy) {
+    if (isRegister && !formData.consentPrivacy) {
       setError('Please acknowledge the privacy policy and GDPR terms to continue.')
       return
     }
