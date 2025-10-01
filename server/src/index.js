@@ -45,11 +45,6 @@ const COINS_PER_CURRENCY_UNIT = 5;
 const SUPPORTED_PURCHASE_CURRENCIES = new Set(['eur']);
 const SQUARE_OUTPUT_SIZE = 1024;
 const DEFAULT_STRIPE_DECIMAL_FACTOR = 100;
-const CACHE_TTL_MS = 60 * 1000;
-const publicCache = {
-  gallery: { payload: null, expiresAt: 0 },
-  prompts: { payload: null, expiresAt: 0 },
-};
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 40,
@@ -82,27 +77,6 @@ function calculatePurchase(amount, currency) {
   const unitAmount = numericAmount * DEFAULT_STRIPE_DECIMAL_FACTOR;
 
   return { coins, amount: unitAmount, currency: normalizedCurrency };
-}
-
-function deriveCategoriesFromPrompts(promptIds = []) {
-  if (!Array.isArray(promptIds)) {
-    return [];
-  }
-
-  const scopes = new Set();
-  promptIds.forEach((id) => {
-    const prompt = PROMPTS_BY_ID[id];
-    if (!prompt || !prompt.scope) {
-      return;
-    }
-    if (prompt.scope === 'gendered') {
-      scopes.add('apparel');
-    } else if (prompt.scope === 'standalone') {
-      scopes.add('accessory');
-    }
-  });
-
-  return Array.from(scopes);
 }
 
 if (!OPENROUTER_API_KEY) {
@@ -353,11 +327,6 @@ app.get('/auth/me', requireAuth, (req, res) => {
 });
 
 app.get('/api/public/gallery', async (_req, res) => {
-  const now = Date.now();
-  if (publicCache.gallery.payload && publicCache.gallery.expiresAt > now) {
-    return res.json(publicCache.gallery.payload);
-  }
-
   try {
     const sessions = await getSessions();
     const pool = [];
@@ -366,36 +335,15 @@ app.get('/api/public/gallery', async (_req, res) => {
       if (!session || !Array.isArray(session.generatedImages)) {
         return;
       }
-
-      const categories = Array.isArray(session.categories) && session.categories.length > 0
-        ? session.categories
-        : deriveCategoriesFromPrompts(session.prompts);
-      const promptSummaries = Array.isArray(session.promptSummaries)
-        ? session.promptSummaries.slice(0, 3)
-        : [];
-      const creator = session.creator && typeof session.creator === 'object'
-        ? {
-            id: session.creator.id || null,
-            name: session.creator.name || '',
-          }
-        : null;
-
       session.generatedImages.forEach((url) => {
         if (typeof url === 'string' && url.startsWith('http')) {
-          pool.push({
-            url,
-            categories,
-            prompts: promptSummaries,
-            creator,
-          });
+          pool.push(url);
         }
       });
     });
 
     if (pool.length === 0) {
-      const emptyPayload = { images: [] };
-      publicCache.gallery = { payload: emptyPayload, expiresAt: now + CACHE_TTL_MS };
-      return res.json(emptyPayload);
+      return res.json({ images: [] });
     }
 
     const limit = Math.min(24, pool.length);
@@ -411,9 +359,7 @@ app.get('/api/public/gallery', async (_req, res) => {
       selected.push(pool[index]);
     }
 
-    const payload = { images: selected };
-    publicCache.gallery = { payload, expiresAt: now + CACHE_TTL_MS };
-    res.json(payload);
+    res.json({ images: selected });
   } catch (error) {
     console.error('Failed to load public gallery', error.message || error);
     res.status(500).json({ error: 'Unable to load gallery images.' });
@@ -421,17 +367,10 @@ app.get('/api/public/gallery', async (_req, res) => {
 });
 
 app.get('/api/public/prompts', (_req, res) => {
-  const now = Date.now();
-  if (publicCache.prompts.payload && publicCache.prompts.expiresAt > now) {
-    return res.json(publicCache.prompts.payload);
-  }
-
   try {
     const promptList = Object.values(PROMPTS_BY_ID);
     if (promptList.length === 0) {
-      const emptyPayload = { prompts: [] };
-      publicCache.prompts = { payload: emptyPayload, expiresAt: now + CACHE_TTL_MS };
-      return res.json(emptyPayload);
+      return res.json({ prompts: [] });
     }
 
     const limit = Math.min(12, promptList.length);
@@ -453,9 +392,7 @@ app.get('/api/public/prompts', (_req, res) => {
       });
     }
 
-    const payload = { prompts: selected };
-    publicCache.prompts = { payload, expiresAt: now + CACHE_TTL_MS };
-    res.json(payload);
+    res.json({ prompts: selected });
   } catch (error) {
     console.error('Failed to load prompt spotlight', error.message || error);
     res.status(500).json({ error: 'Unable to load prompt spotlight.' });
@@ -1052,23 +989,6 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
       descriptions = [],
     } = req.body || {};
 
-    const promptSummaries = Array.isArray(prompts)
-      ? prompts
-          .map((id) => {
-            const lookup = PROMPTS_BY_ID[id];
-            return lookup
-              ? {
-                  id,
-                  title: lookup.title,
-                  description: lookup.description,
-                }
-              : null;
-          })
-          .filter(Boolean)
-      : [];
-
-    const categories = deriveCategoriesFromPrompts(prompts);
-
     const session = {
       id: crypto.randomUUID(),
       userId: req.user.id,
@@ -1077,12 +997,6 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
       sourceImage: typeof sourceImage === 'string' ? sourceImage : '',
       generatedImages: Array.isArray(generatedImages) ? generatedImages.slice(0, 10) : [],
       descriptions: Array.isArray(descriptions) ? descriptions.slice(0, 10) : [],
-      promptSummaries,
-      categories,
-      creator: {
-        id: req.user.id,
-        name: req.user.name || req.user.email || '',
-      },
     };
 
     const sessions = await getSessions();
@@ -1091,9 +1005,6 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
     // Retain only the most recent 200 sessions across all users to avoid unbounded growth.
     const trimmed = sessions.slice(0, 200);
     await saveSessions(trimmed);
-
-    publicCache.gallery = { payload: null, expiresAt: 0 };
-    publicCache.prompts = { payload: null, expiresAt: 0 };
 
     res.status(201).json({ session });
   } catch (error) {

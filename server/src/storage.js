@@ -102,6 +102,7 @@ function mapSupabaseSession(row) {
   const rawCreator = coalesce('creator', 'creator_info');
   const normalized = {
     ...row,
+<<<<<<< HEAD
     id: row.id || row.session_id || null,
     userId: coalesce('userId', 'user_id') || null,
     createdAt: coalesce('createdAt', 'created_at') || null,
@@ -139,6 +140,12 @@ function mapSupabaseSession(row) {
   })();
 
   return normalized;
+=======
+    prompts: parse(row.prompts, []),
+    generatedImages: parse(row.generatedImages, []),
+    descriptions: parse(row.descriptions, []),
+  };
+>>>>>>> parent of 9778c11 (update)
 }
 
 function mapSessionForSupabase(session) {
@@ -148,15 +155,6 @@ function mapSessionForSupabase(session) {
     prompts: Array.isArray(session.prompts) ? session.prompts : [],
     generatedImages: Array.isArray(session.generatedImages) ? session.generatedImages : [],
     descriptions: Array.isArray(session.descriptions) ? session.descriptions : [],
-    promptSummaries: Array.isArray(session.promptSummaries) ? session.promptSummaries : [],
-    creator:
-      session.creator && typeof session.creator === 'object'
-        ? {
-            id: session.creator.id || null,
-            name: session.creator.name || '',
-          }
-        : null,
-    categories: Array.isArray(session.categories) ? session.categories : [],
   };
 }
 
