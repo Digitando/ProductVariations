@@ -102,7 +102,6 @@ function mapSupabaseSession(row) {
   const rawCreator = coalesce('creator', 'creator_info');
   const normalized = {
     ...row,
-<<<<<<< HEAD
     id: row.id || row.session_id || null,
     userId: coalesce('userId', 'user_id') || null,
     createdAt: coalesce('createdAt', 'created_at') || null,
@@ -140,12 +139,6 @@ function mapSupabaseSession(row) {
   })();
 
   return normalized;
-=======
-    prompts: parse(row.prompts, []),
-    generatedImages: parse(row.generatedImages, []),
-    descriptions: parse(row.descriptions, []),
-  };
->>>>>>> parent of 9778c11 (update)
 }
 
 function mapSessionForSupabase(session) {
