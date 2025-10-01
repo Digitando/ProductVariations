@@ -85,9 +85,9 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
               onCredential(response.credential)
             }
           },
-          ux_mode: 'popup',
           auto_select: false,
           cancel_on_tap_outside: true,
+          itp_support: true,
         })
 
         if (!buttonRef.current) {
