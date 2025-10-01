@@ -162,6 +162,10 @@ const openRouterClient = axios.create({
 });
 
 const PROMPTS_BY_ID = promptCatalog.promptsById || {};
+console.log(`Loaded ${Object.keys(PROMPTS_BY_ID).length} prompts from catalog`);
+console.log(`Standalone categories: ${promptCatalog.standaloneCategories?.length || 0}`);
+console.log(`Genders: ${promptCatalog.genders?.length || 0}`);
+
 const DEFAULT_PROMPT_SEQUENCE = (() => {
   const defaultCategory = typeof promptCatalog.getCategory === 'function' ? promptCatalog.getCategory('male', 'upper') : null;
   if (defaultCategory?.defaultPromptIds?.length) {
@@ -369,7 +373,9 @@ app.get('/api/public/gallery', async (_req, res) => {
 app.get('/api/public/prompts', (_req, res) => {
   try {
     const promptList = Object.values(PROMPTS_BY_ID);
+    console.log(`[/api/public/prompts] Total prompts available: ${promptList.length}`);
     if (promptList.length === 0) {
+      console.warn('[/api/public/prompts] WARNING: No prompts found in catalog!');
       return res.json({ prompts: [] });
     }
 
