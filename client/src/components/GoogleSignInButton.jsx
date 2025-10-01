@@ -59,7 +59,7 @@ function loadGoogleScript({ onLoad, onError }) {
   return cleanup
 }
 
-export default function GoogleSignInButton({ clientId, onCredential, text = 'Continue with Google' }) {
+export default function GoogleSignInButton({ clientId, onCredential, text = 'Continue with Google', buttonText = 'signin_with' }) {
   const buttonRef = useRef(null)
   const [loadError, setLoadError] = useState(false)
 
@@ -99,7 +99,7 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
         window.google.accounts.id.renderButton(buttonRef.current, {
           theme: 'outline',
           size: 'large',
-          text: 'signin_with',
+          text: buttonText,
           type: 'standard',
           shape: 'pill',
         })
@@ -117,7 +117,7 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
         window.google.accounts.id.cancel()
       }
     }
-  }, [clientId, onCredential])
+  }, [clientId, onCredential, buttonText])
 
   if (!clientId || loadError) {
     return (

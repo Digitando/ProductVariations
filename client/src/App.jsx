@@ -91,7 +91,7 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
 
     try {
       if (isRegister && !formData.consentPrivacy) {
-        setError('Please acknowledge the privacy policy and GDPR terms to continue.')
+        setError('Please accept the Privacy Policy and GDPR terms above to create your account.')
         setSubmitting(false)
         return
       }
@@ -134,13 +134,16 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
       return
     }
 
+    // Only require consent for new registrations, not for existing users logging in
     if (isRegister && !formData.consentPrivacy) {
-      setError('Please acknowledge the privacy policy and GDPR terms to continue.')
+      setError('Please accept the Privacy Policy and GDPR terms above before signing up with Google.')
       return
     }
 
-    const consentPrivacy = Boolean(formData.consentPrivacy)
-    const consentMarketing = Boolean(formData.consentMarketing)
+    // For login mode, pass true for privacy (existing users already consented)
+    // For register mode, use the checkbox values
+    const consentPrivacy = isRegister ? Boolean(formData.consentPrivacy) : true
+    const consentMarketing = isRegister ? Boolean(formData.consentMarketing) : false
 
     setSubmitting(true)
     setError('')
@@ -178,10 +181,51 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
               ? 'Register to save your garment uploads and revisit generated assets at any time.'
               : 'Sign in to access saved uploads and continue where you left off.'}
           </p>
+          {isRegister && (
+            <div className="auth-form__consent">
+              <label className="auth-form__checkbox">
+                <input
+                  type="checkbox"
+                  checked={formData.consentPrivacy}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, consentPrivacy: event.target.checked }))
+                  }
+                  required
+                />
+                <span>
+                  I accept the{' '}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => {
+                      if (typeof onNavigate === 'function') {
+                        onClose()
+                        onNavigate(VIEWS.PRIVACY)
+                      }
+                    }}
+                  >
+                    Privacy Policy
+                  </button>{' '}
+                  and GDPR terms.
+                </span>
+              </label>
+              <label className="auth-form__checkbox">
+                <input
+                  type="checkbox"
+                  checked={formData.consentMarketing}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, consentMarketing: event.target.checked }))
+                  }
+                />
+                <span>I agree to receive promotional materials and updates (optional).</span>
+              </label>
+            </div>
+          )}
           <GoogleSignInButton
             clientId={googleClientId}
             onCredential={handleGoogleCredential}
-            text="Continue with Google"
+            text={isRegister ? 'Sign up with Google' : 'Sign in with Google'}
+            buttonText={isRegister ? 'signup_with' : 'signin_with'}
           />
           <div className="modal__divider">
             <span>or</span>
@@ -242,46 +286,6 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
                   autoComplete="off"
                 />
               </label>
-            )}
-            {isRegister && (
-              <div className="auth-form__consent">
-                <label className="auth-form__checkbox">
-                  <input
-                    type="checkbox"
-                    checked={formData.consentPrivacy}
-                    onChange={(event) =>
-                      setFormData((prev) => ({ ...prev, consentPrivacy: event.target.checked }))
-                    }
-                    required
-                  />
-                  <span>
-                    I accept the{' '}
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => {
-                        if (typeof onNavigate === 'function') {
-                          onClose()
-                          onNavigate(VIEWS.PRIVACY)
-                        }
-                      }}
-                    >
-                      Privacy Policy
-                    </button>{' '}
-                    and GDPR terms.
-                  </span>
-                </label>
-                <label className="auth-form__checkbox">
-                  <input
-                    type="checkbox"
-                    checked={formData.consentMarketing}
-                    onChange={(event) =>
-                      setFormData((prev) => ({ ...prev, consentMarketing: event.target.checked }))
-                    }
-                  />
-                  <span>I agree to receive promotional materials and updates (optional).</span>
-                </label>
-              </div>
             )}
             {error && <p className="auth-form__error">{error}</p>}
             <button type="submit" className="primary" disabled={submitting}>
