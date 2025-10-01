@@ -22,7 +22,7 @@ const {
   findUserById,
   generateReferralCode,
 } = require('./auth');
-const { getSessions, saveSessions, getUsers, saveUsers } = require('./storage');
+const { getSessions, saveSessions, getUsers, saveUsers, supabaseClient } = require('./storage');
 const { sendWelcomeEmail } = require('./mailer');
 const promptCatalog = require('../../shared/promptCatalog.cjs');
 
@@ -490,6 +490,36 @@ function getAssetBaseUrl(req) {
   return `${scheme}://${host}`;
 }
 
+async function uploadToSupabaseStorage(filePath, fileName) {
+  if (!supabaseClient) {
+    return null;
+  }
+
+  try {
+    const fileBuffer = await fsp.readFile(filePath);
+    const { data, error } = await supabaseClient.storage
+      .from('uploads')
+      .upload(fileName, fileBuffer, {
+        contentType: 'image/png',
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return null;
+    }
+
+    const { data: publicUrlData } = supabaseClient.storage
+      .from('uploads')
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('Failed to upload to Supabase:', error);
+    return null;
+  }
+}
+
 async function generateVariationImage({ prompt, imageUrl }) {
   const systemInstruction =
     'You are an e-commerce photo retoucher. Use the supplied reference image as the definitive product. Preserve its silhouette, materials, colours, and branding. Only adjust camera angle, lighting, background, or lightweight supporting props. Return exactly one finished square (1:1) image ready for online catalogues.';
@@ -585,8 +615,20 @@ app.post('/api/generate-images', requireAuth, upload.single('image'), async (req
       return res.status(402).json({ error: `You need ${coinsRequired} coin(s) but only have ${user.coins}.` });
     }
 
-    const assetBaseUrl = getAssetBaseUrl(req);
-    const imageUrl = `${assetBaseUrl}/uploads/${req.file.filename}`;
+    // Try to upload to Supabase Storage for public URL access
+    const supabaseUrl = await uploadToSupabaseStorage(req.file.path, req.file.filename);
+
+    // Fall back to local URL if Supabase upload fails
+    let imageUrl;
+    if (supabaseUrl) {
+      imageUrl = supabaseUrl;
+      console.log('Using Supabase URL for image generation:', imageUrl);
+    } else {
+      const assetBaseUrl = getAssetBaseUrl(req);
+      imageUrl = `${assetBaseUrl}/uploads/${req.file.filename}`;
+      console.log('Using local URL for image generation:', imageUrl);
+    }
+
     const images = await Promise.all(
       variationRequests.map(async ({ prompt }, index) => {
         const rawImage = await generateVariationImage({

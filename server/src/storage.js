@@ -297,4 +297,5 @@ module.exports = {
   mapUserForSupabase,
   mapSupabaseSession,
   mapSessionForSupabase,
+  supabaseClient,
 };
