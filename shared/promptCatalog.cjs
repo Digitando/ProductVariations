@@ -1614,14 +1614,30 @@ function getStandaloneCategory(categoryId) {
   return standaloneLookup[categoryId] || null;
 }
 
-function getPromptsForSelection({ genderId, categoryId }) {
+function getPromptsForSelection({ genderId, categoryId, subcategoryId }) {
   if (!categoryId) {
     return [];
   }
 
   const standaloneCategory = getStandaloneCategory(categoryId);
   if (standaloneCategory) {
-    return standaloneCategory.prompts || [];
+    const allPrompts = standaloneCategory.prompts || [];
+
+    // If subcategory is selected, filter prompts by subcategory
+    if (subcategoryId && standaloneCategory.subcategories && standaloneCategory.subcategories.length > 0) {
+      // Filter prompts that belong to this subcategory
+      // Prompts are filtered by matching their group/name to the subcategory label
+      const subcategory = standaloneCategory.subcategories.find(sub => sub.id === subcategoryId);
+      if (subcategory) {
+        // Filter prompts whose description or title mentions the subcategory label
+        return allPrompts.filter(prompt => {
+          const searchText = `${prompt.title} ${prompt.description} ${prompt.name} ${prompt.group}`.toLowerCase();
+          return searchText.includes(subcategory.label.toLowerCase());
+        });
+      }
+    }
+
+    return allPrompts;
   }
 
   const category = getCategory(genderId, categoryId);

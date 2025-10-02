@@ -76,8 +76,47 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   const hasSubcategoryOptions = activeSubcategories.length > 0
   const hasSubcategorySelection = !hasSubcategoryOptions || Boolean(selectedSubcategoryId)
 
-  const activePromptGroups = activeCategory?.groups || []
-  const availablePromptCount = activeCategory?.prompts?.length || 0
+  // Filter prompts by subcategory if one is selected
+  const filteredPrompts = useMemo(() => {
+    if (!activeCategory) return []
+
+    const allPrompts = activeCategory.prompts || []
+
+    // If subcategory is selected, filter prompts
+    if (selectedSubcategoryId && activeSubcategories.length > 0) {
+      const subcategory = activeSubcategories.find(sub => sub.id === selectedSubcategoryId)
+      if (subcategory) {
+        // Filter prompts whose description or title mentions the subcategory label
+        return allPrompts.filter(prompt => {
+          const searchText = `${prompt.title} ${prompt.description} ${prompt.name} ${prompt.group}`.toLowerCase()
+          return searchText.includes(subcategory.label.toLowerCase())
+        })
+      }
+    }
+
+    return allPrompts
+  }, [activeCategory, selectedSubcategoryId, activeSubcategories])
+
+  // Group the filtered prompts
+  const activePromptGroups = useMemo(() => {
+    const groupMap = new Map()
+
+    filteredPrompts.forEach(prompt => {
+      const groupLabel = prompt.group || 'Other'
+      if (!groupMap.has(groupLabel)) {
+        groupMap.set(groupLabel, {
+          id: groupLabel,
+          label: groupLabel,
+          prompts: []
+        })
+      }
+      groupMap.get(groupLabel).prompts.push(prompt)
+    })
+
+    return Array.from(groupMap.values())
+  }, [filteredPrompts])
+
+  const availablePromptCount = filteredPrompts.length
 
   const selectedPromptDetails = useMemo(
     () => selectedPromptIds.map((id) => PROMPTS_BY_ID[id]).filter(Boolean),
