@@ -527,6 +527,9 @@ async function uploadToSupabaseStorage(filePath, fileName) {
 }
 
 async function generateVariationImage({ prompt, imageUrl }) {
+  console.log('[generateVariationImage] Starting with imageUrl:', imageUrl);
+  console.log('[generateVariationImage] Prompt:', prompt);
+
   const systemInstruction =
     'You are an e-commerce photo retoucher. Use the supplied reference image as the definitive product. Preserve its silhouette, materials, colours, and branding. Only adjust camera angle, lighting, background, or lightweight supporting props. Return exactly one finished square (1:1) image ready for online catalogues.';
 
@@ -552,33 +555,42 @@ async function generateVariationImage({ prompt, imageUrl }) {
     },
   ];
 
+  console.log('[generateVariationImage] Sending request to OpenRouter with model: google/gemini-2.5-flash-image-preview');
+
   const { data } = await openRouterClient.post('/chat/completions', {
     model: 'google/gemini-2.5-flash-image-preview',
     messages,
   });
 
+  console.log('[generateVariationImage] Received response from OpenRouter');
   return extractImageFromResponse(data);
 }
 
 function extractImageFromResponse(data) {
   const choice = data?.choices?.[0];
   const message = choice?.message;
+
   if (!message) {
+    console.error('[extractImageFromResponse] No message in model response:', JSON.stringify(data, null, 2));
     throw new Error('No message returned from image model');
   }
 
+  // Check message.images array
   const imageFromImages = Array.isArray(message.images)
     ? message.images.find((item) => item?.image_base64 || item?.image_url?.url)
     : null;
 
   if (imageFromImages?.image_base64) {
+    console.log('[extractImageFromResponse] Found image in message.images[].image_base64');
     return `data:image/png;base64,${imageFromImages.image_base64}`;
   }
 
   if (imageFromImages?.image_url?.url) {
+    console.log('[extractImageFromResponse] Found image in message.images[].image_url.url');
     return imageFromImages.image_url.url;
   }
 
+  // Check message.content array
   const contentBlocks = Array.isArray(message.content) ? message.content : [];
   const imageBlock = contentBlocks.find((item) => {
     if (!item || typeof item !== 'object') return false;
@@ -587,14 +599,19 @@ function extractImageFromResponse(data) {
   });
 
   if (imageBlock?.image_base64) {
+    console.log('[extractImageFromResponse] Found image in content[].image_base64');
     return `data:image/png;base64,${imageBlock.image_base64}`;
   }
 
   if (imageBlock?.image_url?.url) {
+    console.log('[extractImageFromResponse] Found image in content[].image_url.url');
     return imageBlock.image_url.url;
   }
 
-  throw new Error('Model response did not include an output image');
+  // No image found - log the full message structure for debugging
+  console.error('[extractImageFromResponse] Could not find image. Message structure:', JSON.stringify(message, null, 2));
+  console.error('[extractImageFromResponse] Full response data:', JSON.stringify(data, null, 2));
+  throw new Error('Model response did not include an output image. The model may not support image generation or returned an unexpected format.');
 }
 
 app.post('/api/generate-images', requireAuth, upload.single('image'), async (req, res) => {
