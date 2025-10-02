@@ -78,15 +78,18 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
 
         setLoadError(false)
 
+        // Initialize with callback that will handle the credential
+        const handleCredentialResponse = (response) => {
+          if (response?.credential) {
+            onCredential(response.credential)
+          }
+        }
+
         window.google.accounts.id.initialize({
           client_id: clientId,
-          callback: (response) => {
-            if (response?.credential) {
-              onCredential(response.credential)
-            }
-          },
+          callback: handleCredentialResponse,
           auto_select: false,
-          cancel_on_tap_outside: true,
+          cancel_on_tap_outside: false, // Don't cancel when clicking outside
           itp_support: true,
         })
 
@@ -96,13 +99,41 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
 
         buttonRef.current.innerHTML = ''
 
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          theme: 'outline',
-          size: 'large',
-          text: buttonText,
-          type: 'standard',
-          shape: 'pill',
-        })
+        // Create a custom styled button
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'google-signin-custom-button'
+        button.textContent = text
+
+        // Use Google's OAuth2 flow with intermediate page approach
+        button.onclick = async () => {
+          try {
+            // Create a hidden iframe to handle the authentication
+            const iframe = document.createElement('iframe')
+            iframe.style.display = 'none'
+            iframe.id = 'google-auth-iframe'
+            document.body.appendChild(iframe)
+
+            // Initialize Google One Tap for this specific interaction
+            window.google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                console.warn('Google One Tap not displayed:', {
+                  notDisplayedReason: notification.getNotDisplayedReason?.(),
+                  skippedReason: notification.getSkippedReason?.()
+                })
+                // Clean up iframe
+                const oldIframe = document.getElementById('google-auth-iframe')
+                if (oldIframe) {
+                  oldIframe.remove()
+                }
+              }
+            })
+          } catch (error) {
+            console.error('Google Sign-In error:', error)
+          }
+        }
+
+        buttonRef.current.appendChild(button)
       },
       onError: () => {
         if (cancelled) return

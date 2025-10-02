@@ -76,26 +76,13 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
   const hasSubcategoryOptions = activeSubcategories.length > 0
   const hasSubcategorySelection = !hasSubcategoryOptions || Boolean(selectedSubcategoryId)
 
-  // Filter prompts by subcategory if one is selected
+  // Get all prompts for the active category
+  // Note: Subcategory selection is informational but doesn't filter prompts
+  // because prompts are not tagged with specific subcategories
   const filteredPrompts = useMemo(() => {
     if (!activeCategory) return []
-
-    const allPrompts = activeCategory.prompts || []
-
-    // If subcategory is selected, filter prompts
-    if (selectedSubcategoryId && activeSubcategories.length > 0) {
-      const subcategory = activeSubcategories.find(sub => sub.id === selectedSubcategoryId)
-      if (subcategory) {
-        // Filter prompts whose description or title mentions the subcategory label
-        return allPrompts.filter(prompt => {
-          const searchText = `${prompt.title} ${prompt.description} ${prompt.name} ${prompt.group}`.toLowerCase()
-          return searchText.includes(subcategory.label.toLowerCase())
-        })
-      }
-    }
-
-    return allPrompts
-  }, [activeCategory, selectedSubcategoryId, activeSubcategories])
+    return activeCategory.prompts || []
+  }, [activeCategory])
 
   // Group the filtered prompts
   const activePromptGroups = useMemo(() => {
