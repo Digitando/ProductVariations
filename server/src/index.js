@@ -249,6 +249,56 @@ async function convertToSquareDataUri(reference) {
   return `data:image/png;base64,${squareBuffer.toString('base64')}`;
 }
 
+async function processAndUploadImage(reference, filename) {
+  const buffer = await loadImageBuffer(reference);
+  const image = sharp(buffer, { failOnError: false });
+  const metadata = await image.metadata();
+  const width = metadata.width || SQUARE_OUTPUT_SIZE;
+  const height = metadata.height || SQUARE_OUTPUT_SIZE;
+  const cropSize = Math.max(1, Math.min(width, height));
+  const targetSize = Math.min(SQUARE_OUTPUT_SIZE, cropSize);
+
+  let pipeline = sharp(buffer, { failOnError: false });
+  if (width !== height && width && height) {
+    const left = Math.max(0, Math.floor((width - cropSize) / 2));
+    const top = Math.max(0, Math.floor((height - cropSize) / 2));
+    pipeline = pipeline.extract({ left, top, width: cropSize, height: cropSize });
+  }
+
+  const squareBuffer = await pipeline
+    .resize(targetSize, targetSize, { fit: 'cover', withoutEnlargement: true })
+    .png()
+    .toBuffer();
+
+  // Try to upload to Supabase Storage
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.storage
+        .from('uploads')
+        .upload(filename, squareBuffer, {
+          contentType: 'image/png',
+          upsert: true,
+        });
+
+      if (!error) {
+        const { data: publicUrlData } = supabaseClient.storage
+          .from('uploads')
+          .getPublicUrl(data.path);
+
+        console.log(`Generated image uploaded to storage: ${publicUrlData.publicUrl}`);
+        return publicUrlData.publicUrl;
+      } else {
+        console.error('Failed to upload generated image to storage:', error);
+      }
+    } catch (uploadError) {
+      console.error('Error uploading generated image:', uploadError);
+    }
+  }
+
+  // Fallback to data URI if upload fails or Supabase not configured
+  return `data:image/png;base64,${squareBuffer.toString('base64')}`;
+}
+
 function translateUpstreamError(error) {
   const rawMessage =
     error?.response?.data?.error?.message || error?.response?.data?.error || error?.message || 'Request failed';
@@ -678,7 +728,8 @@ app.post('/api/generate-images', requireAuth, upload.single('image'), async (req
           prompt: `Variation ${index + 1}: ${prompt}`,
           imageUrl,
         });
-        return convertToSquareDataUri(rawImage);
+        const filename = `generated-${Date.now()}-${Math.round(Math.random() * 1e9)}-${index}.png`;
+        return processAndUploadImage(rawImage, filename);
       })
     );
 

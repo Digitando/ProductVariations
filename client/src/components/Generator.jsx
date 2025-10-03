@@ -741,7 +741,14 @@ export default function Generator({
               >
                 <div className="chat-history__thumb">
                   {session.generatedImages?.[0] ? (
-                    <img src={session.generatedImages[0]} alt="Session thumbnail" />
+                    <img
+                      src={session.generatedImages[0]}
+                      alt="Session thumbnail"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<span>📄</span>';
+                      }}
+                    />
                   ) : (
                     <span>📄</span>
                   )}
