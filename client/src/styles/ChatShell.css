@@ -561,6 +561,8 @@
   gap: 14px;
   box-shadow: 0 30px 60px rgba(7, 9, 30, 0.55);
   backdrop-filter: blur(28px);
+  position: relative;
+  z-index: 10;
 }
 
 .chat-composer__bar {
@@ -728,7 +730,7 @@
   padding: 16px;
   box-shadow: 0 26px 70px rgba(7, 10, 30, 0.6);
   min-width: 220px;
-  z-index: 20;
+  z-index: 100;
   backdrop-filter: blur(20px);
 }
 
