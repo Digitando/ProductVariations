@@ -255,12 +255,22 @@ async function saveUsers(users) {
 
 async function getSessions() {
   if (supabaseClient) {
-    const { data, error } = await supabaseClient.from('sessions').select('*').order('createdAt', { ascending: false });
-    if (error) {
+    try {
+      const { data, error } = await supabaseClient.from('sessions').select('*');
+      if (error) {
+        throw error;
+      }
+
+      const mapped = Array.isArray(data) ? data.map(mapSupabaseSession) : [];
+      mapped.sort((a, b) => {
+        const bStamp = Date.parse(b?.createdAt || '') || 0;
+        const aStamp = Date.parse(a?.createdAt || '') || 0;
+        return bStamp - aStamp;
+      });
+      return mapped;
+    } catch (error) {
       console.error('Failed to fetch sessions from Supabase', error);
-      throw error;
     }
-    return Array.isArray(data) ? data.map(mapSupabaseSession) : [];
   }
 
   await ensureDataFiles();
@@ -269,36 +279,37 @@ async function getSessions() {
 
 async function saveSessions(sessions) {
   if (supabaseClient) {
-    const normalized = Array.isArray(sessions) ? sessions.map(mapSessionForSupabase) : [];
-    const ids = normalized.map((session) => session.id);
+    try {
+      const normalized = Array.isArray(sessions) ? sessions.map(mapSessionForSupabase) : [];
+      const ids = normalized.map((session) => session.id);
 
-    const { error: upsertError } = await supabaseClient.from('sessions').upsert(normalized, { onConflict: 'id' });
-    if (upsertError) {
-      console.error('Failed to upsert sessions to Supabase', upsertError);
-      throw upsertError;
-    }
-
-    if (ids.length > 0) {
-      const { data: existing, error: fetchError } = await supabaseClient.from('sessions').select('id');
-      if (fetchError) {
-        console.error('Failed to fetch existing session ids from Supabase', fetchError);
-        throw fetchError;
+      const { error: upsertError } = await supabaseClient.from('sessions').upsert(normalized, { onConflict: 'id' });
+      if (upsertError) {
+        throw upsertError;
       }
 
-      const staleIds = (existing || [])
-        .map((row) => row.id)
-        .filter((id) => !ids.includes(id));
+      if (ids.length > 0) {
+        const { data: existing, error: fetchError } = await supabaseClient.from('sessions').select('id');
+        if (fetchError) {
+          throw fetchError;
+        }
 
-      if (staleIds.length > 0) {
-        const { error: deleteError } = await supabaseClient.from('sessions').delete().in('id', staleIds);
-        if (deleteError) {
-          console.error('Failed to delete stale sessions from Supabase', deleteError);
-          throw deleteError;
+        const staleIds = (existing || [])
+          .map((row) => row.id)
+          .filter((id) => !ids.includes(id));
+
+        if (staleIds.length > 0) {
+          const { error: deleteError } = await supabaseClient.from('sessions').delete().in('id', staleIds);
+          if (deleteError) {
+            throw deleteError;
+          }
         }
       }
-    }
 
-    return;
+      return;
+    } catch (error) {
+      console.error('Failed to save sessions to Supabase, falling back to local storage', error);
+    }
   }
 
   await ensureDataFiles();
