@@ -11,10 +11,12 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+  background: linear-gradient(135deg, rgba(30, 33, 47, 0.85), rgba(21, 24, 35, 0.88));
   border-radius: 24px;
   padding: 28px 32px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 28px 60px rgba(7, 10, 32, 0.65);
+  border: 1px solid rgba(142, 148, 209, 0.12);
+  backdrop-filter: blur(32px);
 }
 
 .profile__hero button {
@@ -32,49 +34,54 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: 16px;
-  background: rgba(99, 102, 241, 0.12);
+  background: linear-gradient(135deg, rgba(127, 90, 240, 0.22), rgba(100, 116, 255, 0.18));
+  border: 1px solid rgba(127, 90, 240, 0.35);
 }
 
 .profile__coin-pill span {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #4338ca;
+  letter-spacing: 0.12em;
+  color: rgba(179, 187, 255, 0.75);
 }
 
 .profile__coin-pill strong {
-  font-size: 22px;
-  color: #312e81;
+  font-size: 24px;
+  color: rgba(226, 231, 255, 0.95);
 }
 
 .profile__eyebrow {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  font-size: 0.72rem;
-  color: #4338ca;
+  font-size: 0.7rem;
+  color: rgba(127, 90, 240, 0.85);
 }
 
 .profile__hero h1 {
   margin: 8px 0 4px;
   font-size: clamp(2rem, 4vw, 2.7rem);
+  background: linear-gradient(135deg, #f7f9ff 0%, rgba(184, 192, 255, 0.95) 60%);
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .profile__hero p {
   margin: 0 0 10px;
-  color: #475569;
+  color: rgba(236, 238, 250, 0.75);
   max-width: 520px;
 }
 
 .profile__meta {
   display: inline-block;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(60, 64, 95, 0.55);
+  border: 1px solid rgba(155, 160, 230, 0.24);
   font-size: 0.9rem;
-  color: #312e81;
+  color: rgba(225, 228, 255, 0.92);
   font-weight: 600;
 }
 
@@ -85,74 +92,92 @@
 }
 
 .profile-stat {
-  background: #ffffff;
+  background: linear-gradient(135deg, rgba(30, 33, 47, 0.85), rgba(21, 24, 35, 0.88));
   border-radius: 20px;
-  padding: 20px 22px;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  padding: 22px 24px;
+  box-shadow: 0 28px 60px rgba(7, 10, 32, 0.65);
+  border: 1px solid rgba(142, 148, 209, 0.12);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  backdrop-filter: blur(32px);
 }
 
 .profile-stat h2 {
   margin: 0;
-  font-size: 1rem;
-  color: #1f2937;
+  font-size: 0.95rem;
+  color: rgba(236, 238, 250, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
 }
 
 .profile-stat__number {
   margin: 0;
-  font-size: 2.4rem;
+  font-size: 2.6rem;
   font-weight: 700;
-  color: #312e81;
+  background: linear-gradient(135deg, rgba(127, 90, 240, 0.95), rgba(100, 200, 255, 0.85));
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .profile-stat__hint {
   margin: 0;
-  color: #64748b;
-  font-size: 0.95rem;
+  color: rgba(200, 203, 240, 0.65);
+  font-size: 0.9rem;
 }
 
 .profile__tabs {
   display: inline-flex;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.7);
+  gap: 8px;
+  background: rgba(24, 26, 36, 0.88);
   padding: 8px;
   border-radius: 999px;
   align-self: flex-start;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(138, 141, 196, 0.16);
+  backdrop-filter: blur(28px);
 }
 
 .profile-tab {
   border: none;
-  padding: 10px 20px;
+  padding: 10px 22px;
   border-radius: 999px;
   background: transparent;
   font-weight: 600;
-  color: #475569;
+  color: rgba(200, 203, 240, 0.75);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.profile-tab:hover {
+  color: rgba(236, 238, 250, 0.95);
+  background: rgba(60, 64, 95, 0.35);
 }
 
 .profile-tab--active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(129, 140, 248, 0.18));
-  color: #312e81;
+  background: linear-gradient(135deg, rgba(127, 90, 240, 0.22), rgba(100, 116, 255, 0.18));
+  color: rgba(226, 231, 255, 0.95);
+  border-color: rgba(127, 90, 240, 0.35);
 }
 
 .profile__feedback {
   margin: 0;
-  background: rgba(34, 197, 94, 0.12);
-  color: #166534;
+  background: rgba(46, 198, 160, 0.2);
+  border: 1px solid rgba(46, 198, 160, 0.42);
+  color: rgba(144, 255, 224, 0.95);
   padding: 10px 16px;
   border-radius: 12px;
   font-weight: 600;
 }
 
 .profile__panel {
-  background: #ffffff;
+  background: linear-gradient(160deg, rgba(28, 30, 45, 0.82), rgba(21, 23, 33, 0.85));
   border-radius: 24px;
   padding: 28px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 26px 56px rgba(6, 8, 28, 0.55);
+  border: 1px solid rgba(138, 141, 196, 0.16);
+  backdrop-filter: blur(28px);
 }
 
 .profile-overview {
@@ -162,18 +187,20 @@
 }
 
 .profile-card {
-  background: rgba(248, 250, 252, 0.75);
+  background: rgba(32, 34, 50, 0.72);
   border-radius: 20px;
-  padding: 20px 22px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(138, 141, 196, 0.12);
+  box-shadow: 0 16px 36px rgba(10, 11, 30, 0.35);
 }
 
 .profile-card h2 {
   margin: 0;
   font-size: 1.1rem;
+  color: rgba(236, 238, 250, 0.95);
 }
 
 .profile-card ul {
@@ -193,19 +220,19 @@
 
 .profile-card li span {
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  color: #64748b;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: rgba(179, 187, 255, 0.62);
 }
 
 .profile-card li strong {
   font-size: 1rem;
-  color: #1f2937;
+  color: rgba(236, 238, 250, 0.9);
 }
 
 .profile-card__timestamp {
   margin: 0;
-  color: #475569;
+  color: rgba(200, 203, 240, 0.75);
   font-size: 0.9rem;
 }
 
@@ -216,9 +243,10 @@
 }
 
 .profile-card__prompts span {
-  background: rgba(99, 102, 241, 0.12);
-  color: #312e81;
-  padding: 4px 10px;
+  background: rgba(60, 64, 95, 0.55);
+  border: 1px solid rgba(155, 160, 230, 0.24);
+  color: rgba(225, 228, 255, 0.92);
+  padding: 5px 12px;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -233,10 +261,15 @@
   border: none;
   padding: 0;
   background: none;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 12px 28px rgba(8, 8, 24, 0.45);
+  transition: transform 0.2s ease;
+}
+
+.profile-card__preview button:hover {
+  transform: translateY(-2px);
 }
 
 .profile-card__preview img {
@@ -248,7 +281,7 @@
 
 .profile-card__empty {
   margin: 0;
-  color: #64748b;
+  color: rgba(200, 203, 240, 0.65);
 }
 
 .profile-library__header {
@@ -260,11 +293,12 @@
 
 .profile-library__header h2 {
   margin: 0;
+  color: rgba(236, 238, 250, 0.95);
 }
 
 .profile-library__header p {
   margin: 4px 0 0;
-  color: #475569;
+  color: rgba(200, 203, 240, 0.75);
 }
 
 .profile-library__actions {
@@ -276,12 +310,12 @@
   margin: 0;
   text-align: center;
   padding: 40px 12px;
-  color: #64748b;
+  color: rgba(200, 203, 240, 0.65);
 }
 
 .profile-panel__hint {
   margin: 8px 0 0;
-  color: #94a3b8;
+  color: rgba(179, 187, 255, 0.62);
   font-size: 0.95rem;
 }
 
@@ -295,8 +329,9 @@
 .profile-session-card {
   border-radius: 18px;
   padding: 20px 22px;
-  background: rgba(248, 250, 252, 0.8);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+  background: rgba(32, 34, 50, 0.72);
+  border: 1px solid rgba(138, 141, 196, 0.12);
+  box-shadow: 0 16px 36px rgba(10, 11, 30, 0.35);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -312,16 +347,22 @@
 .profile-session-card header h3 {
   margin: 0 0 6px;
   font-size: 1.05rem;
+  color: rgba(236, 238, 250, 0.95);
 }
 
 .profile-session-card header p {
   margin: 0;
-  color: #475569;
+  color: rgba(200, 203, 240, 0.75);
 }
 
 .profile-session-card__link {
   font-weight: 600;
-  color: #4c1d95;
+  color: rgba(127, 90, 240, 0.85);
+  transition: color 0.2s ease;
+}
+
+.profile-session-card__link:hover {
+  color: rgba(150, 124, 255, 0.95);
 }
 
 .profile-session-card__body {
@@ -344,7 +385,12 @@
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 28px rgba(8, 8, 24, 0.45);
+  transition: transform 0.2s ease;
+}
+
+.profile-session-card__thumbs button:hover {
+  transform: translateY(-2px);
 }
 
 .profile-session-card__thumbs img {
@@ -355,7 +401,7 @@
 }
 
 .profile-session-card__empty {
-  color: #94a3b8;
+  color: rgba(179, 187, 255, 0.62);
   font-weight: 600;
 }
 
@@ -375,15 +421,15 @@
 }
 
 .profile-session-card__meta span {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
+  letter-spacing: 0.12em;
+  color: rgba(179, 187, 255, 0.62);
 }
 
 .profile-session-card__meta strong {
   font-size: 1.1rem;
-  color: #1f2937;
+  color: rgba(236, 238, 250, 0.9);
 }
 
 .profile-settings {
@@ -395,41 +441,56 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(138, 141, 196, 0.16);
 }
 
 .profile-settings__form h2 {
   margin: 0;
+  color: rgba(236, 238, 250, 0.95);
 }
 
 .profile-settings__hint {
   margin: 0;
-  color: #475569;
+  color: rgba(200, 203, 240, 0.75);
 }
 
 .profile-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   font-weight: 600;
-  color: #1f2937;
+  color: rgba(236, 238, 250, 0.9);
 }
 
 .profile-field span {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: rgba(179, 187, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
 }
 
 .profile-field input {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(138, 141, 196, 0.18);
+  background: rgba(26, 28, 42, 0.7);
+  color: rgba(236, 238, 250, 0.95);
   font: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.profile-field input:focus {
+  outline: none;
+  border-color: rgba(150, 124, 255, 0.65);
+  background: rgba(35, 37, 58, 0.85);
 }
 
 .profile-field input:disabled {
-  background: rgba(226, 232, 240, 0.5);
-  color: #94a3b8;
+  background: rgba(32, 34, 50, 0.5);
+  color: rgba(179, 187, 255, 0.5);
+  cursor: not-allowed;
 }
 
 .profile-settings__actions {
@@ -453,32 +514,36 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(99, 102, 241, 0.12);
+  background: linear-gradient(135deg, rgba(127, 90, 240, 0.22), rgba(100, 116, 255, 0.18));
+  border: 1px solid rgba(127, 90, 240, 0.35);
   border-radius: 20px;
   padding: 20px 24px;
-  color: #1f2937;
+  backdrop-filter: blur(20px);
 }
 
 .wallet__balance span {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #4338ca;
+  letter-spacing: 0.12em;
+  color: rgba(179, 187, 255, 0.75);
 }
 
 .wallet__balance strong {
-  font-size: 28px;
-  color: #312e81;
+  font-size: 32px;
+  background: linear-gradient(135deg, rgba(184, 192, 255, 0.95), rgba(150, 124, 255, 0.95));
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .wallet__form {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(32, 34, 50, 0.72);
   border-radius: 20px;
   padding: 24px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(138, 141, 196, 0.12);
+  box-shadow: 0 16px 36px rgba(10, 11, 30, 0.35);
 }
 
 .wallet__fields {
@@ -493,15 +558,25 @@
   flex-direction: column;
   gap: 8px;
   font-weight: 600;
-  color: #1f2937;
+  color: rgba(236, 238, 250, 0.9);
+  font-size: 0.9rem;
 }
 
 .wallet__fields input,
 .wallet__fields select {
-  border: 1px solid #d9dce8;
+  border: 1px solid rgba(138, 141, 196, 0.18);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 10px 14px;
+  background: rgba(26, 28, 42, 0.7);
+  color: rgba(236, 238, 250, 0.95);
   font: inherit;
+}
+
+.wallet__fields input:focus,
+.wallet__fields select:focus {
+  outline: none;
+  border-color: rgba(150, 124, 255, 0.65);
+  background: rgba(35, 37, 58, 0.85);
 }
 
 .wallet__card {
@@ -509,14 +584,14 @@
   flex-direction: column;
   gap: 8px;
   font-weight: 600;
-  color: #1f2937;
+  color: rgba(236, 238, 250, 0.9);
 }
 
 .wallet__card-input {
-  border: 1px solid #d9dce8;
+  border: 1px solid rgba(138, 141, 196, 0.18);
   border-radius: 12px;
-  padding: 12px;
-  background: #ffffff;
+  padding: 12px 14px;
+  background: rgba(26, 28, 42, 0.7);
 }
 
 .wallet__status {
@@ -525,21 +600,22 @@
 }
 
 .wallet__status--error {
-  color: #b91c1c;
+  color: #f87171;
 }
 
 .wallet__status--success {
-  color: #15803d;
+  color: rgba(144, 255, 224, 0.95);
 }
 
 .wallet__referral {
-  background: #ffffff;
+  background: rgba(32, 34, 50, 0.72);
   border-radius: 20px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(138, 141, 196, 0.12);
+  box-shadow: 0 16px 36px rgba(10, 11, 30, 0.35);
 }
 
 .wallet__referral-header {
@@ -551,6 +627,7 @@
 
 .wallet__referral-header h2 {
   margin: 0;
+  color: rgba(236, 238, 250, 0.95);
 }
 
 .wallet__referral-code {
@@ -561,12 +638,14 @@
 }
 
 .wallet__referral-code code {
-  background: #111827;
-  color: #ffffff;
-  padding: 8px 14px;
+  background: rgba(18, 20, 34, 0.98);
+  border: 1px solid rgba(150, 124, 255, 0.24);
+  color: rgba(184, 192, 255, 0.95);
+  padding: 10px 16px;
   border-radius: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(20px);
 }
 
 @media (max-width: 768px) {
@@ -627,7 +706,7 @@
   }
 
   .profile-stat__number {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
 
   .profile-card__preview {
@@ -645,7 +724,7 @@
   }
 
   .wallet__balance strong {
-    font-size: 24px;
+    font-size: 28px;
   }
 
   .wallet__referral-header {
