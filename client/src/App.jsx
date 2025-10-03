@@ -888,6 +888,11 @@ function App() {
   const [profileModal, setProfileModal] = useState({ open: false, initialTab: 'overview' })
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
 
+  // Debug: log sessions changes
+  useEffect(() => {
+    console.log('[sessions state changed]', sessions.length, sessions)
+  }, [sessions])
+
   const updateUserSnapshot = useCallback(
     (partial) => {
       setUser((previous) => (previous ? { ...previous, ...partial } : previous))
@@ -946,20 +951,24 @@ function App() {
   useEffect(() => {
     const storedToken = localStorage.getItem('pv_auth_token')
     if (!storedToken) {
+      console.log('[useEffect] No stored token found')
       return
     }
 
+    console.log('[useEffect] Found stored token, restoring session...')
     setToken(storedToken)
 
     ;(async () => {
       try {
         const data = await apiRequest('/auth/me', { token: storedToken })
+        console.log('[useEffect] Auth response:', data)
         if (data?.user) {
+          console.log('[useEffect] User authenticated:', data.user.email)
           setUser(data.user)
           await loadSessions(storedToken)
         }
       } catch (error) {
-        console.warn('Session restore failed', error)
+        console.warn('[useEffect] Session restore failed', error)
         localStorage.removeItem('pv_auth_token')
         setToken('')
       }

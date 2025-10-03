@@ -1108,7 +1108,11 @@ app.post('/api/referral-code/refresh', requireAuth, async (req, res) => {
 app.get('/api/sessions', requireAuth, async (req, res) => {
   try {
     const sessions = await getSessions();
+    console.log('[GET /api/sessions] User ID:', req.user.id);
+    console.log('[GET /api/sessions] Total sessions:', sessions.length);
+    console.log('[GET /api/sessions] All session userIds:', sessions.map(s => ({ id: s.id, userId: s.userId })));
     const userSessions = sessions.filter((session) => session.userId === req.user.id);
+    console.log('[GET /api/sessions] Filtered sessions for user:', userSessions.length);
     res.json({ sessions: userSessions });
   } catch (error) {
     console.error('Failed to fetch sessions', error);
