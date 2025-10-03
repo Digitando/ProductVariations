@@ -134,6 +134,7 @@ if (hasClientBuild) {
       res.status(204).set('Cache-Control', 'public, max-age=60').end();
     });
   }
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
