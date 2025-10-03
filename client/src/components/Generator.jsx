@@ -53,6 +53,28 @@ const QUICK_SUGGESTIONS = [
   },
 ]
 
+function CheckMarkIcon(props) {
+  return (
+    <svg viewBox="0 0 14 10" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M1 5.5 4.5 9 13 1"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function CloseIcon(props) {
+  return (
+    <svg viewBox="0 0 12 12" fill="none" aria-hidden="true" {...props}>
+      <path d="M3 3l6 6M9 3 3 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function formatRelativeTime(input) {
   if (!input) return ''
   const date = typeof input === 'string' ? new Date(input) : input
@@ -907,7 +929,7 @@ export default function Generator({
                           ref={registerMenuItem('category', index)}
                         >
                           <span>{category.label}</span>
-                          {isActive && <span className="chat-menu__check">✓</span>}
+                          {isActive && <span className="chat-menu__check"><CheckMarkIcon /></span>}
                         </button>
                       )
                     })}
@@ -957,7 +979,7 @@ export default function Generator({
                             ref={registerMenuItem('subcategory', index)}
                           >
                             <span>{subcategory.label}</span>
-                            {isActive && <span className="chat-menu__check">✓</span>}
+                            {isActive && <span className="chat-menu__check"><CheckMarkIcon /></span>}
                           </button>
                         )
                       })}
@@ -1039,7 +1061,7 @@ export default function Generator({
                               <strong>{name}</strong>
                               {description && <span>{description}</span>}
                             </div>
-                            {isSelected && <span className="chat-menu__check">✓</span>}
+                            {isSelected && <span className="chat-menu__check"><CheckMarkIcon /></span>}
                           </button>
                         )
                       })
@@ -1112,21 +1134,32 @@ export default function Generator({
                   className="chat-chip chat-chip--image"
                   onClick={handleRemoveUpload}
                   disabled={disableInputs}
+                  aria-label="Remove reference image"
                 >
-                  Reference attached ×
+                  <span className="chat-chip__label">Reference attached</span>
+                  <span className="chat-chip__icon">
+                    <CloseIcon />
+                  </span>
                 </button>
               )}
-              {selectedPromptDetails.map((prompt) => (
-                <button
-                  key={prompt.id}
-                  type="button"
-                  className="chat-chip"
-                  onClick={() => handleRemovePrompt(prompt.id)}
-                  disabled={disableInputs}
-                >
-                  {prompt.title || prompt.name} ×
-                </button>
-              ))}
+              {selectedPromptDetails.map((prompt) => {
+                const label = prompt.title || prompt.name || 'Prompt preset'
+                return (
+                  <button
+                    key={prompt.id}
+                    type="button"
+                    className="chat-chip"
+                    onClick={() => handleRemovePrompt(prompt.id)}
+                    disabled={disableInputs}
+                    aria-label={`Remove ${label}`}
+                  >
+                    <span className="chat-chip__label">{label}</span>
+                    <span className="chat-chip__icon">
+                      <CloseIcon />
+                    </span>
+                  </button>
+                )
+              })}
               {customPrompt.trim() && (
                 <span className="chat-chip chat-chip--custom">{customPrompt.trim()}</span>
               )}
