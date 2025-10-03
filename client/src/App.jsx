@@ -1668,7 +1668,6 @@ function App() {
       setGuestSessions((prev) => [session, ...prev].slice(0, 5))
       loadPublicGallery()
       loadPromptSpotlight()
-      setView(VIEWS.LIBRARY)
       return
     }
 
@@ -1701,8 +1700,6 @@ function App() {
 
     loadPublicGallery()
     loadPromptSpotlight()
-
-    setView(VIEWS.LIBRARY)
   }
 
   const handleNavigate = (nextView) => {

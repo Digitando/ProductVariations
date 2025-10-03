@@ -123,6 +123,7 @@ export default function Generator({
   const [historyQuery, setHistoryQuery] = useState('')
   const [openMenu, setOpenMenu] = useState(null)
   const composerRef = useRef(null)
+  const menuRefs = useRef({ category: [], subcategory: [], prompts: [] })
 
   const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
@@ -562,6 +563,60 @@ export default function Generator({
 
   const closeMenu = () => setOpenMenu(null)
 
+  const registerMenuItem = (menu, index) => (element) => {
+    if (!menuRefs.current[menu]) {
+      menuRefs.current[menu] = []
+    }
+    menuRefs.current[menu][index] = element
+  }
+
+  const focusMenuItem = (menu, index) => {
+    const items = (menuRefs.current[menu] || []).filter(Boolean)
+    if (!items.length) return
+    const next = items[(index + items.length) % items.length]
+    if (next) {
+      next.focus()
+    }
+  }
+
+  const handleMenuKeyDown = (event, menu) => {
+    const items = (menuRefs.current[menu] || []).filter(Boolean)
+    if (!items.length) return
+
+    const currentIndex = items.indexOf(document.activeElement)
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusMenuItem(menu, safeIndex + 1)
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusMenuItem(menu, safeIndex - 1)
+      return
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault()
+      focusMenuItem(menu, 0)
+      return
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault()
+      focusMenuItem(menu, items.length - 1)
+      return
+    }
+
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      const offset = event.shiftKey ? -1 : 1
+      focusMenuItem(menu, safeIndex + offset)
+    }
+  }
+
   useEffect(() => {
     if (!openMenu || typeof document === 'undefined') {
       return undefined
@@ -593,14 +648,26 @@ export default function Generator({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keydown', handleKeyDown)
     }
   }, [openMenu])
+
+  useEffect(() => {
+    if (!openMenu) return
+    const items = (menuRefs.current[openMenu] || []).filter(Boolean)
+    if (items.length > 0) {
+      items[0].focus()
+    }
+  }, [openMenu, filteredPrompts.length, activeSubcategories.length])
 
   const selectedCategoryLabel = activeCategory?.label || 'Choose category'
   const selectedSubcategoryLabel = selectedSubcategoryId
     ? activeSubcategories.find((entry) => entry.id === selectedSubcategoryId)?.label || 'Select subcategory'
     : 'Select subcategory'
+
+  menuRefs.current.category = []
+  menuRefs.current.subcategory = []
+  menuRefs.current.prompts = []
 
   return (
     <div className="chat-shell">
@@ -810,14 +877,21 @@ export default function Generator({
                 className={`chat-composer__control${openMenu === 'category' ? ' chat-composer__control--active' : ''}`}
                 onClick={() => toggleMenu('category', { disabled: disableInputs })}
                 disabled={disableInputs}
+                aria-haspopup="true"
+                aria-expanded={openMenu === 'category'}
               >
                 <span className="chat-composer__control-label">Category</span>
                 <span className="chat-composer__control-value">{selectedCategoryLabel}</span>
               </button>
               {openMenu === 'category' && (
-                <div className="chat-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+                <div
+                  className="chat-menu"
+                  role="menu"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => handleMenuKeyDown(event, 'category')}
+                >
                   <div className="chat-menu__list">
-                    {STANDALONE_DEFINITIONS.map((category) => {
+                    {STANDALONE_DEFINITIONS.map((category, index) => {
                       const isActive = category.id === selectedCategoryId
                       return (
                         <button
@@ -830,6 +904,7 @@ export default function Generator({
                           }}
                           role="menuitemradio"
                           aria-checked={isActive}
+                          ref={registerMenuItem('category', index)}
                         >
                           <span>{category.label}</span>
                           {isActive && <span className="chat-menu__check">✓</span>}
@@ -850,6 +925,8 @@ export default function Generator({
                   }`}
                   onClick={() => toggleMenu('subcategory', { disabled: disableInputs })}
                   disabled={disableInputs}
+                  aria-haspopup="true"
+                  aria-expanded={openMenu === 'subcategory'}
                 >
                   <span className="chat-composer__control-label">Subcategory</span>
                   <span className="chat-composer__control-value">
@@ -857,9 +934,14 @@ export default function Generator({
                   </span>
                 </button>
                 {openMenu === 'subcategory' && (
-                  <div className="chat-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+                  <div
+                    className="chat-menu"
+                    role="menu"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => handleMenuKeyDown(event, 'subcategory')}
+                  >
                     <div className="chat-menu__list">
-                      {activeSubcategories.map((subcategory) => {
+                      {activeSubcategories.map((subcategory, index) => {
                         const isActive = subcategory.id === selectedSubcategoryId
                         return (
                           <button
@@ -872,6 +954,7 @@ export default function Generator({
                             }}
                             role="menuitemradio"
                             aria-checked={isActive}
+                            ref={registerMenuItem('subcategory', index)}
                           >
                             <span>{subcategory.label}</span>
                             {isActive && <span className="chat-menu__check">✓</span>}
@@ -899,6 +982,8 @@ export default function Generator({
                   })
                 }
                 disabled={disableInputs || availablePromptCount === 0}
+                aria-haspopup="true"
+                aria-expanded={openMenu === 'prompts'}
               >
                 <span className="chat-composer__control-label">Prompt presets</span>
                 <span className="chat-composer__control-value">
@@ -910,7 +995,12 @@ export default function Generator({
                 </span>
               </button>
               {openMenu === 'prompts' && (
-                <div className="chat-menu chat-menu--wide" role="menu" onClick={(event) => event.stopPropagation()}>
+                <div
+                  className="chat-menu chat-menu--wide"
+                  role="menu"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => handleMenuKeyDown(event, 'prompts')}
+                >
                   <header className="chat-menu__header">
                     <strong>Prompt presets</strong>
                     <button
@@ -929,7 +1019,7 @@ export default function Generator({
                         Choose a category to see prompt suggestions.
                       </p>
                     ) : (
-                      filteredPrompts.map((prompt) => {
+                      filteredPrompts.map((prompt, index) => {
                         const isSelected = selectedPromptIds.includes(prompt.id)
                         const name = prompt.title || prompt.name || 'Prompt preset'
                         const description = prompt.description || prompt.prompt || ''
@@ -943,6 +1033,7 @@ export default function Generator({
                             onClick={() => handlePromptToggle(prompt.id)}
                             role="menuitemcheckbox"
                             aria-checked={isSelected}
+                            ref={registerMenuItem('prompts', index)}
                           >
                             <div className="chat-menu__item-body">
                               <strong>{name}</strong>
@@ -960,7 +1051,27 @@ export default function Generator({
 
             <label className="chat-composer__upload">
               <input type="file" accept="image/*" onChange={handleUploadChange} disabled={disableInputs} />
-              {uploadPreview ? 'Replace image' : 'Add reference'}
+              <span className="chat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path
+                    d="M16.5 6.5 9.5 13.5a2.5 2.5 0 1 0 3.54 3.54l6.5-6.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 7 6.46 12.54a4 4 0 1 0 5.66 5.66L19 11.32"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="sr-only">{uploadPreview ? 'Replace reference image' : 'Attach reference image'}</span>
             </label>
 
             <div className="chat-composer__input">
@@ -974,9 +1085,22 @@ export default function Generator({
             </div>
 
             <button type="button" className="chat-composer__generate" onClick={handleGenerate} disabled={disableInputs}>
-              {isGenerating
-                ? 'Generating…'
-                : `Generate (${coinsRequired} coin${coinsRequired === 1 ? '' : 's'})`}
+              <span className="chat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path
+                    d="M3 11.5 21 3l-8.5 18-.9-7.6L3 11.5z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="sr-only">
+                {isGenerating
+                  ? 'Generating variations'
+                  : `Generate ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'}`}
+              </span>
             </button>
           </div>
 
