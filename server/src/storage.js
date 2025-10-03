@@ -16,6 +16,9 @@ const supabaseClient = SUPABASE_URL && SUPABASE_SERVICE_KEY
     })
   : null;
 
+const USERS_TABLE = 'users';
+const SESSIONS_TABLE = 'chat_sessions';
+
 function mapSupabaseUser(row) {
   if (!row) return null;
   const parse = (value, fallback) => {
@@ -111,6 +114,20 @@ function mapSupabaseSession(row) {
     descriptions: parse(coalesce('descriptions', 'description_entries', 'description'), []),
     promptSummaries: parse(coalesce('promptSummaries', 'prompt_summaries', 'promptsummaries'), []),
     categories: parse(coalesce('categories', 'category_scopes', 'categoryscopes'), []),
+    customPrompt: coalesce('customPrompt', 'custom_prompt', 'customprompt') || '',
+    categoryId: coalesce('categoryId', 'category_id', 'categoryid') || '',
+    categoryLabel: coalesce('categoryLabel', 'category_label', 'categorylabel') || '',
+    subcategoryId: coalesce('subcategoryId', 'subcategory_id', 'subcategoryid') || '',
+    subcategoryLabel: coalesce('subcategoryLabel', 'subcategory_label', 'subcategorylabel') || '',
+    title: coalesce('title') || '',
+    coinsSpent: (() => {
+      const value = coalesce('coinsSpent', 'coins_spent', 'coinsspent');
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    })(),
   };
 
   normalized.creator = (() => {
@@ -165,6 +182,18 @@ function mapSessionForSupabase(session) {
     promptSummaries: normalizeArray(session.promptSummaries),
     categories: normalizeArray(session.categories),
     creator: normalizeCreator(session.creator),
+    customPrompt: typeof session.customPrompt === 'string' ? session.customPrompt : '',
+    categoryId: typeof session.categoryId === 'string' ? session.categoryId : '',
+    categoryLabel: typeof session.categoryLabel === 'string' ? session.categoryLabel : '',
+    subcategoryId: typeof session.subcategoryId === 'string' ? session.subcategoryId : '',
+    subcategoryLabel: typeof session.subcategoryLabel === 'string' ? session.subcategoryLabel : '',
+    title: typeof session.title === 'string' ? session.title : '',
+    coinsSpent:
+      typeof session.coinsSpent === 'number' && Number.isFinite(session.coinsSpent)
+        ? session.coinsSpent
+        : session.coinsSpent === null || session.coinsSpent === undefined
+        ? null
+        : Number.parseInt(session.coinsSpent, 10) || null,
   };
 }
 
@@ -203,7 +232,7 @@ async function writeJson(filePath, data) {
 
 async function getUsers() {
   if (supabaseClient) {
-    const { data, error } = await supabaseClient.from('users').select('*');
+    const { data, error } = await supabaseClient.from(USERS_TABLE).select('*');
     if (error) {
       console.error('Failed to fetch users from Supabase', error);
       throw error;
@@ -220,14 +249,14 @@ async function saveUsers(users) {
     const normalized = Array.isArray(users) ? users.map(mapUserForSupabase) : [];
     const ids = normalized.map((user) => user.id);
 
-    const { error: upsertError } = await supabaseClient.from('users').upsert(normalized, { onConflict: 'id' });
+    const { error: upsertError } = await supabaseClient.from(USERS_TABLE).upsert(normalized, { onConflict: 'id' });
     if (upsertError) {
       console.error('Failed to upsert users to Supabase', upsertError);
       throw upsertError;
     }
 
     if (ids.length > 0) {
-      const { data: existing, error: fetchError } = await supabaseClient.from('users').select('id');
+      const { data: existing, error: fetchError } = await supabaseClient.from(USERS_TABLE).select('id');
       if (fetchError) {
         console.error('Failed to fetch existing user ids from Supabase', fetchError);
         throw fetchError;
@@ -238,7 +267,7 @@ async function saveUsers(users) {
         .filter((id) => !ids.includes(id));
 
       if (staleIds.length > 0) {
-        const { error: deleteError } = await supabaseClient.from('users').delete().in('id', staleIds);
+        const { error: deleteError } = await supabaseClient.from(USERS_TABLE).delete().in('id', staleIds);
         if (deleteError) {
           console.error('Failed to delete stale users from Supabase', deleteError);
           throw deleteError;
@@ -256,7 +285,7 @@ async function saveUsers(users) {
 async function getSessions() {
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient.from('sessions').select('*');
+      const { data, error } = await supabaseClient.from(SESSIONS_TABLE).select('*');
       if (error) {
         throw error;
       }
@@ -283,13 +312,15 @@ async function saveSessions(sessions) {
       const normalized = Array.isArray(sessions) ? sessions.map(mapSessionForSupabase) : [];
       const ids = normalized.map((session) => session.id);
 
-      const { error: upsertError } = await supabaseClient.from('sessions').upsert(normalized, { onConflict: 'id' });
+      const { error: upsertError } = await supabaseClient.from(SESSIONS_TABLE).upsert(normalized, {
+        onConflict: 'id',
+      });
       if (upsertError) {
         throw upsertError;
       }
 
       if (ids.length > 0) {
-        const { data: existing, error: fetchError } = await supabaseClient.from('sessions').select('id');
+        const { data: existing, error: fetchError } = await supabaseClient.from(SESSIONS_TABLE).select('id');
         if (fetchError) {
           throw fetchError;
         }
@@ -299,7 +330,7 @@ async function saveSessions(sessions) {
           .filter((id) => !ids.includes(id));
 
         if (staleIds.length > 0) {
-          const { error: deleteError } = await supabaseClient.from('sessions').delete().in('id', staleIds);
+          const { error: deleteError } = await supabaseClient.from(SESSIONS_TABLE).delete().in('id', staleIds);
           if (deleteError) {
             throw deleteError;
           }

@@ -117,6 +117,13 @@ describe('mapSupabaseSession', () => {
       categoryscopes: '["footwear"]',
       sourceimage: 'https://example.com/source-footwear.png',
       creatorinfo: '{"id":"user-10"}',
+      customprompt: 'sleek finish',
+      categoryid: 'footwear',
+      categorylabel: 'Footwear',
+      subcategoryid: 'sneakers',
+      subcategorylabel: 'High Tops',
+      title: 'Footwear Spotlight',
+      coins_spent: '4',
     });
 
     expect(mapped).toMatchObject({
@@ -130,6 +137,13 @@ describe('mapSupabaseSession', () => {
       categories: ['footwear'],
       sourceImage: 'https://example.com/source-footwear.png',
       creator: { id: 'user-10', name: '' },
+      customPrompt: 'sleek finish',
+      categoryId: 'footwear',
+      categoryLabel: 'Footwear',
+      subcategoryId: 'sneakers',
+      subcategoryLabel: 'High Tops',
+      title: 'Footwear Spotlight',
+      coinsSpent: 4,
     });
   });
 });
@@ -144,6 +158,13 @@ describe('mapSessionForSupabase', () => {
       promptSummaries: null,
       categories: null,
       creator: { id: 'user-2' },
+      customPrompt: null,
+      categoryId: null,
+      categoryLabel: null,
+      subcategoryId: null,
+      subcategoryLabel: null,
+      title: null,
+      coinsSpent: undefined,
     });
 
     expect(mapped).toEqual({
@@ -157,6 +178,13 @@ describe('mapSessionForSupabase', () => {
       createdAt: null,
       sourceImage: '',
       creator: { id: 'user-2', name: '' },
+      customPrompt: '',
+      categoryId: '',
+      categoryLabel: '',
+      subcategoryId: '',
+      subcategoryLabel: '',
+      title: '',
+      coinsSpent: null,
     });
   });
 });
