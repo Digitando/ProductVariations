@@ -295,11 +295,15 @@
 .chat-body {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+  grid-template-columns: 1fr;
   gap: 20px;
   min-height: 0;
   position: relative;
   z-index: 1;
+}
+
+.chat-body--split {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
 }
 
 .chat-thread {

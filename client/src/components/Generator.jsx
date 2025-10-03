@@ -785,7 +785,7 @@ export default function Generator({
           </div>
         </header>
 
-        <div className="chat-body">
+        <div className={`chat-body${activePreviewImage ? ' chat-body--split' : ''}`}>
           <section className="chat-thread">
             <div className="chat-thread__messages">
               {showSuggestions && (
@@ -854,7 +854,7 @@ export default function Generator({
             </div>
           </section>
 
-          <aside className="chat-preview">
+          {activePreviewImage && <aside className="chat-preview">
             {activePreviewImage ? (
               <button
                 type="button"
@@ -895,7 +895,7 @@ export default function Generator({
                 )}
               </footer>
             )}
-          </aside>
+          </aside>}
         </div>
 
         <div className="chat-composer" ref={composerRef}>
