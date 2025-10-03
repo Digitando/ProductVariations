@@ -696,9 +696,9 @@ export default function Generator({
       <aside className="chat-shell__sidebar">
         <div className="chat-sidebar__top">
           <div className="chat-sidebar__brand">
-            <span className="chat-sidebar__logo">PG</span>
+            <img src="/logo.png" alt="MetaVariant" className="chat-sidebar__logo" />
             <div className="chat-sidebar__titles">
-              <strong>Product Variations</strong>
+              <strong>MetaVariant</strong>
               <span>AI styling studio</span>
             </div>
           </div>

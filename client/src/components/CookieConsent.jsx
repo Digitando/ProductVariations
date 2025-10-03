@@ -144,7 +144,7 @@ export default function CookieConsent() {
                 <p className="cookie-consent__eyebrow">GDPR compliance</p>
                 <h2 id="cookie-consent-heading">We respect how you control your data</h2>
                 <p className="cookie-consent__summary">
-                  Product Variations uses cookies so you can stay signed in, keep your library in sync, and help us improve
+                  MetaVariant uses cookies so you can stay signed in, keep your library in sync, and help us improve
                   the generator. Choose what works for you. You can revisit these settings anytime using the GDPR button.
                 </p>
               </div>

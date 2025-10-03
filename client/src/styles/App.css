@@ -115,15 +115,10 @@ button {
 }
 
 .topbar__logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #ffffff;
-  font-weight: 700;
+  object-fit: contain;
 }
 
 .topbar__title {
