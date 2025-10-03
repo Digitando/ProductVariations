@@ -375,10 +375,7 @@ app.get('/api/public/prompts', (_req, res) => {
     const promptList = Object.values(PROMPTS_BY_ID);
     console.log(`[/api/public/prompts] Total prompts available: ${promptList.length}`);
     if (promptList.length === 0) {
-<<<<<<< HEAD
       console.warn('[/api/public/prompts] WARNING: No prompts found in catalog!');
-=======
->>>>>>> parent of 9778c11 (update)
       return res.json({ prompts: [] });
     }
 

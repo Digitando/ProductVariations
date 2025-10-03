@@ -104,6 +104,34 @@ describe('mapSupabaseSession', () => {
       creator: { id: 'user-9', name: 'Casey' },
     });
   });
+
+  it('handles lowercase Postgres column names', () => {
+    const mapped = mapSupabaseSession({
+      sessionid: 'session-4',
+      userid: 'user-10',
+      createdat: '2024-02-02T00:00:00.000Z',
+      prompts: '["p-10"]',
+      generatedimages: '["img-10"]',
+      description_entries: '["desc-10"]',
+      promptsummaries: '["summary-10"]',
+      categoryscopes: '["footwear"]',
+      sourceimage: 'https://example.com/source-footwear.png',
+      creatorinfo: '{"id":"user-10"}',
+    });
+
+    expect(mapped).toMatchObject({
+      id: 'session-4',
+      userId: 'user-10',
+      createdAt: '2024-02-02T00:00:00.000Z',
+      prompts: ['p-10'],
+      generatedImages: ['img-10'],
+      descriptions: ['desc-10'],
+      promptSummaries: ['summary-10'],
+      categories: ['footwear'],
+      sourceImage: 'https://example.com/source-footwear.png',
+      creator: { id: 'user-10', name: '' },
+    });
+  });
 });
 
 describe('mapSessionForSupabase', () => {
@@ -125,6 +153,9 @@ describe('mapSessionForSupabase', () => {
       descriptions: [],
       promptSummaries: [],
       categories: [],
+      userId: null,
+      createdAt: null,
+      sourceImage: '',
       creator: { id: 'user-2', name: '' },
     });
   });

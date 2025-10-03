@@ -99,19 +99,18 @@ function mapSupabaseSession(row) {
     return undefined;
   };
 
-  const rawCreator = coalesce('creator', 'creator_info');
+  const rawCreator = coalesce('creator', 'creator_info', 'creatorinfo');
   const normalized = {
     ...row,
-<<<<<<< HEAD
-    id: row.id || row.session_id || null,
-    userId: coalesce('userId', 'user_id') || null,
-    createdAt: coalesce('createdAt', 'created_at') || null,
-    sourceImage: coalesce('sourceImage', 'source_image') || '',
-    prompts: parse(coalesce('prompts', 'prompt_ids'), []),
-    generatedImages: parse(coalesce('generatedImages', 'generated_images'), []),
+    id: row.id || row.session_id || row.sessionid || null,
+    userId: coalesce('userId', 'user_id', 'userid') || null,
+    createdAt: coalesce('createdAt', 'created_at', 'createdat') || null,
+    sourceImage: coalesce('sourceImage', 'source_image', 'sourceimage') || '',
+    prompts: parse(coalesce('prompts', 'prompt_ids', 'promptids'), []),
+    generatedImages: parse(coalesce('generatedImages', 'generated_images', 'generatedimages'), []),
     descriptions: parse(coalesce('descriptions', 'description_entries', 'description'), []),
-    promptSummaries: parse(coalesce('promptSummaries', 'prompt_summaries'), []),
-    categories: parse(coalesce('categories', 'category_scopes'), []),
+    promptSummaries: parse(coalesce('promptSummaries', 'prompt_summaries', 'promptsummaries'), []),
+    categories: parse(coalesce('categories', 'category_scopes', 'categoryscopes'), []),
   };
 
   normalized.creator = (() => {
@@ -140,21 +139,32 @@ function mapSupabaseSession(row) {
   })();
 
   return normalized;
-=======
-    prompts: parse(row.prompts, []),
-    generatedImages: parse(row.generatedImages, []),
-    descriptions: parse(row.descriptions, []),
-  };
->>>>>>> parent of 9778c11 (update)
 }
 
 function mapSessionForSupabase(session) {
   if (!session) return session;
+  const normalizeArray = (value) => (Array.isArray(value) ? value : []);
+  const normalizeCreator = (value) => {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+    return {
+      id: value.id || null,
+      name: value.name || '',
+    };
+  };
+
   return {
     ...session,
-    prompts: Array.isArray(session.prompts) ? session.prompts : [],
-    generatedImages: Array.isArray(session.generatedImages) ? session.generatedImages : [],
-    descriptions: Array.isArray(session.descriptions) ? session.descriptions : [],
+    userId: session.userId || session.userid || null,
+    createdAt: session.createdAt || session.createdat || null,
+    sourceImage: typeof session.sourceImage === 'string' ? session.sourceImage : '',
+    prompts: normalizeArray(session.prompts),
+    generatedImages: normalizeArray(session.generatedImages),
+    descriptions: normalizeArray(session.descriptions),
+    promptSummaries: normalizeArray(session.promptSummaries),
+    categories: normalizeArray(session.categories),
+    creator: normalizeCreator(session.creator),
   };
 }
 

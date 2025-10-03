@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
+const VALID_BUTTON_TEXTS = new Set(['signin_with', 'signup_with', 'continue_with', 'signin'])
 
 function loadGoogleScript({ onLoad, onError }) {
   if (window.google?.accounts?.id) {
@@ -64,24 +65,32 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
-    if (!clientId || !buttonRef.current) {
+    const containerElement = buttonRef.current
+
+    if (!clientId || !containerElement) {
       return
     }
 
-    let cancelled = false
-    let detachListener = () => {}
+    let isMounted = true
 
-    detachListener = loadGoogleScript({
+    const detachListener = loadGoogleScript({
       onLoad: () => {
-        if (cancelled) return
-        if (!window.google?.accounts?.id) return
+        if (!isMounted || !window.google?.accounts?.id) {
+          return
+        }
 
         setLoadError(false)
 
-        // Initialize with callback that will handle the credential
+        const normalizedButtonText = VALID_BUTTON_TEXTS.has(buttonText) ? buttonText : 'signin_with'
+
         const handleCredentialResponse = (response) => {
+          if (!isMounted) {
+            return
+          }
           if (response?.credential) {
             onCredential(response.credential)
+          } else {
+            onCredential(null)
           }
         }
 
@@ -89,61 +98,51 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
           client_id: clientId,
           callback: handleCredentialResponse,
           auto_select: false,
-          cancel_on_tap_outside: false, // Don't cancel when clicking outside
+          cancel_on_tap_outside: false,
           itp_support: true,
         })
 
-        if (!buttonRef.current) {
+        if (!containerElement) {
           return
         }
 
-        buttonRef.current.innerHTML = ''
+        containerElement.innerHTML = ''
 
-        // Create a custom styled button
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.className = 'google-signin-custom-button'
-        button.textContent = text
+        const measuredWidth = Math.max(containerElement.offsetWidth || 0, 0)
+        const renderWidth = measuredWidth ? String(Math.min(Math.max(measuredWidth, 200), 400)) : undefined
 
-        // Use Google's OAuth2 flow with intermediate page approach
-        button.onclick = async () => {
-          try {
-            // Create a hidden iframe to handle the authentication
-            const iframe = document.createElement('iframe')
-            iframe.style.display = 'none'
-            iframe.id = 'google-auth-iframe'
-            document.body.appendChild(iframe)
+        window.google.accounts.id.renderButton(containerElement, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          text: normalizedButtonText,
+          ...(renderWidth ? { width: renderWidth } : {}),
+        })
 
-            // Initialize Google One Tap for this specific interaction
-            window.google.accounts.id.prompt((notification) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                console.warn('Google One Tap not displayed:', {
-                  notDisplayedReason: notification.getNotDisplayedReason?.(),
-                  skippedReason: notification.getSkippedReason?.()
-                })
-                // Clean up iframe
-                const oldIframe = document.getElementById('google-auth-iframe')
-                if (oldIframe) {
-                  oldIframe.remove()
-                }
-              }
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            console.warn('Google One Tap not displayed:', {
+              notDisplayedReason: notification.getNotDisplayedReason?.(),
+              skippedReason: notification.getSkippedReason?.(),
             })
-          } catch (error) {
-            console.error('Google Sign-In error:', error)
           }
-        }
-
-        buttonRef.current.appendChild(button)
+        })
       },
       onError: () => {
-        if (cancelled) return
+        if (!isMounted) {
+          return
+        }
         setLoadError(true)
       },
     })
 
     return () => {
-      cancelled = true
+      isMounted = false
       detachListener?.()
+      if (containerElement) {
+        containerElement.innerHTML = ''
+      }
       if (window.google?.accounts?.id) {
         window.google.accounts.id.cancel()
       }
@@ -152,11 +151,11 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
 
   if (!clientId || loadError) {
     return (
-      <button type="button" className="google-button" onClick={() => onCredential(null)}>
+      <button type="button" className="google-button--fallback" onClick={() => onCredential(null)}>
         {text}
       </button>
     )
   }
 
-  return <div ref={buttonRef} className="google-button" />
+  return <div ref={buttonRef} className="google-button__container" />
 }
