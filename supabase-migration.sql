@@ -60,6 +60,9 @@ CREATE TABLE public.chat_sessions (
   prompts jsonb NOT NULL DEFAULT '[]'::jsonb,
   generatedImages jsonb NOT NULL DEFAULT '[]'::jsonb,
   descriptions jsonb NOT NULL DEFAULT '[]'::jsonb,
+  promptSummaries jsonb DEFAULT '[]'::jsonb,
+  categories jsonb DEFAULT '[]'::jsonb,
+  creator jsonb,
   coinsSpent integer,
   sourceImage text
 );

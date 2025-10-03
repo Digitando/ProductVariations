@@ -92,6 +92,11 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+const DATA_DIR = path.resolve(__dirname, '../data');
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
 const CLIENT_DIST_DIR = path.resolve(__dirname, '../../client/dist');
 const CLIENT_INDEX_FILE = path.join(CLIENT_DIST_DIR, 'index.html');
 const CLIENT_FAVICON_FILE = path.join(CLIENT_DIST_DIR, 'favicon.ico');
@@ -508,10 +513,12 @@ function getAssetBaseUrl(req) {
 
 async function uploadToSupabaseStorage(filePath, fileName) {
   if (!supabaseClient) {
+    console.warn('Supabase client not configured - skipping storage upload');
     return null;
   }
 
   try {
+    console.log(`Uploading ${fileName} to Supabase Storage bucket 'uploads'...`);
     const fileBuffer = await fsp.readFile(filePath);
     const { data, error } = await supabaseClient.storage
       .from('uploads')
@@ -522,6 +529,7 @@ async function uploadToSupabaseStorage(filePath, fileName) {
 
     if (error) {
       console.error('Supabase upload error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return null;
     }
 
@@ -529,6 +537,7 @@ async function uploadToSupabaseStorage(filePath, fileName) {
       .from('uploads')
       .getPublicUrl(data.path);
 
+    console.log('Upload successful! Public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
     console.error('Failed to upload to Supabase:', error);
