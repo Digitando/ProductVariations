@@ -913,13 +913,16 @@ function App() {
     async (authToken) => {
       const effectiveToken = authToken || token
       if (!effectiveToken) {
+        console.log('[loadSessions] No token available')
         return
       }
 
+      console.log('[loadSessions] Loading sessions...')
       setLibraryStatus({ loading: true, error: '' })
       try {
         const data = await apiRequest('/api/sessions', { token: effectiveToken })
         const fetchedSessions = Array.isArray(data?.sessions) ? data.sessions : []
+        console.log('[loadSessions] Fetched sessions:', fetchedSessions.length, fetchedSessions)
         setSessions(fetchedSessions)
         setActiveSessionId((prev) => {
           if (prev && fetchedSessions.some((session) => session.id === prev)) {
@@ -929,6 +932,7 @@ function App() {
         })
         setLibraryStatus({ loading: false, error: '' })
       } catch (error) {
+        console.error('[loadSessions] Error loading sessions:', error)
         setLibraryStatus({ loading: false, error: error.message })
       }
     },
