@@ -173,22 +173,22 @@ function mapSessionForSupabase(session) {
 
   return {
     ...session,
-    userid: session.userId || session.userid || null,
-    createdat: session.createdAt || session.createdat || null,
-    sourceimage: typeof session.sourceImage === 'string' ? session.sourceImage : '',
+    userId: session.userId || session.userid || null,
+    createdAt: session.createdAt || session.createdat || null,
+    sourceImage: typeof session.sourceImage === 'string' ? session.sourceImage : '',
     prompts: normalizeArray(session.prompts),
-    generatedimages: normalizeArray(session.generatedImages),
+    generatedImages: normalizeArray(session.generatedImages),
     descriptions: normalizeArray(session.descriptions),
-    promptsummaries: normalizeArray(session.promptSummaries),
+    promptSummaries: normalizeArray(session.promptSummaries),
     categories: normalizeArray(session.categories),
     creator: normalizeCreator(session.creator),
-    customprompt: typeof session.customPrompt === 'string' ? session.customPrompt : '',
-    categoryid: typeof session.categoryId === 'string' ? session.categoryId : '',
-    categorylabel: typeof session.categoryLabel === 'string' ? session.categoryLabel : '',
-    subcategoryid: typeof session.subcategoryId === 'string' ? session.subcategoryId : '',
-    subcategorylabel: typeof session.subcategoryLabel === 'string' ? session.subcategoryLabel : '',
+    customPrompt: typeof session.customPrompt === 'string' ? session.customPrompt : '',
+    categoryId: typeof session.categoryId === 'string' ? session.categoryId : '',
+    categoryLabel: typeof session.categoryLabel === 'string' ? session.categoryLabel : '',
+    subcategoryId: typeof session.subcategoryId === 'string' ? session.subcategoryId : '',
+    subcategoryLabel: typeof session.subcategoryLabel === 'string' ? session.subcategoryLabel : '',
     title: typeof session.title === 'string' ? session.title : '',
-    coinsspent:
+    coinsSpent:
       typeof session.coinsSpent === 'number' && Number.isFinite(session.coinsSpent)
         ? session.coinsSpent
         : session.coinsSpent === null || session.coinsSpent === undefined
