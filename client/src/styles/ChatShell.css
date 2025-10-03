@@ -257,8 +257,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: clamp(48px, 7vh, 68px) clamp(28px, 5vw, 60px);
-  gap: 32px;
+  padding: clamp(24px, 3vh, 32px) clamp(20px, 2vw, 28px);
+  gap: 20px;
   overflow: hidden;
   min-height: 0;
   position: relative;
@@ -267,8 +267,8 @@
 .chat-shell__main::before {
   content: '';
   position: absolute;
-  inset: clamp(16px, 3.2vw, 36px);
-  border-radius: 32px;
+  inset: clamp(8px, 1.5vw, 16px);
+  border-radius: 24px;
   background: radial-gradient(circle at 20% 10%, rgba(118, 129, 255, 0.12), transparent 60%),
     linear-gradient(135deg, rgba(25, 27, 42, 0.75), rgba(15, 16, 28, 0.88));
   border: 1px solid rgba(137, 139, 204, 0.12);
@@ -278,8 +278,8 @@
 }
 
 .chat-header h1 {
-  margin: 0 0 6px;
-  font-size: clamp(2.4rem, 4.2vw, 3rem);
+  margin: 0 0 4px;
+  font-size: clamp(1.8rem, 3.5vw, 2.2rem);
   letter-spacing: -0.03em;
   background: linear-gradient(135deg, #f7f9ff 0%, rgba(184, 192, 255, 0.95) 60%, rgba(181, 215, 255, 0.85) 100%);
   -webkit-background-clip: text;
@@ -291,6 +291,7 @@
 .chat-header p {
   margin: 0;
   max-width: 560px;
+  font-size: 14px;
   color: rgba(236, 238, 250, 0.75);
   position: relative;
   z-index: 1;
@@ -299,8 +300,8 @@
 .chat-body {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.95fr);
-  gap: 36px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.85fr);
+  gap: 20px;
   min-height: 0;
   position: relative;
   z-index: 1;
@@ -308,8 +309,8 @@
 
 .chat-thread {
   background: linear-gradient(135deg, rgba(30, 33, 47, 0.85), rgba(21, 24, 35, 0.88));
-  border-radius: 26px;
-  padding: 28px;
+  border-radius: 20px;
+  padding: 20px;
   border: 1px solid rgba(142, 148, 209, 0.12);
   box-shadow: 0 28px 60px rgba(7, 10, 32, 0.65);
   display: flex;
@@ -479,11 +480,11 @@
 
 .chat-preview {
   background: linear-gradient(160deg, rgba(28, 30, 45, 0.82), rgba(21, 23, 33, 0.85));
-  border-radius: 26px;
-  padding: 26px;
+  border-radius: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   border: 1px solid rgba(138, 141, 196, 0.16);
   min-height: 0;
   box-shadow: 0 26px 56px rgba(6, 8, 28, 0.55);
@@ -553,12 +554,12 @@
 
 .chat-composer {
   background: rgba(24, 26, 36, 0.88);
-  border-radius: 26px;
+  border-radius: 20px;
   border: 1px solid rgba(138, 141, 196, 0.16);
-  padding: 26px 28px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   box-shadow: 0 30px 60px rgba(7, 9, 30, 0.55);
   backdrop-filter: blur(28px);
 }
