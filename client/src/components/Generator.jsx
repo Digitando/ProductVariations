@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as promptCatalogModule from '@shared/promptCatalog.cjs'
 import '../styles/ChatShell.css'
 
@@ -121,6 +121,8 @@ export default function Generator({
   const [activeCanvasId, setActiveCanvasId] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [historyQuery, setHistoryQuery] = useState('')
+  const [openMenu, setOpenMenu] = useState(null)
+  const composerRef = useRef(null)
 
   const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
@@ -217,6 +219,7 @@ export default function Generator({
   }, [activeSession, coinsRequired])
 
   const handleStartNewChat = () => {
+    setOpenMenu(null)
     resetWorkspace()
     onSelectSession?.(null)
   }
@@ -247,25 +250,29 @@ export default function Generator({
     setUploadPreview('')
   }
 
-  const handleCategoryChange = (event) => {
-    const categoryId = event.target.value
+  const handleCategoryChange = (input) => {
+    const categoryId = typeof input === 'string' ? input : input?.target?.value || ''
     setErrorMessage('')
     setSelectedCategoryId(categoryId)
     setSelectedSubcategoryId('')
     setSelectedPromptIds([])
   }
 
-  const handleSubcategoryChange = (event) => {
-    const subcategoryId = event.target.value
+  const handleSubcategoryChange = (input) => {
+    const subcategoryId = typeof input === 'string' ? input : input?.target?.value || ''
     setErrorMessage('')
     setSelectedSubcategoryId(subcategoryId)
     setSelectedPromptIds([])
   }
 
-  const handlePromptSelect = (event) => {
-    const promptId = event.target.value
-    if (!promptId || selectedPromptIds.includes(promptId)) return
-    setSelectedPromptIds((prev) => [...prev, promptId])
+  const handlePromptToggle = (promptId) => {
+    if (!promptId) return
+    setSelectedPromptIds((prev) => {
+      if (prev.includes(promptId)) {
+        return prev.filter((value) => value !== promptId)
+      }
+      return [...prev, promptId]
+    })
     setErrorMessage('')
   }
 
@@ -324,6 +331,7 @@ export default function Generator({
   }
 
   const handleGenerate = async () => {
+    setOpenMenu(null)
     if (!validateBeforeGenerate()) return
 
     setIsGenerating(true)
@@ -544,7 +552,55 @@ export default function Generator({
 
     setErrorMessage('')
     setStatusMessage('Preset applied. Upload an image and generate to see the results.')
+    setOpenMenu(null)
   }
+
+  const toggleMenu = (menu, { disabled } = {}) => {
+    if (disabled) return
+    setOpenMenu((previous) => (previous === menu ? null : menu))
+  }
+
+  const closeMenu = () => setOpenMenu(null)
+
+  useEffect(() => {
+    if (!openMenu || typeof document === 'undefined') {
+      return undefined
+    }
+
+    const handleClick = (event) => {
+      if (!composerRef.current) return
+      if (!composerRef.current.contains(event.target)) {
+        setOpenMenu(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+    }
+  }, [openMenu])
+
+  useEffect(() => {
+    if (!openMenu || typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpenMenu(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openMenu])
+
+  const selectedCategoryLabel = activeCategory?.label || 'Choose category'
+  const selectedSubcategoryLabel = selectedSubcategoryId
+    ? activeSubcategories.find((entry) => entry.id === selectedSubcategoryId)?.label || 'Select subcategory'
+    : 'Select subcategory'
 
   return (
     <div className="chat-shell">
@@ -746,67 +802,178 @@ export default function Generator({
           </aside>
         </div>
 
-        <div className="chat-composer">
-          <div className="chat-composer__grid">
-            <label className="chat-upload">
+        <div className="chat-composer" ref={composerRef}>
+          <div className="chat-composer__bar">
+            <div className="chat-composer__control-wrapper">
+              <button
+                type="button"
+                className={`chat-composer__control${openMenu === 'category' ? ' chat-composer__control--active' : ''}`}
+                onClick={() => toggleMenu('category', { disabled: disableInputs })}
+                disabled={disableInputs}
+              >
+                <span className="chat-composer__control-label">Category</span>
+                <span className="chat-composer__control-value">{selectedCategoryLabel}</span>
+              </button>
+              {openMenu === 'category' && (
+                <div className="chat-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+                  <div className="chat-menu__list">
+                    {STANDALONE_DEFINITIONS.map((category) => {
+                      const isActive = category.id === selectedCategoryId
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          className={`chat-menu__item${isActive ? ' chat-menu__item--selected' : ''}`}
+                          onClick={() => {
+                            handleCategoryChange(category.id)
+                            setOpenMenu(null)
+                          }}
+                          role="menuitemradio"
+                          aria-checked={isActive}
+                        >
+                          <span>{category.label}</span>
+                          {isActive && <span className="chat-menu__check">✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {hasSubcategoryOptions && (
+              <div className="chat-composer__control-wrapper">
+                <button
+                  type="button"
+                  className={`chat-composer__control${
+                    openMenu === 'subcategory' ? ' chat-composer__control--active' : ''
+                  }`}
+                  onClick={() => toggleMenu('subcategory', { disabled: disableInputs })}
+                  disabled={disableInputs}
+                >
+                  <span className="chat-composer__control-label">Subcategory</span>
+                  <span className="chat-composer__control-value">
+                    {selectedSubcategoryId ? selectedSubcategoryLabel : 'Choose subcategory'}
+                  </span>
+                </button>
+                {openMenu === 'subcategory' && (
+                  <div className="chat-menu" role="menu" onClick={(event) => event.stopPropagation()}>
+                    <div className="chat-menu__list">
+                      {activeSubcategories.map((subcategory) => {
+                        const isActive = subcategory.id === selectedSubcategoryId
+                        return (
+                          <button
+                            key={subcategory.id}
+                            type="button"
+                            className={`chat-menu__item${isActive ? ' chat-menu__item--selected' : ''}`}
+                            onClick={() => {
+                              handleSubcategoryChange(subcategory.id)
+                              closeMenu()
+                            }}
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                          >
+                            <span>{subcategory.label}</span>
+                            {isActive && <span className="chat-menu__check">✓</span>}
+                          </button>
+                        )
+                      })}
+                      {activeSubcategories.length === 0 && (
+                        <p className="chat-menu__empty">No subcategories available.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="chat-composer__control-wrapper">
+              <button
+                type="button"
+                className={`chat-composer__control${
+                  openMenu === 'prompts' ? ' chat-composer__control--active' : ''
+                }${availablePromptCount === 0 ? ' chat-composer__control--disabled' : ''}`}
+                onClick={() =>
+                  toggleMenu('prompts', {
+                    disabled: disableInputs || availablePromptCount === 0,
+                  })
+                }
+                disabled={disableInputs || availablePromptCount === 0}
+              >
+                <span className="chat-composer__control-label">Prompt presets</span>
+                <span className="chat-composer__control-value">
+                  {selectedPromptIds.length > 0
+                    ? `${selectedPromptIds.length} selected`
+                    : availablePromptCount === 0
+                    ? 'No presets'
+                    : 'Choose presets'}
+                </span>
+              </button>
+              {openMenu === 'prompts' && (
+                <div className="chat-menu chat-menu--wide" role="menu" onClick={(event) => event.stopPropagation()}>
+                  <header className="chat-menu__header">
+                    <strong>Prompt presets</strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPromptIds([])
+                        setOpenMenu(null)
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </header>
+                  <div className="chat-menu__list chat-menu__list--scroll">
+                    {filteredPrompts.length === 0 ? (
+                      <p className="chat-menu__empty">
+                        Choose a category to see prompt suggestions.
+                      </p>
+                    ) : (
+                      filteredPrompts.map((prompt) => {
+                        const isSelected = selectedPromptIds.includes(prompt.id)
+                        const name = prompt.title || prompt.name || 'Prompt preset'
+                        const description = prompt.description || prompt.prompt || ''
+                        return (
+                          <button
+                            key={prompt.id}
+                            type="button"
+                            className={`chat-menu__item chat-menu__item--dense${
+                              isSelected ? ' chat-menu__item--selected' : ''
+                            }`}
+                            onClick={() => handlePromptToggle(prompt.id)}
+                            role="menuitemcheckbox"
+                            aria-checked={isSelected}
+                          >
+                            <div className="chat-menu__item-body">
+                              <strong>{name}</strong>
+                              {description && <span>{description}</span>}
+                            </div>
+                            {isSelected && <span className="chat-menu__check">✓</span>}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <label className="chat-composer__upload">
               <input type="file" accept="image/*" onChange={handleUploadChange} disabled={disableInputs} />
-              {uploadPreview ? 'Replace image' : 'Upload reference'}
+              {uploadPreview ? 'Replace image' : 'Add reference'}
             </label>
 
-            <select
-              className="chat-select"
-              value={selectedCategoryId}
-              onChange={handleCategoryChange}
-              disabled={disableInputs}
-            >
-              <option value="">Category</option>
-              {STANDALONE_DEFINITIONS.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
+            <div className="chat-composer__input">
+              <input
+                type="text"
+                placeholder="Describe the look you want"
+                value={customPrompt}
+                onChange={(event) => setCustomPrompt(event.target.value)}
+                disabled={disableInputs}
+              />
+            </div>
 
-            <select
-              className="chat-select"
-              value={selectedSubcategoryId}
-              onChange={handleSubcategoryChange}
-              disabled={disableInputs || !hasSubcategoryOptions}
-            >
-              <option value="">Subcategory</option>
-              {activeSubcategories.map((subcategory) => (
-                <option key={subcategory.id} value={subcategory.id}>
-                  {subcategory.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="chat-select"
-              value=""
-              onChange={handlePromptSelect}
-              disabled={disableInputs || availablePromptCount === 0}
-            >
-              <option value="">Prompt preset</option>
-              {filteredPrompts
-                .filter((prompt) => !selectedPromptIds.includes(prompt.id))
-                .map((prompt) => (
-                  <option key={prompt.id} value={prompt.id}>
-                    {prompt.title}
-                  </option>
-                ))}
-            </select>
-
-            <input
-              type="text"
-              className="chat-input"
-              placeholder="Add custom directions"
-              value={customPrompt}
-              onChange={(event) => setCustomPrompt(event.target.value)}
-              disabled={disableInputs}
-            />
-
-            <button type="button" className="chat-generate" onClick={handleGenerate} disabled={disableInputs}>
+            <button type="button" className="chat-composer__generate" onClick={handleGenerate} disabled={disableInputs}>
               {isGenerating
                 ? 'Generating…'
                 : `Generate (${coinsRequired} coin${coinsRequired === 1 ? '' : 's'})`}
@@ -822,7 +989,7 @@ export default function Generator({
                   onClick={handleRemoveUpload}
                   disabled={disableInputs}
                 >
-                  Image selected ×
+                  Reference attached ×
                 </button>
               )}
               {selectedPromptDetails.map((prompt) => (
@@ -833,7 +1000,7 @@ export default function Generator({
                   onClick={() => handleRemovePrompt(prompt.id)}
                   disabled={disableInputs}
                 >
-                  {prompt.title} ×
+                  {prompt.title || prompt.name} ×
                 </button>
               ))}
               {customPrompt.trim() && (
