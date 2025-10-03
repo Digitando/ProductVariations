@@ -134,7 +134,6 @@ if (hasClientBuild) {
       res.status(204).set('Cache-Control', 'public, max-age=60').end();
     });
   }
-}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
@@ -471,14 +470,24 @@ function resolvePromptTemplates(promptIds) {
   return resolved;
 }
 
-function buildVariationRequests({ promptIds }) {
+function buildVariationRequests({ promptIds, customPrompt }) {
   const templates = resolvePromptTemplates(promptIds);
   const baseInstruction =
     'Create product variations of the provided reference image. Treat the upload as authoritative: preserve the product\'s silhouette, materials, colours, and branding. Do not introduce alternate products, packaging, or text overlays. Maintain garment accuracy. Ensure the final output is a square (1:1) frame suitable for e-commerce listings.';
+  const custom = typeof customPrompt === 'string' ? customPrompt.trim() : '';
+
+  if (templates.length === 0 && custom) {
+    return [
+      {
+        template: { id: 'custom', name: 'Custom prompt', prompt: custom },
+        prompt: `${baseInstruction} Follow the custom direction: ${custom}`,
+      },
+    ];
+  }
 
   return templates.map((template) => ({
     template,
-    prompt: `${baseInstruction} Apply the ${template.name} styling: ${template.prompt}`,
+    prompt: `${baseInstruction} Apply the ${template.name} styling: ${template.prompt}${custom ? ` Additionally, ${custom}` : ''}`,
   }));
 }
 
@@ -625,7 +634,8 @@ app.post('/api/generate-images', requireAuth, upload.single('image'), async (req
     }
 
     const promptIds = extractPromptIds(req.body.prompts || req.body.styles);
-    const variationRequests = buildVariationRequests({ promptIds });
+    const customPrompt = typeof req.body.customPrompt === 'string' ? req.body.customPrompt : '';
+    const variationRequests = buildVariationRequests({ promptIds, customPrompt });
 
     const coinsRequired = computeRequiredCoins(variationRequests);
     const { users, user, index } = await getUserStoreEntry(req.user.id);
@@ -1052,6 +1062,13 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
       sourceImage = '',
       generatedImages = [],
       descriptions = [],
+      customPrompt = '',
+      categoryId = '',
+      categoryLabel = '',
+      subcategoryId = '',
+      subcategoryLabel = '',
+      coinsSpent,
+      title = '',
     } = req.body || {};
 
     const session = {
@@ -1062,6 +1079,13 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
       sourceImage: typeof sourceImage === 'string' ? sourceImage : '',
       generatedImages: Array.isArray(generatedImages) ? generatedImages.slice(0, 10) : [],
       descriptions: Array.isArray(descriptions) ? descriptions.slice(0, 10) : [],
+      customPrompt: typeof customPrompt === 'string' ? customPrompt : '',
+      categoryId: typeof categoryId === 'string' ? categoryId : '',
+      categoryLabel: typeof categoryLabel === 'string' ? categoryLabel : '',
+      subcategoryId: typeof subcategoryId === 'string' ? subcategoryId : '',
+      subcategoryLabel: typeof subcategoryLabel === 'string' ? subcategoryLabel : '',
+      coinsSpent: typeof coinsSpent === 'number' ? coinsSpent : null,
+      title: typeof title === 'string' ? title : '',
     };
 
     const sessions = await getSessions();

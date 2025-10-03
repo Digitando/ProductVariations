@@ -1,406 +1,367 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as promptCatalogModule from '@shared/promptCatalog.cjs'
 import '../styles/Generator.css'
+import '../styles/Workspace.css'
 
-const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule['default'] : promptCatalogModule
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-
+const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule.default : promptCatalogModule
 const PROMPTS_BY_ID = promptCatalog.promptsById || {}
 const STANDALONE_DEFINITIONS = promptCatalog.standaloneCategories || []
 const STANDALONE_LOOKUP = promptCatalog.standaloneLookup || {}
 
-const getStandaloneDefinition = (categoryId) => {
-  if (!categoryId) {
-    return null
-  }
-  return STANDALONE_LOOKUP[categoryId] || null
+const EMPTY_CHAT_MESSAGE = {
+  id: 'empty-state',
+  type: 'system',
+  headline: 'Get started',
+  body: 'Upload a product image, choose a category, and hit Generate to create your first variation.',
 }
 
-function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsChange, onRequestTopUp }) {
-  const handleViewImage = (src, alt) => {
-    if (typeof onViewImage === 'function') {
-      onViewImage({ src, alt })
+function formatRelativeTime(input) {
+  if (!input) return ''
+  const date = typeof input === 'string' ? new Date(input) : input
+  const diffMs = Date.now() - date.getTime()
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+  const divisions = [
+    { amount: 60_000 * 60 * 24, unit: 'day' },
+    { amount: 60_000 * 60, unit: 'hour' },
+    { amount: 60_000, unit: 'minute' },
+  ]
+
+  for (const division of divisions) {
+    if (Math.abs(diffMs) >= division.amount) {
+      return rtf.format(Math.round(diffMs / division.amount), division.unit)
     }
   }
 
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState('')
+  return 'just now'
+}
+
+function buildPromptSummary(prompts = [], customPrompt = '') {
+  const names = prompts
+    .map((item) => item?.title || item?.name || '')
+    .filter(Boolean)
+
+  if (customPrompt.trim()) {
+    names.push(customPrompt.trim())
+  }
+
+  if (names.length === 0) return 'Custom directions'
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} + ${names[1]}`
+  return `${names.slice(0, 2).join(' + ')} + ${names.length - 2} more`
+}
+
+function getStandaloneDefinition(categoryId) {
+  if (!categoryId) return null
+  return STANDALONE_LOOKUP[categoryId] || null
+}
+
+export default function Generator({
+  token,
+  coins = 0,
+  onCoinsChange,
+  onSessionComplete,
+  onViewImage,
+  onRequestTopUp,
+  sessions = [],
+  activeSessionId,
+  onSelectSession,
+  onRefreshSessions,
+  user,
+  onOpenProfile,
+}) {
+  const [uploadFile, setUploadFile] = useState(null)
+  const [uploadPreview, setUploadPreview] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('')
   const [selectedPromptIds, setSelectedPromptIds] = useState([])
-  const [generatedImages, setGeneratedImages] = useState([])
-  const [sourceImage, setSourceImage] = useState('')
-  const [descriptions, setDescriptions] = useState([])
-  const [status, setStatus] = useState({ step: '', message: '', loading: false, error: '' })
-  const selectionSnapshotRef = useRef({ categoryId: '', subcategoryId: '' })
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [statusMessage, setStatusMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [chatMessages, setChatMessages] = useState([EMPTY_CHAT_MESSAGE])
+  const [canvasItems, setCanvasItems] = useState([])
+  const [activeCanvasId, setActiveCanvasId] = useState(null)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [historyQuery, setHistoryQuery] = useState('')
 
-  const hasResults = useMemo(
-    () => generatedImages.length > 0 || descriptions.length > 0,
-    [generatedImages.length, descriptions.length],
-  )
-
-  const coinsRequired = useMemo(() => Math.max(selectedPromptIds.length, 1), [selectedPromptIds.length])
-  const hasEnoughCoins = coins >= coinsRequired
-
-  const resetOutputs = () => {
-    setGeneratedImages([])
-    setDescriptions([])
-    setSourceImage('')
-  }
-
-  const updateStatus = (partial) => {
-    setStatus((prev) => ({ ...prev, ...partial }))
-  }
-
-  const categoryOptions = useMemo(
-    () =>
-      STANDALONE_DEFINITIONS.map((category) => ({
-        id: category.id,
-        label: category.label,
-        hasPrompts: category.hasPrompts,
-      })).sort((a, b) => a.label.localeCompare(b.label)),
-    [],
-  )
-
-  const activeCategory = useMemo(
-    () => getStandaloneDefinition(selectedCategoryId),
-    [selectedCategoryId],
-  )
-
-  const activeCategoryLabel = activeCategory?.label || ''
+  const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
-  const activeSubcategoryLabel =
-    activeSubcategories.find((option) => option.id === selectedSubcategoryId)?.label || ''
   const hasSubcategoryOptions = activeSubcategories.length > 0
-  const hasSubcategorySelection = !hasSubcategoryOptions || Boolean(selectedSubcategoryId)
-
-  // Get all prompts for the active category
-  // Note: Subcategory selection is informational but doesn't filter prompts
-  // because prompts are not tagged with specific subcategories
-  const filteredPrompts = useMemo(() => {
-    if (!activeCategory) return []
-    return activeCategory.prompts || []
-  }, [activeCategory])
-
-  // Group the filtered prompts
-  const activePromptGroups = useMemo(() => {
-    const groupMap = new Map()
-
-    filteredPrompts.forEach(prompt => {
-      const groupLabel = prompt.group || 'Other'
-      if (!groupMap.has(groupLabel)) {
-        groupMap.set(groupLabel, {
-          id: groupLabel,
-          label: groupLabel,
-          prompts: []
-        })
-      }
-      groupMap.get(groupLabel).prompts.push(prompt)
-    })
-
-    return Array.from(groupMap.values())
-  }, [filteredPrompts])
-
+  const filteredPrompts = useMemo(() => activeCategory?.prompts || [], [activeCategory])
   const availablePromptCount = filteredPrompts.length
-
   const selectedPromptDetails = useMemo(
     () => selectedPromptIds.map((id) => PROMPTS_BY_ID[id]).filter(Boolean),
     [selectedPromptIds],
   )
+  const coinsRequired = useMemo(() => {
+    const presetCount = selectedPromptIds.length
+    const customCount = customPrompt.trim() ? 1 : 0
+    return Math.max(presetCount + customCount, 1)
+  }, [selectedPromptIds.length, customPrompt])
+  const hasEnoughCoins = coins >= coinsRequired
 
-  const stepMeta = {
-    focus: {
-      title: 'Product category',
-      description: 'Select what kind of product imagery you want to create.',
-    },
-    prompts: {
-      title: 'Prompt cues',
-      description: 'Pick the creative directions for the generated shots.',
-    },
-    upload: {
-      title: 'Upload & generate',
-      description: 'Review your inputs, add the photo, and create assets.',
-    },
-  }
+  const activeCanvasItem = useMemo(
+    () => canvasItems.find((item) => item.id === activeCanvasId) || null,
+    [canvasItems, activeCanvasId],
+  )
+  const activeSession = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId) || null,
+    [sessions, activeSessionId],
+  )
 
-  const stepOrder = ['focus', 'prompts', 'upload']
-
-  useEffect(() => {
-    setCurrentStepIndex((prev) => {
-      const maxIndex = Math.max(stepOrder.length - 1, 0)
-      return prev > maxIndex ? maxIndex : prev
+  const filteredHistory = useMemo(() => {
+    const query = historyQuery.trim().toLowerCase()
+    if (!query) return sessions
+    return sessions.filter((session) => {
+      const title = session.title || buildPromptSummary(session.prompts, session.customPrompt)
+      return title.toLowerCase().includes(query)
     })
-  }, [stepOrder])
+  }, [sessions, historyQuery])
 
-  const currentStepId = stepOrder[currentStepIndex] || stepOrder[0]
-  const focusHasTemplates = Boolean(activeCategory) && availablePromptCount > 0
-  const isFocusComplete = Boolean(selectedCategoryId) && focusHasTemplates && hasSubcategorySelection
-  const hasPromptSelection = selectedPromptIds.length > 0
-  const isReadyToGenerate =
-    Boolean(selectedCategoryId) &&
-    hasSubcategorySelection &&
-    hasPromptSelection &&
-    Boolean(imageFile) &&
-    focusHasTemplates &&
-    hasEnoughCoins
-  const canAdvanceCurrentStep = (() => {
-    switch (currentStepId) {
-      case 'focus':
-        return isFocusComplete
-      case 'prompts':
-        return hasPromptSelection
-      default:
-        return false
-    }
-  })()
-  const stepDescriptors = stepOrder.map((id, index) => ({
-    id,
-    title: stepMeta[id].title,
-    description: stepMeta[id].description,
-    status: index < currentStepIndex ? 'complete' : index === currentStepIndex ? 'current' : 'upcoming',
-  }))
+  const resetWorkspace = useCallback(() => {
+    setUploadFile(null)
+    setUploadPreview('')
+    setSelectedCategoryId('')
+    setSelectedSubcategoryId('')
+    setSelectedPromptIds([])
+    setCustomPrompt('')
+    setStatusMessage('')
+    setErrorMessage('')
+    setChatMessages([EMPTY_CHAT_MESSAGE])
+    setCanvasItems([])
+    setActiveCanvasId(null)
+    setActiveImageIndex(0)
+  }, [])
 
   useEffect(() => {
-    const previous = selectionSnapshotRef.current
+    if (!activeSession) return
 
-    if (previous.categoryId !== selectedCategoryId) {
-      selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: '' }
-      if (selectedSubcategoryId !== '') {
-        setSelectedSubcategoryId('')
-      }
-      setSelectedPromptIds([])
-      resetOutputs()
-      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
-      setCurrentStepIndex((prev) => {
-        const focusIndex = stepOrder.indexOf('focus')
-        return focusIndex === -1 ? prev : Math.min(prev, focusIndex)
-      })
-      return
+    setSelectedCategoryId(activeSession.categoryId || '')
+    setSelectedSubcategoryId(activeSession.subcategoryId || '')
+    const restoredPromptIds = Array.isArray(activeSession.prompts)
+      ? activeSession.prompts
+          .map((prompt) => prompt?.id)
+          .filter((id) => typeof id === 'string' && PROMPTS_BY_ID[id])
+      : []
+    setSelectedPromptIds(restoredPromptIds)
+    setCustomPrompt(activeSession.customPrompt || '')
+    setUploadPreview(typeof activeSession.sourceImage === 'string' ? activeSession.sourceImage : '')
+    setUploadFile(null)
+
+    const sessionCanvasItem = {
+      id: activeSession.id,
+      createdAt: activeSession.createdAt,
+      images: Array.isArray(activeSession.generatedImages) ? activeSession.generatedImages : [],
+      prompts: Array.isArray(activeSession.prompts) ? activeSession.prompts : [],
+      customPrompt: activeSession.customPrompt || '',
+      coinsSpent: activeSession.coinsSpent || null,
+      sourceImage: activeSession.sourceImage || '',
     }
 
-    if (previous.subcategoryId !== selectedSubcategoryId) {
-      selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: selectedSubcategoryId }
-      setSelectedPromptIds([])
-      resetOutputs()
-      setStatus((prev) => ({ ...prev, step: '', message: '', error: '' }))
-      setCurrentStepIndex((prev) => {
-        const promptsIndex = stepOrder.indexOf('prompts')
-        return promptsIndex === -1 ? prev : Math.min(prev, promptsIndex)
-      })
-      return
-    }
+    setCanvasItems([sessionCanvasItem])
+    setActiveCanvasId(activeSession.id)
+    setActiveImageIndex(0)
 
-    selectionSnapshotRef.current = { categoryId: selectedCategoryId, subcategoryId: selectedSubcategoryId }
-  }, [selectedCategoryId, selectedSubcategoryId, stepOrder])
+    const promptSummary = buildPromptSummary(sessionCanvasItem.prompts, sessionCanvasItem.customPrompt)
+    const hydratedMessages = [
+      {
+        id: `${activeSession.id}-result`,
+        type: 'result',
+        timestamp: activeSession.createdAt,
+        promptSummary,
+        images: sessionCanvasItem.images.slice(0, 3),
+        coinsSpent: sessionCanvasItem.coinsSpent || coinsRequired,
+        customPrompt: sessionCanvasItem.customPrompt,
+      },
+    ]
 
-  const handleSelectCategory = (categoryId) => {
-    if (categoryId === selectedCategoryId) {
-      return
-    }
-    updateStatus({ error: '' })
-    setSelectedCategoryId(categoryId)
+    setChatMessages(hydratedMessages)
+  }, [activeSession, coinsRequired])
+
+  const handleStartNewChat = () => {
+    resetWorkspace()
+    onSelectSession?.(null)
   }
 
-  const handleSelectSubcategory = (subcategoryId) => {
-    if (!hasSubcategoryOptions || subcategoryId === selectedSubcategoryId) {
-      return
-    }
-    updateStatus({ error: '' })
-    setSelectedSubcategoryId(subcategoryId)
-  }
-
-  const stepErrorMessages = {
-    focus: 'Select a product category and subcategory to continue.',
-    prompts: 'Select at least one prompt direction.',
-  }
-
-  const handleStepClick = (index) => {
-    if (index > currentStepIndex || status.loading) {
-      return
-    }
-    setCurrentStepIndex(index)
-    updateStatus({ error: '' })
-  }
-
-  const handleNext = () => {
-    if (!canAdvanceCurrentStep) {
-      const message = stepErrorMessages[currentStepId]
-      if (message) {
-        updateStatus({ error: message })
-      }
-      return
-    }
-    updateStatus({ error: '' })
-    setCurrentStepIndex((prev) => Math.min(prev + 1, stepOrder.length - 1))
-  }
-
-  const handleBack = () => {
-    if (currentStepIndex === 0) {
-      return
-    }
-    updateStatus({ error: '' })
-    setCurrentStepIndex((prev) => Math.max(prev - 1, 0))
-  }
-
-  const handleFileChange = (evt) => {
-    const file = evt.target.files?.[0]
+  const handleUploadChange = (event) => {
+    const file = event.target.files?.[0]
     if (!file) {
-      setImageFile(null)
-      setImagePreview('')
+      setUploadFile(null)
+      setUploadPreview('')
       return
     }
 
-    setImageFile(file)
+    setUploadFile(file)
+    setErrorMessage('')
+
     const reader = new FileReader()
     reader.onload = (e) => {
-      setImagePreview(String(e.target?.result || ''))
+      const result = e.target?.result
+      if (typeof result === 'string') {
+        setUploadPreview(result)
+      }
     }
     reader.readAsDataURL(file)
   }
 
-  const togglePrompt = (promptId) => {
-    const isPromptInActiveCategory = Boolean(
-      activeCategory?.prompts?.some((prompt) => prompt.id === promptId),
-    )
+  const handleRemoveUpload = () => {
+    setUploadFile(null)
+    setUploadPreview('')
+  }
 
-    if (!isPromptInActiveCategory) {
-      return
-    }
+  const handleCategoryChange = (event) => {
+    const categoryId = event.target.value
+    setErrorMessage('')
+    setSelectedCategoryId(categoryId)
+    setSelectedSubcategoryId('')
+    setSelectedPromptIds([])
+  }
 
-    updateStatus({ error: '' })
-    setSelectedPromptIds((prev) => {
-      if (prev.includes(promptId)) {
-        return prev.filter((value) => value !== promptId)
-      }
+  const handleSubcategoryChange = (event) => {
+    const subcategoryId = event.target.value
+    setErrorMessage('')
+    setSelectedSubcategoryId(subcategoryId)
+    setSelectedPromptIds([])
+  }
 
-      return [...prev, promptId]
+  const handlePromptSelect = (event) => {
+    const promptId = event.target.value
+    if (!promptId || selectedPromptIds.includes(promptId)) return
+    setSelectedPromptIds((prev) => [...prev, promptId])
+    setErrorMessage('')
+  }
+
+  const handleRemovePrompt = (promptId) => {
+    setSelectedPromptIds((prev) => prev.filter((value) => value !== promptId))
+  }
+
+  const buildApiUrl = (path) => `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}${path}`
+
+  const appendMessage = (message) => {
+    setChatMessages((previous) => {
+      const filtered = previous.filter((entry) => entry.id !== EMPTY_CHAT_MESSAGE.id)
+      return [...filtered, message]
     })
   }
 
-  const buildApiUrl = (path) => `${API_BASE_URL}${path}`
-
-  const handleSubmit = async (evt) => {
-    evt.preventDefault()
-
+  const validateBeforeGenerate = () => {
     if (!token) {
-      updateStatus({ error: 'Your session expired. Please log back in to generate assets.', loading: false })
-      return
+      setErrorMessage('Your session expired. Please log back in to generate assets.')
+      return false
     }
 
     if (!selectedCategoryId) {
-      updateStatus({ error: 'Select a product category to continue.' })
-      return
+      setErrorMessage('Pick a product category to continue.')
+      return false
     }
 
     if (hasSubcategoryOptions && !selectedSubcategoryId) {
-      updateStatus({ error: 'Select a subcategory to continue.' })
-      return
+      setErrorMessage('Choose a subcategory to continue.')
+      return false
     }
 
-    if (!activeCategory || availablePromptCount === 0) {
-      updateStatus({ error: 'Prompt templates for this selection are not available yet.' })
-      return
+    if (availablePromptCount === 0) {
+      setErrorMessage('Prompt templates are not yet available for this category.')
+      return false
     }
 
-    if (!imageFile) {
-      updateStatus({ error: 'Upload a product photo to continue.' })
-      return
+    if (!uploadFile && !uploadPreview) {
+      setErrorMessage('Upload a product image to generate variations.')
+      return false
     }
 
     if (!hasEnoughCoins) {
-      updateStatus({
-        error: `You need ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'} to run this batch. Top up your balance to continue.`,
-      })
-      if (typeof onRequestTopUp === 'function') {
-        onRequestTopUp()
-      }
-      return
+      setErrorMessage(`You need ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'} for this run. Top up to continue.`)
+      onRequestTopUp?.()
+      return false
     }
 
-    if (selectedPromptIds.length === 0) {
-      updateStatus({ error: 'Select at least one prompt direction.' })
-      return
+    if (selectedPromptIds.length === 0 && !customPrompt.trim()) {
+      setErrorMessage('Select at least one preset prompt or provide custom directions.')
+      return false
     }
 
-    resetOutputs()
+    setErrorMessage('')
+    return true
+  }
 
-    updateStatus({
-      step: 'images',
-      message: 'Generating product photography variations...',
-      loading: true,
-      error: '',
+  const handleGenerate = async () => {
+    if (!validateBeforeGenerate()) return
+
+    setIsGenerating(true)
+    setStatusMessage('Generating variations…')
+
+    const timestamp = new Date().toISOString()
+    const promptSummary = buildPromptSummary(selectedPromptDetails, customPrompt)
+
+    appendMessage({
+      id: `prompt-${timestamp}`,
+      type: 'user',
+      timestamp,
+      promptSummary,
+      customPrompt,
+      categoryLabel: activeCategory?.label || '',
+      subcategoryLabel:
+        activeSubcategories.find((entry) => entry.id === selectedSubcategoryId)?.label || '',
     })
 
     try {
-      const imageForm = new FormData()
-      imageForm.append('image', imageFile)
-      imageForm.append('prompts', JSON.stringify(selectedPromptIds))
+      const formData = new FormData()
+      formData.append('prompts', selectedPromptIds.join(','))
+      if (customPrompt.trim()) {
+        formData.append('customPrompt', customPrompt.trim())
+      }
+      if (selectedCategoryId) {
+        formData.append('categoryId', selectedCategoryId)
+      }
+      if (selectedSubcategoryId) {
+        formData.append('subcategoryId', selectedSubcategoryId)
+      }
+
+      if (uploadFile) {
+        formData.append('image', uploadFile)
+      } else if (uploadPreview.startsWith('data:')) {
+        const response = await fetch(uploadPreview)
+        const blob = await response.blob()
+        formData.append('image', blob, `upload-${Date.now()}.png`)
+      }
 
       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
       const imageResponse = await fetch(buildApiUrl('/api/generate-images'), {
         method: 'POST',
-        body: imageForm,
+        body: formData,
         headers: authHeaders,
       })
 
       if (imageResponse.status === 401) {
-        updateStatus({ error: 'Your session has expired. Please log in again.', loading: false })
-        return
+        throw new Error('Your session has expired. Please log in again.')
       }
 
       if (imageResponse.status === 402) {
         const errorBody = await imageResponse.json().catch(() => ({}))
-        const message =
-          errorBody?.error ||
-          `You need ${coinsRequired} coin${coinsRequired === 1 ? '' : 's'} for this generation. Top up your wallet.`
-        updateStatus({ error: message, loading: false })
-        if (typeof onRequestTopUp === 'function') {
-          onRequestTopUp()
-        }
-        return
+        throw new Error(errorBody?.error || 'You need more coins to generate this set.')
       }
 
       if (!imageResponse.ok) {
         const errorBody = await imageResponse.json().catch(() => ({}))
-        throw new Error(errorBody.error || 'Image generation request failed')
+        throw new Error(errorBody?.error || 'Image generation failed.')
       }
 
       const {
-        images,
+        images = [],
         sourceImage: sourceImageUrl,
         prompts: promptMetadata,
         coins: remainingCoins,
         coinsCharged,
       } = await imageResponse.json()
-      setGeneratedImages(Array.isArray(images) ? images : [])
-      setSourceImage(typeof sourceImageUrl === 'string' ? sourceImageUrl : '')
 
-      if (typeof remainingCoins === 'number' && typeof onCoinsChange === 'function') {
-        onCoinsChange(remainingCoins)
+      if (typeof remainingCoins === 'number') {
+        onCoinsChange?.(remainingCoins)
       }
 
-      updateStatus({
-        step: 'descriptions',
-        message: 'Visuals ready. Writing product descriptions...',
-        loading: true,
-      })
-
-      const referenceImagePayload =
-        typeof imagePreview === 'string'
-          ? imagePreview.includes(',')
-            ? (imagePreview.split(',')[1] || '').trim()
-            : imagePreview.trim()
-          : ''
-
-      const descriptionBody = {
-        prompts: selectedPromptIds,
-        referenceImage: sourceImageUrl || referenceImagePayload,
-        referenceImageFallback: referenceImagePayload,
-        imageCount: images.length,
-      }
+      const nextSourceImage = typeof sourceImageUrl === 'string' && sourceImageUrl ? sourceImageUrl : uploadPreview
+      setUploadPreview(nextSourceImage)
 
       const descriptionResponse = await fetch(buildApiUrl('/api/generate-descriptions'), {
         method: 'POST',
@@ -408,495 +369,364 @@ function Generator({ onSessionComplete, onViewImage, token, coins = 0, onCoinsCh
           'Content-Type': 'application/json',
           ...authHeaders,
         },
-        body: JSON.stringify(descriptionBody),
+        body: JSON.stringify({
+          prompts: selectedPromptIds,
+          customPrompt: customPrompt.trim(),
+          referenceImage: nextSourceImage,
+          referenceImageFallback: uploadPreview,
+          imageCount: Array.isArray(images) ? images.length : 0,
+        }),
       })
 
       if (descriptionResponse.status === 401) {
-        updateStatus({ error: 'Your session has expired. Please log in again.', loading: false })
-        return
+        throw new Error('Your session has expired. Please log in again.')
       }
 
       if (!descriptionResponse.ok) {
         const errorBody = await descriptionResponse.json().catch(() => ({}))
-        throw new Error(errorBody.error || 'Description generation request failed')
+        throw new Error(errorBody?.error || 'Description generation failed.')
       }
 
       const descriptionPayload = await descriptionResponse.json()
-      const parsedDescriptions = descriptionPayload.descriptions || []
-      setDescriptions(parsedDescriptions)
+      const parsedDescriptions = Array.isArray(descriptionPayload.descriptions)
+        ? descriptionPayload.descriptions
+        : []
 
-      updateStatus({
-        step: 'done',
-        message:
-          typeof remainingCoins === 'number'
-            ? `All assets generated successfully. You have ${remainingCoins} coin${remainingCoins === 1 ? '' : 's'} remaining${
-                typeof coinsCharged === 'number' && coinsCharged > 0
-                  ? ` after spending ${coinsCharged} coin${coinsCharged === 1 ? '' : 's'}.`
-                  : '.'
-              }`
-            : 'All assets generated successfully.',
-        loading: false,
-      })
-
-      if (onSessionComplete) {
-        onSessionComplete({
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          categoryId: selectedCategoryId,
-          categoryLabel: activeCategoryLabel,
-          subcategoryId: selectedSubcategoryId,
-          subcategoryLabel: activeSubcategoryLabel,
-          prompts: promptMetadata || selectedPromptDetails,
-          sourceImage: typeof sourceImageUrl === 'string' ? sourceImageUrl : '',
-          generatedImages: Array.isArray(images) ? images : [],
-          descriptions: parsedDescriptions,
-        })
-      }
-    } catch (error) {
-      console.error(error)
-      updateStatus({
-        error: error instanceof Error ? error.message : 'Something went wrong',
-        loading: false,
-      })
-    }
-  }
-
-  const handleReset = () => {
-    setImageFile(null)
-    setImagePreview('')
-    setSelectedCategoryId('')
-    setSelectedSubcategoryId('')
-    setSelectedPromptIds([])
-    resetOutputs()
-    setCurrentStepIndex(0)
-    selectionSnapshotRef.current = { categoryId: '', subcategoryId: '' }
-    updateStatus({ step: '', message: '', loading: false, error: '' })
-  }
-
-  const downloadImage = async (imageUrl, filename) => {
-    try {
-      const response = await fetch(imageUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename || 'generated-image.png'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Download failed:', error)
-      alert('Failed to download image. Please try again.')
-    }
-  }
-
-  const downloadAllImages = async () => {
-    if (generatedImages.length === 0) return
-
-    updateStatus({ loading: true, message: 'Preparing bulk download...' })
-
-    try {
-      const JSZip = await import('jszip')
-      const zip = new JSZip.default()
-
-      for (let i = 0; i < generatedImages.length; i++) {
-        const imageUrl = generatedImages[i]
-        const response = await fetch(imageUrl)
-        const blob = await response.blob()
-        zip.file(`variation-${i + 1}.png`, blob)
+      const sessionId = crypto.randomUUID()
+      const sessionRecord = {
+        id: sessionId,
+        createdAt: timestamp,
+        categoryId: selectedCategoryId,
+        categoryLabel: activeCategory?.label || '',
+        subcategoryId: selectedSubcategoryId,
+        subcategoryLabel:
+          activeSubcategories.find((entry) => entry.id === selectedSubcategoryId)?.label || '',
+        prompts: promptMetadata || selectedPromptDetails,
+        customPrompt: customPrompt.trim(),
+        sourceImage: nextSourceImage,
+        generatedImages: Array.isArray(images) ? images : [],
+        descriptions: parsedDescriptions,
+        coinsSpent: typeof coinsCharged === 'number' ? coinsCharged : coinsRequired,
+        title: promptSummary,
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const url = window.URL.createObjectURL(zipBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'product-variations.zip'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      onSessionComplete?.(sessionRecord)
 
-      updateStatus({ loading: false, message: 'Bulk download completed!' })
-    } catch (error) {
-      console.error('Bulk download failed:', error)
-      updateStatus({
-        loading: false,
-        error: 'Failed to download images. Please try individual downloads.',
+      const canvasEntry = {
+        id: sessionId,
+        createdAt: timestamp,
+        images: sessionRecord.generatedImages,
+        prompts: sessionRecord.prompts,
+        customPrompt: sessionRecord.customPrompt,
+        coinsSpent: sessionRecord.coinsSpent,
+        sourceImage: nextSourceImage,
+      }
+
+      setCanvasItems((previous) => [canvasEntry, ...previous])
+      setActiveCanvasId(sessionId)
+      setActiveImageIndex(0)
+
+      appendMessage({
+        id: `${sessionId}-result`,
+        type: 'result',
+        timestamp,
+        promptSummary,
+        images: sessionRecord.generatedImages.slice(0, 3),
+        coinsSpent: sessionRecord.coinsSpent,
+        customPrompt: sessionRecord.customPrompt,
       })
+
+      setStatusMessage(`Generated ${sessionRecord.generatedImages.length} image${
+        sessionRecord.generatedImages.length === 1 ? '' : 's'
+      } successfully.`)
+      setErrorMessage('')
+      onSelectSession?.(sessionId)
+      onRefreshSessions?.()
+    } catch (error) {
+      console.error('Generation failed', error)
+      const message = error instanceof Error ? error.message : 'Something went wrong.'
+      setErrorMessage(message)
+      appendMessage({
+        id: `error-${Date.now()}`,
+        type: 'error',
+        timestamp: new Date().toISOString(),
+        promptSummary: 'Generation failed',
+        body: message,
+      })
+    } finally {
+      setIsGenerating(false)
     }
   }
+
+  const handleHistorySelect = (sessionId) => {
+    if (!sessionId) return
+    onSelectSession?.(sessionId)
+  }
+
+  const activePreviewImage = useMemo(() => {
+    if (!activeCanvasItem) return uploadPreview
+    const images = Array.isArray(activeCanvasItem.images) ? activeCanvasItem.images : []
+    return images[activeImageIndex] || images[0] || uploadPreview
+  }, [activeCanvasItem, activeImageIndex, uploadPreview])
+
+  const disableInputs = isGenerating
 
   return (
-    <div className="page">
-      <header className="page__header">
-        <div>
-          <h1>Photo-first Product Generator</h1>
-          <p>
-            Upload a product photo, choose tailored photography prompts for your category, and let OpenRouter craft on-brand
-            marketing visuals and copy.
-          </p>
-        </div>
-        <div className="generator__header-actions">
-          <div className="generator__coins">
-            <span>Coins</span>
-            <strong>{coins}</strong>
+    <div className="workspace">
+      <header className="workspace-header">
+        <button type="button" className="workspace-header__profile" onClick={() => onOpenProfile?.()}>
+          <span className="workspace-header__avatar">
+            {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
+          </span>
+          <div className="workspace-header__meta">
+            <strong>{user?.name || user?.email || 'Profile'}</strong>
+            {user?.email && <span>{user.email}</span>}
           </div>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              if (typeof onRequestTopUp === 'function') {
-                onRequestTopUp()
-              }
-            }}
-            disabled={typeof onRequestTopUp !== 'function'}
-          >
-            Buy coins
+        </button>
+        <div className="workspace-header__coins">
+          <span className="workspace-header__coins-label">Coins</span>
+          <strong>🪙 {coins}</strong>
+          <button type="button" className="workspace-header__coins-button" onClick={() => onRequestTopUp?.()}>
+            Buy more
           </button>
-          <button type="button" className="secondary" onClick={handleReset}>
-            Reset
+        </div>
+        <div className="workspace-header__actions">
+          <button type="button" className="workspace-header__secondary" onClick={handleStartNewChat}>
+            New chat
           </button>
         </div>
       </header>
 
-      <main className="layout">
-        <section className="panel">
-          <form className="generator" onSubmit={handleSubmit}>
-          <div className={`coin-alert${hasEnoughCoins ? '' : ' coin-alert--warning'}`}>
-            <div>
-              <span>Coins required</span>
-              <strong>{coinsRequired}</strong>
-            </div>
-            <div>
-              <span>Coins after run</span>
-              <strong>{Math.max(coins - coinsRequired, 0)}</strong>
-            </div>
-            {!hasEnoughCoins && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  if (typeof onRequestTopUp === 'function') {
-                    onRequestTopUp()
-                  }
-                }}
-              >
-                Top up coins
-              </button>
-            )}
-          </div>
-          <ol className="funnel-stepper" role="list">
-            {stepDescriptors.map((step, index) => {
-              const isDisabled = index > currentStepIndex
-              const ariaLabel = step.description
-                ? `${step.title}. ${step.description}`
-                : step.title
-              return (
-                <li key={step.id} className={`funnel-step funnel-step--${step.status}`}>
-                  <button
-                    type="button"
-                    className="funnel-step__button"
-                    onClick={() => handleStepClick(index)}
-                    disabled={isDisabled}
-                    aria-label={ariaLabel}
-                  >
-                    <span className="funnel-step__index">{index + 1}</span>
-                    <span className="funnel-step__title">{step.title}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ol>
+      <div className="workspace-body">
+        <section className="workspace-main">
+          <div className="control-bar">
+            <label className="control-bar__item control-bar__upload" aria-label="Upload image">
+              <input type="file" accept="image/*" onChange={handleUploadChange} disabled={disableInputs} />
+              {uploadPreview ? 'Replace image' : 'Upload image'}
+            </label>
 
-          <div className="funnel-content">
-            {currentStepId === 'focus' && (
-              <div className="selector-group">
-                <h2>Product category</h2>
-                <p className="selector-note">
-                  Pick a category to load tailored product photography prompts, then choose the subcategory focus for your
-                  product.
-                </p>
+            <select
+              className="control-bar__item"
+              value={selectedCategoryId}
+              onChange={handleCategoryChange}
+              disabled={disableInputs}
+            >
+              <option value="">Category</option>
+              {STANDALONE_DEFINITIONS.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
 
-                <div className="selector-subgroup">
-                  <span className="selector-subheading">Available categories</span>
-                  <div className="selector-row" role="radiogroup" aria-label="Product categories">
-                    {categoryOptions.map((option) => {
-                      const isSelected = selectedCategoryId === option.id
-                      return (
-                        <button
-                          key={`standalone-${option.id}`}
-                          type="button"
-                          className={`selector-btn selector-btn--compact${isSelected ? ' selector-btn--selected' : ''}`}
-                          onClick={() => handleSelectCategory(option.id)}
-                          aria-pressed={isSelected}
-                          disabled={!option.hasPrompts}
-                        >
-                          <span className="selector-btn__label">{option.label}</span>
-                          {!option.hasPrompts && <span className="selector-btn__tag">Coming soon</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+            <select
+              className="control-bar__item"
+              value={selectedSubcategoryId}
+              onChange={handleSubcategoryChange}
+              disabled={disableInputs || !hasSubcategoryOptions}
+            >
+              <option value="">Subcategory</option>
+              {activeSubcategories.map((subcategory) => (
+                <option key={subcategory.id} value={subcategory.id}>
+                  {subcategory.label}
+                </option>
+              ))}
+            </select>
 
-                {hasSubcategoryOptions && (
-                  <div className="selector-subgroup">
-                    <span className="selector-subheading">Subcategories</span>
-                    <div
-                      className="selector-row"
-                      role="radiogroup"
-                      aria-label={`${activeCategoryLabel || 'Selected category'} subcategories`}
-                    >
-                      {activeSubcategories.map((option) => {
-                        const isSelected = selectedSubcategoryId === option.id
-                        return (
-                          <button
-                            key={`subcategory-${option.id}`}
-                            type="button"
-                            className={`selector-btn selector-btn--compact${
-                              isSelected ? ' selector-btn--selected' : ''
-                            }`}
-                            onClick={() => handleSelectSubcategory(option.id)}
-                            aria-pressed={isSelected}
-                          >
-                            <span className="selector-btn__label">{option.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <select
+              className="control-bar__item"
+              value=""
+              onChange={handlePromptSelect}
+              disabled={disableInputs || availablePromptCount === 0}
+            >
+              <option value="">Prompt preset</option>
+              {filteredPrompts
+                .filter((prompt) => !selectedPromptIds.includes(prompt.id))
+                .map((prompt) => (
+                  <option key={prompt.id} value={prompt.id}>
+                    {prompt.title}
+                  </option>
+                ))}
+            </select>
 
-            {currentStepId === 'prompts' && (
-              <div className="styles">
-                <div className="styles__header">
-                  <div>
-                    <h2>Prompt directions</h2>
-                    {activeCategoryLabel && <p className="styles__context">{activeCategoryLabel}</p>}
-                  </div>
-                  <span>{selectedPromptIds.length} selected</span>
-                </div>
-                {!activeCategory && (
-                  <p className="styles__hint">Choose a product category to load suggested prompt cues.</p>
-                )}
-                {activeCategory && availablePromptCount === 0 && (
-                  <p className="styles__hint">Prompt templates for this selection are coming soon.</p>
-                )}
-                {activeCategory && availablePromptCount > 0 && (
-                  <>
-                    <p className="styles__hint">
-                      Choose as many prompts as you want. They steer the scenarios while the product stays consistent.
-                    </p>
-                    {activePromptGroups.map((group) => (
-                      <div key={group.id} className="prompt-group">
-                        <h3>{group.label}</h3>
-                        <div className="style-grid">
-                          {group.prompts.map((option) => {
-                            const isChecked = selectedPromptIds.includes(option.id)
-                            return (
-                              <label
-                                key={option.id}
-                                className={`style-option${isChecked ? ' style-option--selected' : ''}`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  value={option.id}
-                                  checked={isChecked}
-                                  onChange={() => togglePrompt(option.id)}
-                                />
-                                <div className="style-option__content">
-                                  <span className="style-option__title">{option.title}</span>
-                                  <span className="style-option__description">{option.description}</span>
-                                </div>
-                              </label>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
+            <input
+              type="text"
+              className="control-bar__item control-bar__custom"
+              placeholder="Custom prompt"
+              value={customPrompt}
+              onChange={(event) => setCustomPrompt(event.target.value)}
+              disabled={disableInputs}
+            />
 
-            {currentStepId === 'upload' && (
-              <div className="upload-step">
-                <div className="upload">
-                  <label htmlFor="image" className="upload__label">
-                    <span>Product photo*</span>
-                    <input id="image" name="image" type="file" accept="image/*" onChange={handleFileChange} />
-                  </label>
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Upload preview" className="upload__preview" />
-                  ) : (
-                    <p className="upload__placeholder">
-                      Drop or browse for a clear product shot. This anchors every variation and the marketing copy.
-                    </p>
-                  )}
-                </div>
-                <aside className="upload-summary">
-                  <h3>Review selections</h3>
-                  <ul className="funnel-summary">
-                    <li>
-                      <span>Product category</span>
-                      <strong>{activeCategoryLabel || 'Not set'}</strong>
-                    </li>
-                    {hasSubcategoryOptions && (
-                      <li>
-                        <span>Subcategory</span>
-                        <strong>{activeSubcategoryLabel || 'Not set'}</strong>
-                      </li>
-                    )}
-                    <li>
-                      <span>Prompts selected</span>
-                      <strong>{selectedPromptIds.length}</strong>
-                    </li>
-                  </ul>
-                  {selectedPromptDetails.length > 0 && (
-                    <div className="selected-styles selected-styles--inline">
-                      <h4>Cues</h4>
-                      <div className="style-chip-row">
-                        {selectedPromptDetails.map((prompt) => (
-                          <span key={prompt.id} className="style-chip">
-                            {prompt.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </aside>
-              </div>
-            )}
-          </div>
-
-          <div className="funnel-actions">
             <button
               type="button"
-              className="secondary"
-              onClick={handleBack}
-              disabled={currentStepIndex === 0 || status.loading}
+              className="control-bar__generate"
+              onClick={handleGenerate}
+              disabled={disableInputs}
             >
-              Back
+              {isGenerating ? 'Generating…' : `Generate (${coinsRequired} coin${coinsRequired === 1 ? '' : 's'})`}
             </button>
-            <div className="funnel-actions__spacer" />
-            {currentStepIndex < stepOrder.length - 1 ? (
-              <button
-                type="button"
-                className="primary"
-                onClick={handleNext}
-                disabled={!canAdvanceCurrentStep || status.loading}
-              >
-                Next step
-              </button>
+          </div>
+
+          {(uploadPreview || selectedPromptDetails.length > 0 || customPrompt.trim()) && (
+            <div className="control-bar__chips">
+              {uploadPreview && (
+                <button
+                  type="button"
+                  className="control-chip control-chip--image"
+                  onClick={handleRemoveUpload}
+                  disabled={disableInputs}
+                >
+                  Image selected ×
+                </button>
+              )}
+              {selectedPromptDetails.map((prompt) => (
+                <button
+                  key={prompt.id}
+                  type="button"
+                  className="control-chip"
+                  onClick={() => handleRemovePrompt(prompt.id)}
+                  disabled={disableInputs}
+                >
+                  {prompt.title} ×
+                </button>
+              ))}
+              {customPrompt.trim() && <span className="control-chip control-chip--custom">{customPrompt.trim()}</span>}
+            </div>
+          )}
+
+          {errorMessage && <p className="workspace-status workspace-status--error">{errorMessage}</p>}
+          {statusMessage && !errorMessage && (
+            <p className="workspace-status workspace-status--info">{statusMessage}</p>
+          )}
+
+          <div className="workspace-canvas">
+            {activePreviewImage ? (
+              <div className="workspace-canvas__preview">
+                <img
+                  src={activePreviewImage}
+                  alt="Generated preview"
+                  onClick={() =>
+                    onViewImage?.({ src: activePreviewImage, alt: 'Generated variation' })
+                  }
+                />
+              </div>
             ) : (
-              <button className="primary" type="submit" disabled={status.loading || !isReadyToGenerate}>
-                {status.loading ? 'Generating...' : 'Generate product assets'}
-              </button>
+              <div className="workspace-canvas__empty">
+                <p>Canvas is empty. Generate a look to see it here.</p>
+              </div>
+            )}
+
+            {activeCanvasItem && activeCanvasItem.images.length > 1 && (
+              <div className="workspace-canvas__thumbnails">
+                {activeCanvasItem.images.map((imageUrl, index) => (
+                  <button
+                    type="button"
+                    key={`${activeCanvasItem.id}-thumb-${index}`}
+                    className={`workspace-canvas__thumb${index === activeImageIndex ? ' workspace-canvas__thumb--active' : ''}`}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    <img src={imageUrl} alt={`Variation ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeCanvasItem && (
+              <footer className="workspace-canvas__meta">
+                <span>{formatRelativeTime(activeCanvasItem.createdAt)}</span>
+                <span>{buildPromptSummary(activeCanvasItem.prompts, activeCanvasItem.customPrompt)}</span>
+                {typeof activeCanvasItem.coinsSpent === 'number' && (
+                  <span>{activeCanvasItem.coinsSpent} coin{activeCanvasItem.coinsSpent === 1 ? '' : 's'}</span>
+                )}
+              </footer>
             )}
           </div>
 
-          {status.message && !status.error && <p className="status status--info">{status.message}</p>}
-          {status.error && <p className="status status--error">{status.error}</p>}
-        </form>
-        </section>
-
-        <section className="panel results">
-          {!hasResults && (
-            <p className="placeholder">
-              Generated image variations and descriptions will appear here once processing completes.
-            </p>
-          )}
-
-          {selectedPromptDetails.length > 0 && (
-            <div className="selected-styles">
-              <h2>Selected prompt cues</h2>
-              <div className="style-chip-row">
-                {selectedPromptDetails.map((prompt) => (
-                  <span key={prompt.id} className="style-chip">
-                    {prompt.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {sourceImage && (
-            <div className="source-image">
-              <h2>Source image URL</h2>
-              <a href={sourceImage} target="_blank" rel="noreferrer">
-                {sourceImage}
-              </a>
-            </div>
-          )}
-
-          {generatedImages.length > 0 && (
-            <div>
-              <div className="images-header">
-                <h2>Image variations</h2>
-                <div className="download-actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={downloadAllImages}
-                    disabled={status.loading}
-                  >
-                    Download All ({generatedImages.length})
-                  </button>
-                </div>
-              </div>
-              <div className="image-grid">
-                {generatedImages.map((src, index) => (
-                  <figure key={`${src}-${index}`}>
-                    <button
-                      type="button"
-                      className="image-thumb"
-                      onClick={() => handleViewImage(src, `Generated variation ${index + 1}`)}
-                    >
-                      <img src={src} alt={`Generated variation ${index + 1}`} loading="lazy" />
-                    </button>
-                    <div className="image-actions">
-                      <figcaption>Variation {index + 1}</figcaption>
-                      <button
-                        type="button"
-                        className="download-btn"
-                        onClick={() => downloadImage(src, `variation-${index + 1}.png`)}
-                        title="Download this image"
-                      >
-                        Download
-                      </button>
+          <section className="workspace-chat">
+            <header className="workspace-chat__header">
+              <h2>Chat</h2>
+            </header>
+            <div className="workspace-chat__stream">
+              {chatMessages.map((message) => (
+                <article key={message.id} className={`chat-message chat-message--${message.type}`}>
+                  <header>
+                    <strong>
+                      {message.type === 'user'
+                        ? 'You'
+                        : message.type === 'result'
+                        ? 'Variations ready'
+                        : 'System'}
+                    </strong>
+                    {message.timestamp && <span>{formatRelativeTime(message.timestamp)}</span>}
+                  </header>
+                  <p>{message.promptSummary || message.body}</p>
+                  {message.images && message.images.length > 0 && (
+                    <div className="chat-message__images">
+                      {message.images.map((imageUrl, index) => (
+                        <button
+                          key={`${message.id}-preview-${index}`}
+                          type="button"
+                          onClick={() =>
+                            onViewImage?.({ src: imageUrl, alt: `Generated variation ${index + 1}` })
+                          }
+                        >
+                          <img src={imageUrl} alt={`Generated variation ${index + 1}`} />
+                        </button>
+                      ))}
                     </div>
-                  </figure>
-                ))}
-              </div>
+                  )}
+                  {message.coinsSpent && (
+                    <footer>{message.coinsSpent} coin{message.coinsSpent === 1 ? '' : 's'} used</footer>
+                  )}
+                </article>
+              ))}
             </div>
-          )}
-
-          {descriptions.length > 0 && (
-            <div className="descriptions">
-              <h2>Product descriptions</h2>
-              <div className="description-grid">
-                {descriptions.map((item, index) => (
-                  <article key={index} className="description-card">
-                    <header>
-                      <span className="description-index">#{index + 1}</span>
-                      <p className="description-tone">Tone: {item.tone}</p>
-                    </header>
-                    {item.title && <h2 className="description-title">{item.title}</h2>}
-                    <h3>{item.headline}</h3>
-                    {item.tagline && <p className="description-tagline">{item.tagline}</p>}
-                    <p>{item.body}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
+          </section>
         </section>
-      </main>
+
+        <aside className="workspace-history">
+          <header className="workspace-history__header">
+            <h2>History</h2>
+            <button type="button" className="workspace-header__secondary" onClick={() => onRefreshSessions?.()}>
+              Refresh
+            </button>
+          </header>
+          <input
+            type="search"
+            className="workspace-history__search"
+            placeholder="Search chats"
+            value={historyQuery}
+            onChange={(event) => setHistoryQuery(event.target.value)}
+          />
+          <div className="workspace-history__list">
+            {filteredHistory.length === 0 ? (
+              <p className="workspace-history__empty">No chats yet. Generate your first look.</p>
+            ) : (
+              filteredHistory.map((session) => (
+                <button
+                  type="button"
+                  key={session.id}
+                  className={`history-item${session.id === activeSessionId ? ' history-item--active' : ''}`}
+                  onClick={() => handleHistorySelect(session.id)}
+                >
+                  <div className="history-item__thumb">
+                    {session.generatedImages?.[0] ? (
+                      <img src={session.generatedImages[0]} alt="Session thumbnail" />
+                    ) : (
+                      <span>📄</span>
+                    )}
+                  </div>
+                  <div className="history-item__meta">
+                    <strong>{session.title || buildPromptSummary(session.prompts, session.customPrompt)}</strong>
+                    <span>{formatRelativeTime(session.createdAt)}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }
-
-export default Generator

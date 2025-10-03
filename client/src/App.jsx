@@ -1430,6 +1430,7 @@ function App() {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState('')
   const [sessions, setSessions] = useState([])
+  const [activeSessionId, setActiveSessionId] = useState(null)
   const [guestSessions, setGuestSessions] = useState([])
   const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
   const [galleryImages, setGalleryImages] = useState([])
@@ -1508,7 +1509,14 @@ function App() {
       setLibraryStatus({ loading: true, error: '' })
       try {
         const data = await apiRequest('/api/sessions', { token: effectiveToken })
-        setSessions(data?.sessions || [])
+        const fetchedSessions = Array.isArray(data?.sessions) ? data.sessions : []
+        setSessions(fetchedSessions)
+        setActiveSessionId((prev) => {
+          if (prev && fetchedSessions.some((session) => session.id === prev)) {
+            return prev
+          }
+          return fetchedSessions[0]?.id || null
+        })
         setLibraryStatus({ loading: false, error: '' })
       } catch (error) {
         setLibraryStatus({ loading: false, error: error.message })
@@ -1614,6 +1622,7 @@ function App() {
     setUser(null)
     setToken('')
     setSessions([])
+    setActiveSessionId(null)
     localStorage.removeItem('pv_auth_token')
     setView(VIEWS.HOME)
     setProfileInitialTab('overview')
@@ -1653,12 +1662,20 @@ function App() {
           sourceImage: session.sourceImage,
           generatedImages: session.generatedImages,
           descriptions: session.descriptions,
+          customPrompt: session.customPrompt,
+          categoryId: session.categoryId,
+          categoryLabel: session.categoryLabel,
+          subcategoryId: session.subcategoryId,
+          subcategoryLabel: session.subcategoryLabel,
+          coinsSpent: session.coinsSpent,
+          title: session.title,
         },
         token,
       })
 
       const saved = response?.session || session
       setSessions((prev) => [saved, ...prev])
+      setActiveSessionId(saved.id || null)
       setLibraryStatus({ loading: false, error: '' })
     } catch (error) {
       setLibraryStatus({ loading: false, error: error.message })
@@ -1842,12 +1859,18 @@ function App() {
         )}
         {view === VIEWS.GENERATOR && (
           <Generator
-            onSessionComplete={handleSessionComplete}
-            onViewImage={openImageViewer}
+            user={user}
             token={token}
             coins={user?.coins ?? 0}
             onCoinsChange={handleCoinsChange}
+            onViewImage={openImageViewer}
             onRequestTopUp={openWallet}
+            onSessionComplete={handleSessionComplete}
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelectSession={setActiveSessionId}
+            onRefreshSessions={() => loadSessions(token)}
+            onOpenProfile={() => setView(VIEWS.PROFILE)}
           />
         )}
         {view === VIEWS.LIBRARY && (
