@@ -906,8 +906,12 @@ function App() {
   )
 
   const openWallet = useCallback(() => {
+    if (!user) {
+      openAuthModal('login')
+      return
+    }
     setProfileModal({ open: true, initialTab: 'wallet' })
-  }, [])
+  }, [user])
 
   const loadSessions = useCallback(
     async (authToken) => {
@@ -1094,7 +1098,11 @@ function App() {
           onSelectSession={setActiveSessionId}
           onRefreshSessions={() => loadSessions(token)}
           onOpenProfile={() => {
-            if (!user || !sessions.length) {
+            if (!user) {
+              openAuthModal('login')
+              return
+            }
+            if (!sessions.length) {
               loadSessions()
             }
             setProfileModal({ open: true, initialTab: 'overview' })
