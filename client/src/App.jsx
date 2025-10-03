@@ -13,23 +13,6 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
 const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY) : null
 
-const VIEWS = {
-  HOME: 'home',
-  ABOUT: 'about',
-  GENERATOR: 'generator',
-  LIBRARY: 'library',
-  PROFILE: 'profile',
-  COOKIE_POLICY: 'cookie-policy',
-  PRIVACY: 'privacy-notice',
-}
-
-const NAV_ITEMS = [
-  { id: VIEWS.HOME, label: 'Home' },
-  { id: VIEWS.ABOUT, label: 'About' },
-  { id: VIEWS.GENERATOR, label: 'Create', requiresAuth: true },
-  { id: VIEWS.LIBRARY, label: 'Library', requiresAuth: true },
-  { id: VIEWS.PROFILE, label: 'Profile', requiresAuth: true },
-]
 
 async function apiRequest(path, { method = 'GET', body, token } = {}) {
   const url = `${API_BASE_URL}${path}`
@@ -70,7 +53,7 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
   return data
 }
 
-function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }) {
+function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -194,18 +177,7 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
                 />
                 <span>
                   I accept the{' '}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() => {
-                      if (typeof onNavigate === 'function') {
-                        onClose()
-                        onNavigate(VIEWS.PRIVACY)
-                      }
-                    }}
-                  >
-                    Privacy Policy
-                  </button>{' '}
+                  <span className="link-button">Privacy Policy</span>{' '}
                   and GDPR terms.
                 </span>
               </label>
@@ -298,531 +270,6 @@ function AuthModal({ mode, onClose, onAuthenticate, onNavigate, googleClientId }
   )
 }
 
-function Hero({ onGetStarted, user, recentImages = [] }) {
-  const hasImages = recentImages.length > 0
-  const previewImages = useMemo(
-    () => (hasImages ? recentImages.slice(0, 10) : []),
-    [hasImages, recentImages],
-  )
-  const [activeIndex, setActiveIndex] = useState(hasImages ? 0 : -1)
-
-  useEffect(() => {
-    if (!previewImages.length) {
-      setActiveIndex(-1)
-      return undefined
-    }
-
-    setActiveIndex(0)
-    const interval = setInterval(() => {
-      setActiveIndex((previous) => {
-        if (previewImages.length <= 1) {
-          return 0
-        }
-
-        const next = previous + 1
-        return next >= previewImages.length ? 0 : next
-      })
-    }, 4500)
-
-    return () => clearInterval(interval)
-  }, [previewImages])
-
-  return (
-    <section className="hero">
-      <div className="hero__content">
-        <p className="eyebrow">AI Product Studio for Apparel Brands</p>
-        <h1>Transform a single garment photo into launch-ready visuals and copy.</h1>
-        <p className="hero__description">
-          Upload a reference shot, pick the editorial directions, and let our generator return consistent model imagery,
-          close-ups, and conversion-ready product descriptions.
-        </p>
-        <p className="hero__tagline">Created by dropshippers for dropshippers, so every launch feels effortless.</p>
-        <div className="hero__actions">
-          <button type="button" className="primary" onClick={onGetStarted}>
-            Start generating
-          </button>
-          {user ? (
-            <span className="hero__hint">Signed in as {user.name || user.email}</span>
-          ) : (
-            <span className="hero__hint">Create an account to save every upload.</span>
-          )}
-        </div>
-      </div>
-      <div className="hero__card">
-        <div className="hero__preview" aria-hidden="true">
-          {previewImages.length > 0 ? (
-            <>
-              {previewImages.map((src, index) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
-                  className={`hero__slide${index === activeIndex ? ' hero__slide--active' : ''}`}
-                />
-              ))}
-              <div className="hero__preview-dots">
-                {previewImages.map((_, index) => (
-                  <span
-                    key={`hero-dot-${index}`}
-                    className={`hero__dot${index === activeIndex ? ' hero__dot--active' : ''}`}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="hero__placeholder">
-              <img src="/vite.svg" alt="" />
-            </div>
-          )}
-        </div>
-        <ul className="hero__list" aria-label="Workflow highlights">
-          <li>
-            <span className="hero__badge">01</span>
-            Upload one outfit photo
-          </li>
-          <li>
-            <span className="hero__badge">02</span>
-            Select editorial prompts
-          </li>
-          <li>
-            <span className="hero__badge">03</span>
-            Download variations and copy
-          </li>
-        </ul>
-      </div>
-    </section>
-  )
-}
-
-function HomeContent({
-  onStart,
-  onViewCookie,
-  onViewPrivacy,
-  galleryImages = [],
-  galleryStatus = { loading: false, error: '' },
-  onRefreshGallery,
-  promptSpotlight = [],
-  promptStatus = { loading: false, error: '' },
-  onRefreshPrompts,
-}) {
-  const [copiedPromptId, setCopiedPromptId] = useState('')
-
-  const previewImages = useMemo(() => galleryImages.slice(0, 8), [galleryImages])
-
-  const handleCopyPrompt = async (prompt) => {
-    if (!prompt?.prompt) {
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(prompt.prompt)
-      setCopiedPromptId(prompt.id)
-      setTimeout(() => setCopiedPromptId(''), 2000)
-    } catch (error) {
-      console.warn('Failed to copy prompt', error)
-    }
-  }
-
-  return (
-    <section className="home-content">
-      <article className="home-section home-section--primary">
-        <div>
-          <h2>Launch-ready visuals without a full photo team</h2>
-          <p>
-            MetaVariant automates model shots, close-ups, and product copy so you can publish faster. Every render
-            is cropped to a perfect 1:1 square, ready for marketplaces and ads.
-          </p>
-        </div>
-        <ul>
-          <li>Upload one clean garment photo and pick your styling cues.</li>
-          <li>Generate consistent hero, detail, and lifestyle angles in a single run.</li>
-          <li>Export paired copy decks that stay true to the fabric and fit.</li>
-        </ul>
-        <div className="home-section__actions">
-          <button type="button" className="primary" onClick={onStart}>
-            Generate a look
-          </button>
-          <span>Every account starts with 2 free coins.</span>
-        </div>
-      </article>
-
-      <article className="home-section home-section--grid">
-        <div className="home-card">
-          <h3>Fair-play coin system</h3>
-        <p>
-          Each generated photo costs 1 coin. Add coins whenever you need them—every 1&nbsp;EUR tops up 5 fresh image
-          credits.
-        </p>
-        </div>
-        <div className="home-card">
-          <h3>Invite and earn more</h3>
-          <p>
-            Share your referral code: new users receive 2 bonus coins and you pocket 4 extra coins every time they join.
-          </p>
-        </div>
-        <div className="home-card">
-          <h3>Built for dropshipping teams</h3>
-          <p>
-            Keep campaigns consistent across regions with reusable prompt sets and a sharable asset library.
-          </p>
-        </div>
-      </article>
-
-      <article className="home-section home-section--community">
-        <div className="home-section__header">
-          <div>
-            <h2>Community gallery</h2>
-            <p>Peek at what other merchants ship with MetaVariant.</p>
-          </div>
-          <button type="button" className="secondary" onClick={onRefreshGallery} disabled={galleryStatus.loading}>
-            {galleryStatus.loading ? 'Refreshing…' : 'Shuffle gallery'}
-          </button>
-        </div>
-        {galleryStatus.error && previewImages.length === 0 && (
-          <p className="home-section__status home-section__status--error">{galleryStatus.error}</p>
-        )}
-        {previewImages.length > 0 ? (
-          <div className="home-gallery" role="list" aria-label="Community gallery">
-            {previewImages.map((url) => (
-              <figure key={url} role="listitem" className="home-gallery__item">
-                <img src={url} alt="Community generated product" loading="lazy" />
-              </figure>
-            ))}
-          </div>
-        ) : (
-          !galleryStatus.loading && <p className="home-section__status">Gallery will populate as soon as images are generated.</p>
-        )}
-      </article>
-
-      <article className="home-section home-section--spotlight">
-        <div className="home-section__header">
-          <div>
-            <h2>Prompt spotlight</h2>
-            <p>Borrow these curated art directions to speed up your next batch.</p>
-          </div>
-          <button type="button" className="secondary" onClick={onRefreshPrompts} disabled={promptStatus.loading}>
-            {promptStatus.loading ? 'Refreshing…' : 'Refresh prompts'}
-          </button>
-        </div>
-        {promptStatus.error && promptSpotlight.length === 0 && (
-          <p className="home-section__status home-section__status--error">{promptStatus.error}</p>
-        )}
-        {promptSpotlight.length > 0 ? (
-          <ul className="spotlight-list">
-            {promptSpotlight.map((item) => (
-              <li key={item.id} className="spotlight-card">
-                <header>
-                  <h3>{item.title}</h3>
-                  <button type="button" className="link-button" onClick={() => handleCopyPrompt(item)}>
-                    {copiedPromptId === item.id ? 'Copied!' : 'Copy prompt'}
-                  </button>
-                </header>
-                <p>{item.description}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          !promptStatus.loading && <p className="home-section__status">Prompt suggestions will appear shortly.</p>
-        )}
-      </article>
-
-      <article className="home-section home-section--policies">
-        <h2>We respect your brand and your data</h2>
-        <p>
-          Learn how we use cookies to improve your sessions and how we safeguard uploads and personal information.
-        </p>
-        <div className="home-policy-links">
-          <button type="button" className="secondary" onClick={onViewCookie}>
-            Read the cookie policy
-          </button>
-          <button type="button" className="secondary" onClick={onViewPrivacy}>
-            Review the privacy notice
-          </button>
-        </div>
-      </article>
-    </section>
-  )
-}
-
-function AboutView({ onStart, galleryImages = [], galleryStatus = { loading: false, error: '' } }) {
-  const galleryPreview = useMemo(() => galleryImages.slice(0, 12), [galleryImages])
-  return (
-    <section className="about">
-      <header className="about__hero">
-        <p className="eyebrow">Why MetaVariant</p>
-        <h1>We streamline product storytelling for fast-moving commerce teams.</h1>
-        <p>
-          The studio is built by dropshippers who needed consistent visuals, compelling copy, and faster experimentation.
-          We obsess over keeping your assets accurate to the fabric, cut, and finish so every launch feels polished.
-        </p>
-        <button type="button" className="primary" onClick={onStart}>
-          Generate your first collection
-        </button>
-      </header>
-
-      <div className="about__grid">
-        <article className="about-card">
-          <h2>Grounded in your source image</h2>
-          <p>
-            Upload one product shot. We auto-crop to a perfect 1:1 frame, preserve texture detail, and reuse your image as
-            context for both visuals and copy so every output matches the actual garment.
-          </p>
-        </article>
-        <article className="about-card">
-          <h2>Prompt catalog curated by stylists</h2>
-          <p>
-            Apparel and accessory funnels guide you through editorial looks, close-ups, and lifestyle scenes. All cues are
-            written with clear art direction to avoid guesswork and keep results on brand.
-          </p>
-        </article>
-        <article className="about-card">
-          <h2>Ready for scaling teams</h2>
-          <p>
-            Coins keep generation costs predictable, Stripe handles secure checkout, and referral bonuses help you bring in
-            collaborators. Profiles track sessions, balances, and invite performance in one place.
-          </p>
-        </article>
-      </div>
-
-      <div className="about__gallery-wrap">
-        <header className="about__gallery-header">
-          <h2>Fresh renders from the community</h2>
-          <p>Every preview is generated by customers using MetaVariant—updated in real time.</p>
-        </header>
-        {galleryStatus.loading && galleryPreview.length === 0 && (
-          <p className="about__gallery-status">Loading community gallery…</p>
-        )}
-        {galleryStatus.error && galleryPreview.length === 0 && (
-          <p className="about__gallery-status about__gallery-status--error">
-            {galleryStatus.error}
-          </p>
-        )}
-        {galleryPreview.length > 0 && (
-          <div className="about__gallery" role="list" aria-label="Generated image showcase">
-            {galleryPreview.map((url) => (
-              <figure key={url} role="listitem" className="about__gallery-item">
-                <img src={url} alt="AI generated product showcase" loading="lazy" />
-              </figure>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="about__cta">
-        <h2>Need a tailored workflow?</h2>
-        <p>
-          We love partnering with teams on bespoke prompt packs, brand-safe fine tuning, and API integrations. Reach out at
-          <a href="mailto:team@productvariations.app"> team@productvariations.app</a> and we&apos;ll schedule a walkthrough.
-        </p>
-      </div>
-    </section>
-  )
-}
-
-function CookiePolicyView() {
-  return (
-    <section className="policy">
-      <header>
-        <h1>Cookie Policy</h1>
-        <p>Last updated: {new Date().toLocaleDateString()}</p>
-      </header>
-      <article>
-        <h2>1. Purpose of cookies</h2>
-        <p>
-          We use cookies to keep you signed in, remember your generator preferences, and understand how teams use Product
-          Variations. Cookies help us keep your library secure and speed up image generation workflows.
-        </p>
-      </article>
-      <article>
-        <h2>2. Essential cookies</h2>
-        <p>
-          Essential cookies power authentication, session continuity, and the coin checkout process. They are required for
-          the app to function. Disabling them will prevent logins, purchases, and library syncing.
-        </p>
-      </article>
-      <article>
-        <h2>3. Analytics cookies</h2>
-        <p>
-          We collect anonymised usage metrics to identify bottlenecks in the creation funnel. Analytics cookies never
-          track product images or personal data—they only aggregate counts like “steps completed” or “downloads”.
-        </p>
-      </article>
-      <article>
-        <h2>4. Managing cookies</h2>
-        <p>
-          You can adjust your preferences via the cookie banner or in your browser settings. Rejecting non-essential
-          cookies will not stop you from generating images, but certain convenience features may be limited.
-        </p>
-      </article>
-      <article>
-        <h2>5. Contact</h2>
-        <p>
-          Have a question about how we use cookies? Reach out at <a href="mailto:privacy@productvariations.app">privacy@productvariations.app</a> and our team will help.
-        </p>
-      </article>
-    </section>
-  )
-}
-
-function PrivacyNoticeView() {
-  return (
-    <section className="policy">
-      <header>
-        <h1>Privacy Notice</h1>
-        <p>Last updated: {new Date().toLocaleDateString()}</p>
-      </header>
-      <article>
-        <h2>1. Data we collect</h2>
-        <p>
-          When you create an account we store your name, email address, and authentication activity. Uploaded product
-          images are stored securely so you can revisit generations inside your library.
-        </p>
-      </article>
-      <article>
-        <h2>2. How we use your information</h2>
-        <p>
-          We use your details to provide access to the generator, deliver email updates you request, and process coin
-          purchases via Stripe. We never sell personal data or training assets.
-        </p>
-      </article>
-      <article>
-        <h2>3. Sharing with third parties</h2>
-        <p>
-          Payment information is handled by Stripe. AI rendering is performed through OpenRouter. Both providers only
-          receive the minimum data needed to complete each task.
-        </p>
-      </article>
-      <article>
-        <h2>4. Your rights</h2>
-        <p>
-          You can request access, updates, or deletion of your data at any time. Email <a href="mailto:privacy@productvariations.app">privacy@productvariations.app</a> and we will respond within 10
-          business days.
-        </p>
-      </article>
-      <article>
-        <h2>5. Retention and security</h2>
-        <p>
-          Accounts and image assets are retained while you remain active. Idle accounts are archived after 12 months of
-          inactivity. We use encrypted storage and routine audits to keep your files safe.
-        </p>
-      </article>
-    </section>
-  )
-}
-
-function LibraryView({ sessions, user, status, onRefresh, onViewImage }) {
-  const hasSessions = sessions.length > 0
-  const triggerViewImage = (src, alt) => {
-    if (typeof onViewImage === 'function') {
-      onViewImage(src, alt)
-    }
-  }
-
-  if (!user) {
-    return (
-      <section className="empty-state">
-        <h2>Sign in to build your library</h2>
-        <p>Your garment uploads and generated content appear here once you are signed in.</p>
-      </section>
-    )
-  }
-
-  if (status.loading) {
-    return (
-      <section className="empty-state">
-        <h2>Loading your library…</h2>
-        <p>Please hold tight while we fetch your saved sessions.</p>
-      </section>
-    )
-  }
-
-  if (status.error) {
-    return (
-      <section className="empty-state">
-        <h2>Unable to load sessions</h2>
-        <p>{status.error}</p>
-        <button type="button" className="secondary" onClick={onRefresh}>
-          Try again
-        </button>
-      </section>
-    )
-  }
-
-  if (!hasSessions) {
-    return (
-      <section className="empty-state">
-        <h2>No saved sessions yet</h2>
-        <p>Generate your first variations to see them listed here.</p>
-      </section>
-    )
-  }
-
-  return (
-    <section className="library">
-      <header className="library__header">
-        <div>
-          <h2>Saved sessions</h2>
-          <p>Review every product variation set you have generated.</p>
-        </div>
-        <span className="library__meta">{sessions.length} session(s)</span>
-      </header>
-      <div className="library__grid">
-        {sessions.map((session) => (
-          <article key={session.id} className="library-card">
-            <header className="library-card__header">
-              <h3>{new Date(session.createdAt).toLocaleString()}</h3>
-              <p>
-                {session.prompts
-                  ?.map((prompt) => prompt?.name || prompt?.title)
-                  .filter(Boolean)
-                  .join(', ') || 'Custom'}
-              </p>
-            </header>
-            <div className="library-card__body">
-              <div className="library-card__images">
-                {session.generatedImages?.length > 0 ? (
-                  session.generatedImages.map((imageUrl, index) => (
-                    <button
-                      type="button"
-                      key={`${session.id}-${index}`}
-                      className="image-thumb"
-                      onClick={() => triggerViewImage(imageUrl, `Generated variation ${index + 1}`)}
-                    >
-                      <img src={imageUrl} alt={`Generated variation ${index + 1}`} loading="lazy" />
-                    </button>
-                  ))
-                ) : (
-                  <div className="library-card__placeholder">No images stored</div>
-                )}
-              </div>
-              <div className="library-card__descriptions">
-                {session.descriptions?.length > 0 ? (
-                  <ul>
-                    {session.descriptions.map((item, index) => (
-                      <li key={`${session.id}-desc-${index}`}>
-                        {item.title && <strong className="description-title">{item.title}</strong>}
-                        <strong>{item.headline}</strong>
-                        <p>{item.body}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No copy saved for this session.</p>
-                )}
-              </div>
-            </div>
-            {session.sourceImage && (
-              <footer className="library-card__footer">
-                <a href={session.sourceImage} target="_blank" rel="noreferrer">
-                  View source upload
-                </a>
-              </footer>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
 
 function WalletPanel({ user, token, onUserUpdate }) {
   const stripe = useStripe()
@@ -1049,13 +496,14 @@ function WalletPanel({ user, token, onUserUpdate }) {
   )
 }
 
-function ProfileView({
+function ProfileModal({
   user,
   sessions = [],
   status,
   onRefresh,
   onViewImage,
   onLogout,
+  onClose,
   token,
   onUserUpdate,
   stripePromise,
@@ -1132,27 +580,31 @@ function ProfileView({
   }
 
   return (
-    <div className="profile">
-      <header className="profile__hero">
-        <div>
-          <p className="profile__eyebrow">Account hub</p>
-          <h1>{user.name || user.email}</h1>
-          <p>Review your creator activity, manage saved sessions, and adjust contact preferences.</p>
-          {joinedAt && <span className="profile__meta">Member since {joinedAt}</span>}
-        </div>
-        <div className="profile__hero-actions">
-          <div className="profile__coin-pill">
-            <span>Coins</span>
-            <strong>{coins}</strong>
+    <div className="modal__backdrop" role="presentation">
+      <div className="profile modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-heading">
+        <header className="profile__hero">
+          <div>
+            <p className="profile__eyebrow">Account hub</p>
+            <h1 id="profile-modal-heading">{user.name || user.email}</h1>
+            <p>Review your creator activity, manage saved sessions, and adjust contact preferences.</p>
+            {joinedAt && <span className="profile__meta">Member since {joinedAt}</span>}
           </div>
-          <button type="button" className="secondary" onClick={() => setActiveTab('wallet')}>
-            Buy coins
-          </button>
-          <button type="button" className="secondary" onClick={onLogout}>
-            Sign out
-          </button>
-        </div>
-      </header>
+          <div className="profile__hero-actions">
+            <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+            <div className="profile__coin-pill">
+              <span>Coins</span>
+              <strong>{coins}</strong>
+            </div>
+            <button type="button" className="secondary" onClick={() => setActiveTab('wallet')}>
+              Buy coins
+            </button>
+            <button type="button" className="secondary" onClick={onLogout}>
+              Sign out
+            </button>
+          </div>
+        </header>
 
       <section className="profile__stats">
         <article className="profile-stat">
@@ -1421,62 +873,20 @@ function ProfileView({
           </div>
         )}
       </section>
+      </div>
     </div>
   )
 }
 
 function App() {
-  const [view, setView] = useState(VIEWS.GENERATOR)
   const [user, setUser] = useState(null)
   const [token, setToken] = useState('')
   const [sessions, setSessions] = useState([])
   const [activeSessionId, setActiveSessionId] = useState(null)
-  const [guestSessions, setGuestSessions] = useState([])
   const [libraryStatus, setLibraryStatus] = useState({ loading: false, error: '' })
-  const [galleryImages, setGalleryImages] = useState([])
-  const [galleryStatus, setGalleryStatus] = useState({ loading: false, error: '' })
-  const [spotlightPrompts, setSpotlightPrompts] = useState([])
-  const [spotlightStatus, setSpotlightStatus] = useState({ loading: false, error: '' })
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' })
+  const [profileModal, setProfileModal] = useState({ open: false, initialTab: 'overview' })
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
-  const [profileInitialTab, setProfileInitialTab] = useState('overview')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const isChatLayout = view === VIEWS.GENERATOR
-
-  const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
-  const navigationItems = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.requiresAuth || user),
-    [user],
-  )
-  const loadPublicGallery = useCallback(async () => {
-    setGalleryStatus((prev) => ({ ...prev, loading: true }))
-    try {
-      const response = await apiRequest('/api/public/gallery')
-      const images = Array.isArray(response?.images) ? response.images : []
-      setGalleryImages(images)
-      setGalleryStatus({ loading: false, error: '' })
-    } catch (error) {
-      setGalleryStatus({
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unable to load gallery.',
-      })
-    }
-  }, [])
-
-  const loadPromptSpotlight = useCallback(async () => {
-    setSpotlightStatus((prev) => ({ ...prev, loading: true }))
-    try {
-      const response = await apiRequest('/api/public/prompts')
-      const prompts = Array.isArray(response?.prompts) ? response.prompts : []
-      setSpotlightPrompts(prompts)
-      setSpotlightStatus({ loading: false, error: '' })
-    } catch (error) {
-      setSpotlightStatus({
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unable to load prompt spotlight.',
-      })
-    }
-  }, [])
 
   const updateUserSnapshot = useCallback(
     (partial) => {
@@ -1496,8 +906,7 @@ function App() {
   )
 
   const openWallet = useCallback(() => {
-    setProfileInitialTab('wallet')
-    setView(VIEWS.PROFILE)
+    setProfileModal({ open: true, initialTab: 'wallet' })
   }, [])
 
   const loadSessions = useCallback(
@@ -1529,8 +938,6 @@ function App() {
   useEffect(() => {
     const storedToken = localStorage.getItem('pv_auth_token')
     if (!storedToken) {
-      loadPublicGallery()
-      loadPromptSpotlight()
       return
     }
 
@@ -1547,29 +954,9 @@ function App() {
         console.warn('Session restore failed', error)
         localStorage.removeItem('pv_auth_token')
         setToken('')
-      } finally {
-        loadPublicGallery()
-        loadPromptSpotlight()
       }
     })()
-  }, [loadSessions, loadPublicGallery, loadPromptSpotlight])
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return undefined
-    }
-
-    document.body.classList.toggle('chat-body', isChatLayout)
-    return () => {
-      document.body.classList.remove('chat-body')
-    }
-  }, [isChatLayout])
-
-  useEffect(() => {
-    if (isChatLayout) {
-      setMobileMenuOpen(false)
-    }
-  }, [isChatLayout])
+  }, [loadSessions])
 
   const openAuthModal = (mode) => {
     setAuthModal({ open: true, mode })
@@ -1629,7 +1016,7 @@ function App() {
       setToken(data.token)
       setUser(data.user)
       localStorage.setItem('pv_auth_token', data.token)
-      await Promise.all([loadSessions(data.token), loadPublicGallery(), loadPromptSpotlight()])
+      await loadSessions(data.token)
       return { success: true }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Authentication failed.' }
@@ -1642,8 +1029,7 @@ function App() {
     setSessions([])
     setActiveSessionId(null)
     localStorage.removeItem('pv_auth_token')
-    setView(VIEWS.HOME)
-    setProfileInitialTab('overview')
+    setProfileModal({ open: false, initialTab: 'overview' })
   }
 
   const openImageViewer = ({ src, alt }) => {
@@ -1655,19 +1041,8 @@ function App() {
     setViewerState({ open: false, src: '', alt: '' })
   }
 
-  const handleStartGenerating = () => {
-    if (!user || !token) {
-      openAuthModal(user ? 'login' : 'register')
-      return
-    }
-    setView(VIEWS.GENERATOR)
-  }
-
   const handleSessionComplete = async (session) => {
     if (!user || !token) {
-      setGuestSessions((prev) => [session, ...prev].slice(0, 5))
-      loadPublicGallery()
-      loadPromptSpotlight()
       return
     }
 
@@ -1697,227 +1072,30 @@ function App() {
     } catch (error) {
       setLibraryStatus({ loading: false, error: error.message })
     }
-
-    loadPublicGallery()
-    loadPromptSpotlight()
   }
-
-  const handleNavigate = (nextView) => {
-    const target = NAV_ITEMS.find((item) => item.id === nextView)
-    if (target?.requiresAuth && !user) {
-      openAuthModal('login')
-      return
-    }
-    if (nextView !== VIEWS.PROFILE) {
-      setProfileInitialTab('overview')
-    }
-    setView(nextView)
-    setMobileMenuOpen(false)
-    if (
-      (nextView === VIEWS.LIBRARY || nextView === VIEWS.PROFILE) &&
-      user &&
-      !sessions.length &&
-      !libraryStatus.loading
-    ) {
-      loadSessions()
-    }
-  }
-
-  const renderNavItems = ({ showLabels = false } = {}) =>
-    navigationItems.map((item) => {
-      const isIconOnly = Boolean(item.iconOnly) && !showLabels
-      return (
-        <button
-          key={item.id}
-          type="button"
-          className={`topbar__link${view === item.id ? ' topbar__link--active' : ''}`}
-          onClick={() => handleNavigate(item.id)}
-          title={item.label}
-        >
-          {item.icon && (
-            <span className="topbar__link-icon" aria-hidden={isIconOnly}>
-              {item.icon}
-            </span>
-          )}
-          {isIconOnly ? (
-            <span className="sr-only">{item.label}</span>
-          ) : (
-            <span className="topbar__link-label">{item.label}</span>
-          )}
-        </button>
-      )
-    })
 
   return (
-    <div className={`app-shell${isChatLayout ? ' app-shell--chat' : ''}`}>
-      {!isChatLayout && (
-        <>
-          <header className="topbar">
-            <div
-              className="topbar__brand"
-              role="button"
-              tabIndex={0}
-              onClick={() => handleNavigate(VIEWS.HOME)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  handleNavigate(VIEWS.HOME)
-                }
-              }}
-            >
-              <img src="/logo.png" alt="" className="topbar__logo" aria-hidden="true" />
-              <span className="topbar__title">MetaVariant</span>
-            </div>
-            <nav className="topbar__nav" aria-label="Primary">
-              {renderNavItems()}
-            </nav>
-            <button
-              type="button"
-              className="topbar__menu"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-            <div className="topbar__actions">
-              {user ? (
-                <>
-                  <span className="topbar__coins">Coins: {user.coins ?? 0}</span>
-                  <button type="button" className="secondary" onClick={openWallet}>
-                    Buy coins
-                  </button>
-                  <span className="topbar__user">{user.name || user.email}</span>
-                  <button type="button" className="secondary" onClick={handleLogout}>
-                    Log out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
-                    Log in
-                  </button>
-                  <button type="button" className="primary" onClick={() => openAuthModal('register')}>
-                    Register
-                  </button>
-                </>
-              )}
-            </div>
-          </header>
-
-          {mobileMenuOpen && (
-            <div className="mobile-nav" role="dialog" aria-modal="true">
-              <div className="mobile-nav__content">
-                <div className="mobile-nav__header">
-                  <span>Menu</span>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => setMobileMenuOpen(false)}
-                    aria-label="Close menu"
-                  >
-                    ×
-                  </button>
-                </div>
-                <nav className="mobile-nav__links" aria-label="Mobile primary">
-                  {renderNavItems({ showLabels: true })}
-                </nav>
-                <div className="mobile-nav__actions">
-                  {user ? (
-                    <>
-                      <button type="button" className="secondary" onClick={openWallet}>
-                        Buy coins
-                      </button>
-                      <button type="button" className="secondary" onClick={handleLogout}>
-                        Log out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
-                        Log in
-                      </button>
-                      <button type="button" className="primary" onClick={() => openAuthModal('register')}>
-                        Register
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      <main className={`app-main${isChatLayout ? ' app-main--chat' : ''}`}>
-        {isChatLayout ? (
-          <Generator
-            user={user}
-            token={token}
-            coins={user?.coins ?? 0}
-            onCoinsChange={handleCoinsChange}
-            onViewImage={openImageViewer}
-            onRequestTopUp={openWallet}
-            onSessionComplete={handleSessionComplete}
-            sessions={sessions}
-            activeSessionId={activeSessionId}
-            onSelectSession={setActiveSessionId}
-            onRefreshSessions={() => loadSessions(token)}
-            onOpenProfile={() => setView(VIEWS.PROFILE)}
-          />
-        ) : (
-          <>
-            {view === VIEWS.HOME && (
-              <>
-                <Hero onGetStarted={handleStartGenerating} user={user} recentImages={galleryImages} />
-                <HomeContent
-                  onStart={handleStartGenerating}
-                  onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
-                  onViewPrivacy={() => setView(VIEWS.PRIVACY)}
-                  galleryImages={galleryImages}
-                  galleryStatus={galleryStatus}
-                  onRefreshGallery={loadPublicGallery}
-                  promptSpotlight={spotlightPrompts}
-                  promptStatus={spotlightStatus}
-                  onRefreshPrompts={loadPromptSpotlight}
-                />
-              </>
-            )}
-            {view === VIEWS.ABOUT && (
-              <AboutView
-                onStart={handleStartGenerating}
-                galleryImages={galleryImages}
-                galleryStatus={galleryStatus}
-              />
-            )}
-            {view === VIEWS.LIBRARY && (
-              <LibraryView
-                sessions={currentSessions}
-                user={user}
-                status={libraryStatus}
-                onRefresh={() => loadSessions()}
-                onViewImage={(src, alt) => openImageViewer({ src, alt })}
-              />
-            )}
-            {view === VIEWS.PROFILE && (
-              <ProfileView
-                user={user}
-                sessions={sessions}
-                status={libraryStatus}
-                onRefresh={() => loadSessions()}
-                onViewImage={(src, alt) => openImageViewer({ src, alt })}
-                onLogout={handleLogout}
-                token={token}
-                onUserUpdate={updateUserSnapshot}
-                stripePromise={stripePromise}
-                initialTab={profileInitialTab}
-              />
-            )}
-            {view === VIEWS.COOKIE_POLICY && <CookiePolicyView />}
-            {view === VIEWS.PRIVACY && <PrivacyNoticeView />}
-          </>
-        )}
+    <div className="app-shell app-shell--chat">
+      <main className="app-main app-main--chat">
+        <Generator
+          user={user}
+          token={token}
+          coins={user?.coins ?? 0}
+          onCoinsChange={handleCoinsChange}
+          onViewImage={openImageViewer}
+          onRequestTopUp={openWallet}
+          onSessionComplete={handleSessionComplete}
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelectSession={setActiveSessionId}
+          onRefreshSessions={() => loadSessions(token)}
+          onOpenProfile={() => {
+            if (!user || !sessions.length) {
+              loadSessions()
+            }
+            setProfileModal({ open: true, initialTab: 'overview' })
+          }}
+        />
       </main>
 
       {authModal.open && (
@@ -1925,8 +1103,23 @@ function App() {
           mode={authModal.mode}
           onClose={closeAuthModal}
           onAuthenticate={handleAuthenticate}
-          onNavigate={handleNavigate}
           googleClientId={GOOGLE_CLIENT_ID}
+        />
+      )}
+
+      {profileModal.open && user && (
+        <ProfileModal
+          user={user}
+          sessions={sessions}
+          status={libraryStatus}
+          onRefresh={() => loadSessions()}
+          onViewImage={(src, alt) => openImageViewer({ src, alt })}
+          onLogout={handleLogout}
+          onClose={() => setProfileModal({ open: false, initialTab: 'overview' })}
+          token={token}
+          onUserUpdate={updateUserSnapshot}
+          stripePromise={stripePromise}
+          initialTab={profileModal.initialTab}
         />
       )}
 
@@ -1938,17 +1131,6 @@ function App() {
       />
 
       <CookieConsent />
-
-      {!isChatLayout && (
-        <footer className="app-footer">
-          <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.COOKIE_POLICY)}>
-            Cookie Policy
-          </button>
-          <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.PRIVACY)}>
-            Privacy Notice
-          </button>
-        </footer>
-      )}
     </div>
   )
 }

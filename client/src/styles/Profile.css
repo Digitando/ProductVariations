@@ -3,7 +3,14 @@
   flex-direction: column;
   gap: 24px;
   max-width: 1100px;
-  margin: 0 auto;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(28, 30, 45, 0.95), rgba(21, 23, 33, 0.98));
+  border-radius: 28px;
+  box-shadow: 0 40px 90px rgba(5, 7, 22, 0.75);
+  border: 1px solid rgba(138, 141, 196, 0.18);
+  backdrop-filter: blur(32px);
 }
 
 .profile__hero {
@@ -11,12 +18,8 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  background: linear-gradient(135deg, rgba(30, 33, 47, 0.85), rgba(21, 24, 35, 0.88));
-  border-radius: 24px;
   padding: 28px 32px;
-  box-shadow: 0 28px 60px rgba(7, 10, 32, 0.65);
-  border: 1px solid rgba(142, 148, 209, 0.12);
-  backdrop-filter: blur(32px);
+  border-bottom: 1px solid rgba(142, 148, 209, 0.12);
 }
 
 .profile__hero button {
@@ -89,6 +92,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
+  padding: 0 32px;
 }
 
 .profile-stat {
@@ -136,6 +140,7 @@
   align-self: flex-start;
   border: 1px solid rgba(138, 141, 196, 0.16);
   backdrop-filter: blur(28px);
+  margin: 0 32px;
 }
 
 .profile-tab {
@@ -162,7 +167,7 @@
 }
 
 .profile__feedback {
-  margin: 0;
+  margin: 0 32px;
   background: rgba(46, 198, 160, 0.2);
   border: 1px solid rgba(46, 198, 160, 0.42);
   color: rgba(144, 255, 224, 0.95);
@@ -172,12 +177,7 @@
 }
 
 .profile__panel {
-  background: linear-gradient(160deg, rgba(28, 30, 45, 0.82), rgba(21, 23, 33, 0.85));
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 26px 56px rgba(6, 8, 28, 0.55);
-  border: 1px solid rgba(138, 141, 196, 0.16);
-  backdrop-filter: blur(28px);
+  padding: 28px 32px;
 }
 
 .profile-overview {
