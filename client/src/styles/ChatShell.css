@@ -1,6 +1,7 @@
 .chat-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
   background: radial-gradient(circle at 20% -10%, #51526a 0%, #2d2e3f 38%, #14151f 100%);
   color: #ececf1;
   overflow: hidden;
@@ -15,6 +16,8 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-sidebar__top {
@@ -254,6 +257,7 @@
   padding: 36px 48px;
   gap: 28px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .chat-header h1 {
