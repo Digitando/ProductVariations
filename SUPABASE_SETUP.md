@@ -6,6 +6,10 @@ The library is empty because:
 2. No Storage bucket exists for images
 3. Sessions can't be saved properly
 
+> **Heads up**
+>
+> The API now falls back to local JSON files whenever Supabase is unreachable so the UI stays usable during setup. Supabase still needs to be configured for persistence across deploys—follow the steps below to switch from the temporary fallback to the real database + storage.
+
 ## Solution - Follow These Steps:
 
 ### Step 1: Run the SQL Migration
