@@ -1426,7 +1426,7 @@ function ProfileView({
 }
 
 function App() {
-  const [view, setView] = useState(VIEWS.HOME)
+  const [view, setView] = useState(VIEWS.GENERATOR)
   const [user, setUser] = useState(null)
   const [token, setToken] = useState('')
   const [sessions, setSessions] = useState([])
@@ -1441,6 +1441,7 @@ function App() {
   const [viewerState, setViewerState] = useState({ open: false, src: '', alt: '' })
   const [profileInitialTab, setProfileInitialTab] = useState('overview')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isChatLayout = view === VIEWS.GENERATOR
 
   const currentSessions = useMemo(() => (user ? sessions : guestSessions), [sessions, guestSessions, user])
   const navigationItems = useMemo(
@@ -1552,6 +1553,23 @@ function App() {
       }
     })()
   }, [loadSessions, loadPublicGallery, loadPromptSpotlight])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+
+    document.body.classList.toggle('chat-body', isChatLayout)
+    return () => {
+      document.body.classList.remove('chat-body')
+    }
+  }, [isChatLayout])
+
+  useEffect(() => {
+    if (isChatLayout) {
+      setMobileMenuOpen(false)
+    }
+  }, [isChatLayout])
 
   const openAuthModal = (mode) => {
     setAuthModal({ open: true, mode })
@@ -1734,86 +1752,48 @@ function App() {
     })
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div
-          className="topbar__brand"
-          role="button"
-          tabIndex={0}
-          onClick={() => handleNavigate(VIEWS.HOME)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              handleNavigate(VIEWS.HOME)
-            }
-          }}
-        >
-          <span className="topbar__logo" aria-hidden="true">
-            PG
-          </span>
-          <span className="topbar__title">Product Variations</span>
-        </div>
-        <nav className="topbar__nav" aria-label="Primary">
-          {renderNavItems()}
-        </nav>
-        <button
-          type="button"
-          className="topbar__menu"
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={mobileMenuOpen}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-        <div className="topbar__actions">
-          {user ? (
-            <>
-              <span className="topbar__coins">Coins: {user.coins ?? 0}</span>
-              <button type="button" className="secondary" onClick={openWallet}>
-                Buy coins
-              </button>
-              <span className="topbar__user">{user.name || user.email}</span>
-              <button type="button" className="secondary" onClick={handleLogout}>
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
-                Log in
-              </button>
-              <button type="button" className="primary" onClick={() => openAuthModal('register')}>
-                Register
-              </button>
-            </>
-          )}
-        </div>
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="mobile-nav" role="dialog" aria-modal="true">
-          <div className="mobile-nav__content">
-            <div className="mobile-nav__header">
-              <span>Menu</span>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setMobileMenuOpen(false)}
-                aria-label="Close menu"
-              >
-                ×
-              </button>
+    <div className={`app-shell${isChatLayout ? ' app-shell--chat' : ''}`}>
+      {!isChatLayout && (
+        <>
+          <header className="topbar">
+            <div
+              className="topbar__brand"
+              role="button"
+              tabIndex={0}
+              onClick={() => handleNavigate(VIEWS.HOME)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  handleNavigate(VIEWS.HOME)
+                }
+              }}
+            >
+              <span className="topbar__logo" aria-hidden="true">
+                PG
+              </span>
+              <span className="topbar__title">Product Variations</span>
             </div>
-            <nav className="mobile-nav__links" aria-label="Mobile primary">
-              {renderNavItems({ showLabels: true })}
+            <nav className="topbar__nav" aria-label="Primary">
+              {renderNavItems()}
             </nav>
-            <div className="mobile-nav__actions">
+            <button
+              type="button"
+              className="topbar__menu"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div className="topbar__actions">
               {user ? (
                 <>
+                  <span className="topbar__coins">Coins: {user.coins ?? 0}</span>
                   <button type="button" className="secondary" onClick={openWallet}>
                     Buy coins
                   </button>
+                  <span className="topbar__user">{user.name || user.email}</span>
                   <button type="button" className="secondary" onClick={handleLogout}>
                     Log out
                   </button>
@@ -1829,35 +1809,54 @@ function App() {
                 </>
               )}
             </div>
-          </div>
-        </div>
+          </header>
+
+          {mobileMenuOpen && (
+            <div className="mobile-nav" role="dialog" aria-modal="true">
+              <div className="mobile-nav__content">
+                <div className="mobile-nav__header">
+                  <span>Menu</span>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close menu"
+                  >
+                    ×
+                  </button>
+                </div>
+                <nav className="mobile-nav__links" aria-label="Mobile primary">
+                  {renderNavItems({ showLabels: true })}
+                </nav>
+                <div className="mobile-nav__actions">
+                  {user ? (
+                    <>
+                      <button type="button" className="secondary" onClick={openWallet}>
+                        Buy coins
+                      </button>
+                      <button type="button" className="secondary" onClick={handleLogout}>
+                        Log out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="secondary" onClick={() => openAuthModal('login')}>
+                        Log in
+                      </button>
+                      <button type="button" className="primary" onClick={() => openAuthModal('register')}>
+                        Register
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      <main className="app-main">
-        {view === VIEWS.HOME && (
-          <>
-            <Hero onGetStarted={handleStartGenerating} user={user} recentImages={galleryImages} />
-            <HomeContent
-              onStart={handleStartGenerating}
-              onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
-              onViewPrivacy={() => setView(VIEWS.PRIVACY)}
-              galleryImages={galleryImages}
-              galleryStatus={galleryStatus}
-              onRefreshGallery={loadPublicGallery}
-              promptSpotlight={spotlightPrompts}
-              promptStatus={spotlightStatus}
-              onRefreshPrompts={loadPromptSpotlight}
-            />
-          </>
-        )}
-        {view === VIEWS.ABOUT && (
-          <AboutView
-            onStart={handleStartGenerating}
-            galleryImages={galleryImages}
-            galleryStatus={galleryStatus}
-          />
-        )}
-        {view === VIEWS.GENERATOR && (
+      <main className={`app-main${isChatLayout ? ' app-main--chat' : ''}`}>
+        {isChatLayout ? (
           <Generator
             user={user}
             token={token}
@@ -1872,32 +1871,58 @@ function App() {
             onRefreshSessions={() => loadSessions(token)}
             onOpenProfile={() => setView(VIEWS.PROFILE)}
           />
+        ) : (
+          <>
+            {view === VIEWS.HOME && (
+              <>
+                <Hero onGetStarted={handleStartGenerating} user={user} recentImages={galleryImages} />
+                <HomeContent
+                  onStart={handleStartGenerating}
+                  onViewCookie={() => setView(VIEWS.COOKIE_POLICY)}
+                  onViewPrivacy={() => setView(VIEWS.PRIVACY)}
+                  galleryImages={galleryImages}
+                  galleryStatus={galleryStatus}
+                  onRefreshGallery={loadPublicGallery}
+                  promptSpotlight={spotlightPrompts}
+                  promptStatus={spotlightStatus}
+                  onRefreshPrompts={loadPromptSpotlight}
+                />
+              </>
+            )}
+            {view === VIEWS.ABOUT && (
+              <AboutView
+                onStart={handleStartGenerating}
+                galleryImages={galleryImages}
+                galleryStatus={galleryStatus}
+              />
+            )}
+            {view === VIEWS.LIBRARY && (
+              <LibraryView
+                sessions={currentSessions}
+                user={user}
+                status={libraryStatus}
+                onRefresh={() => loadSessions()}
+                onViewImage={(src, alt) => openImageViewer({ src, alt })}
+              />
+            )}
+            {view === VIEWS.PROFILE && (
+              <ProfileView
+                user={user}
+                sessions={sessions}
+                status={libraryStatus}
+                onRefresh={() => loadSessions()}
+                onViewImage={(src, alt) => openImageViewer({ src, alt })}
+                onLogout={handleLogout}
+                token={token}
+                onUserUpdate={updateUserSnapshot}
+                stripePromise={stripePromise}
+                initialTab={profileInitialTab}
+              />
+            )}
+            {view === VIEWS.COOKIE_POLICY && <CookiePolicyView />}
+            {view === VIEWS.PRIVACY && <PrivacyNoticeView />}
+          </>
         )}
-        {view === VIEWS.LIBRARY && (
-          <LibraryView
-            sessions={currentSessions}
-            user={user}
-            status={libraryStatus}
-            onRefresh={() => loadSessions()}
-            onViewImage={(src, alt) => openImageViewer({ src, alt })}
-          />
-        )}
-        {view === VIEWS.PROFILE && (
-          <ProfileView
-            user={user}
-            sessions={sessions}
-            status={libraryStatus}
-            onRefresh={() => loadSessions()}
-            onViewImage={(src, alt) => openImageViewer({ src, alt })}
-            onLogout={handleLogout}
-            token={token}
-            onUserUpdate={updateUserSnapshot}
-            stripePromise={stripePromise}
-            initialTab={profileInitialTab}
-          />
-        )}
-        {view === VIEWS.COOKIE_POLICY && <CookiePolicyView />}
-        {view === VIEWS.PRIVACY && <PrivacyNoticeView />}
       </main>
 
       {authModal.open && (
@@ -1919,14 +1944,16 @@ function App() {
 
       <CookieConsent />
 
-      <footer className="app-footer">
-        <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.COOKIE_POLICY)}>
-          Cookie Policy
-        </button>
-        <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.PRIVACY)}>
-          Privacy Notice
-        </button>
-      </footer>
+      {!isChatLayout && (
+        <footer className="app-footer">
+          <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.COOKIE_POLICY)}>
+            Cookie Policy
+          </button>
+          <button type="button" className="app-footer__link" onClick={() => setView(VIEWS.PRIVACY)}>
+            Privacy Notice
+          </button>
+        </footer>
+      )}
     </div>
   )
 }

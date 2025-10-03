@@ -27,6 +27,11 @@ body {
   min-height: 100vh;
 }
 
+body.chat-body {
+  background: radial-gradient(circle at 20% -10%, #4b4c63 0%, #1c1d2a 35%, #07070c 100%);
+  color: #ececf1;
+}
+
 button {
   font: inherit;
 }
@@ -35,6 +40,27 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.app-shell--chat {
+  background: transparent;
+  color: inherit;
+}
+
+.app-main--chat {
+  flex: 1;
+  display: flex;
+}
+
+.app-main.app-main--chat {
+  padding: 0;
+  width: 100%;
+  margin: 0;
+  gap: 0;
+}
+
+.app-main--chat::before {
+  display: none;
 }
 
 .topbar {

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as promptCatalogModule from '@shared/promptCatalog.cjs'
-import '../styles/Generator.css'
-import '../styles/Workspace.css'
+import '../styles/ChatShell.css'
 
 const promptCatalog = 'default' in promptCatalogModule ? promptCatalogModule.default : promptCatalogModule
 const PROMPTS_BY_ID = promptCatalog.promptsById || {}
@@ -14,6 +13,45 @@ const EMPTY_CHAT_MESSAGE = {
   headline: 'Get started',
   body: 'Upload a product image, choose a category, and hit Generate to create your first variation.',
 }
+
+const QUICK_SUGGESTIONS = [
+  {
+    id: 'suggestion-hero-shot',
+    title: 'Polish my hero image',
+    description: 'Studio-ready beauty setup with glossy reflections and soft gradients.',
+    categoryId: 'beauty_cosmetics',
+    promptIds: ['beauty_cosmetics-01', 'beauty_cosmetics-03'],
+    customPrompt:
+      'Balance a warm gradient backdrop with crisp reflections so the packaging looks premium and editorial ready.',
+  },
+  {
+    id: 'suggestion-energize',
+    title: 'Make it athletic & bold',
+    description: 'Outdoor lifestyle energy, perfect for fitness gear launches.',
+    categoryId: 'fitness_sport',
+    promptIds: ['fitness_sport-02'],
+    customPrompt:
+      'Show the product in motion with dynamic lighting, shallow depth of field, and vibrant athletic energy.',
+  },
+  {
+    id: 'suggestion-tech',
+    title: 'Highlight tech features',
+    description: 'Hero desk setup with cinematic lighting for electronics.',
+    categoryId: 'electronics',
+    promptIds: ['electronics-01'],
+    customPrompt:
+      'Stage the device on a moody workstation with accent lighting that outlines key hardware and materials.',
+  },
+  {
+    id: 'suggestion-launch',
+    title: 'Launch-ready mockups',
+    description: 'Minimal packaging mockups ideal for mobile accessories.',
+    categoryId: 'mobile_accessories',
+    promptIds: ['mobile_accessories-01', 'mobile_accessories-11'],
+    customPrompt:
+      'Present the product with floating components and soft drop shadows on a clean gradient, ready for a landing page.',
+  },
+]
 
 function formatRelativeTime(input) {
   if (!input) return ''
@@ -470,43 +508,253 @@ export default function Generator({
   }, [activeCanvasItem, activeImageIndex, uploadPreview])
 
   const disableInputs = isGenerating
+  const profileInitial = (user?.name || user?.email || 'A').slice(0, 1).toUpperCase()
+  const profileLabel = user?.name || user?.email || 'Your profile'
+  const profileHint = user ? 'Manage account & preferences' : 'Sign in to save your sessions'
+  const isHistoryEmpty = filteredHistory.length === 0
+  const showSuggestions =
+    chatMessages.length === 1 && chatMessages[0]?.id === EMPTY_CHAT_MESSAGE.id && !isGenerating
+
+  const handleSuggestionSelect = (suggestion) => {
+    if (!suggestion) return
+
+    const validPromptIds = Array.isArray(suggestion.promptIds)
+      ? suggestion.promptIds.filter((id) => PROMPTS_BY_ID[id])
+      : []
+
+    if (suggestion.categoryId) {
+      setSelectedCategoryId(suggestion.categoryId)
+    }
+
+    if (suggestion.subcategoryId) {
+      setSelectedSubcategoryId(suggestion.subcategoryId)
+    } else {
+      setSelectedSubcategoryId('')
+    }
+
+    if (validPromptIds.length > 0) {
+      setSelectedPromptIds(validPromptIds)
+    } else {
+      setSelectedPromptIds([])
+    }
+
+    if (suggestion.customPrompt) {
+      setCustomPrompt(suggestion.customPrompt)
+    }
+
+    setErrorMessage('')
+    setStatusMessage('Preset applied. Upload an image and generate to see the results.')
+  }
 
   return (
-    <div className="workspace">
-      <header className="workspace-header">
-        <button type="button" className="workspace-header__profile" onClick={() => onOpenProfile?.()}>
-          <span className="workspace-header__avatar">
-            {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
-          </span>
-          <div className="workspace-header__meta">
-            <strong>{user?.name || user?.email || 'Profile'}</strong>
-            {user?.email && <span>{user.email}</span>}
+    <div className="chat-shell">
+      <aside className="chat-shell__sidebar">
+        <div className="chat-sidebar__top">
+          <div className="chat-sidebar__brand">
+            <span className="chat-sidebar__logo">PG</span>
+            <div className="chat-sidebar__titles">
+              <strong>Product Variations</strong>
+              <span>AI styling studio</span>
+            </div>
           </div>
-        </button>
-        <div className="workspace-header__coins">
-          <span className="workspace-header__coins-label">Coins</span>
-          <strong>🪙 {coins}</strong>
-          <button type="button" className="workspace-header__coins-button" onClick={() => onRequestTopUp?.()}>
-            Buy more
-          </button>
+          <div className="chat-sidebar__buttons">
+            <button type="button" className="chat-sidebar__action" onClick={handleStartNewChat}>
+              + New variation
+            </button>
+            <button
+              type="button"
+              className="chat-sidebar__action chat-sidebar__action--ghost"
+              onClick={() => onRefreshSessions?.()}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
-        <div className="workspace-header__actions">
-          <button type="button" className="workspace-header__secondary" onClick={handleStartNewChat}>
-            New chat
-          </button>
-        </div>
-      </header>
 
-      <div className="workspace-body">
-        <section className="workspace-main">
-          <div className="control-bar">
-            <label className="control-bar__item control-bar__upload" aria-label="Upload image">
+        <label className="chat-sidebar__search">
+          <span className="sr-only">Search sessions</span>
+          <input
+            type="search"
+            placeholder="Search sessions"
+            value={historyQuery}
+            onChange={(event) => setHistoryQuery(event.target.value)}
+          />
+        </label>
+
+        <div className="chat-sidebar__history">
+          {isHistoryEmpty ? (
+            <p className="chat-sidebar__empty">No sessions yet. Generate your first variation to see it here.</p>
+          ) : (
+            filteredHistory.map((session) => (
+              <button
+                type="button"
+                key={session.id}
+                className={`chat-history__item${
+                  session.id === activeSessionId ? ' chat-history__item--active' : ''
+                }`}
+                onClick={() => handleHistorySelect(session.id)}
+              >
+                <div className="chat-history__thumb">
+                  {session.generatedImages?.[0] ? (
+                    <img src={session.generatedImages[0]} alt="Session thumbnail" />
+                  ) : (
+                    <span>📄</span>
+                  )}
+                </div>
+                <div className="chat-history__meta">
+                  <strong>{session.title || buildPromptSummary(session.prompts, session.customPrompt)}</strong>
+                  <span>{formatRelativeTime(session.createdAt)}</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        <footer className="chat-sidebar__footer">
+          <button type="button" className="chat-sidebar__profile" onClick={() => onOpenProfile?.()}>
+            <span className="chat-sidebar__avatar">{profileInitial}</span>
+            <div>
+              <strong>{profileLabel}</strong>
+              <span>{profileHint}</span>
+            </div>
+          </button>
+          <div className="chat-sidebar__wallet">
+            <span className="chat-sidebar__coins">🪙 {coins}</span>
+            <button type="button" onClick={() => onRequestTopUp?.()}>Buy coins</button>
+          </div>
+        </footer>
+      </aside>
+
+      <section className="chat-shell__main">
+        <header className="chat-header">
+          <div>
+            <h1>What are we styling today?</h1>
+            <p>Upload a product image, mix prompt presets, and brief the assistant to craft new looks.</p>
+          </div>
+        </header>
+
+        <div className="chat-body">
+          <section className="chat-thread">
+            <div className="chat-thread__messages">
+              {showSuggestions && (
+                <div className="chat-suggestions">
+                  <div className="chat-suggestions__header">
+                    <span>Popular starter briefs</span>
+                    <p>Pick one and tweak the details to move even faster.</p>
+                  </div>
+                  <div className="chat-suggestions__grid">
+                    {QUICK_SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        className="chat-suggestion"
+                        onClick={() => handleSuggestionSelect(suggestion)}
+                      >
+                        <strong>{suggestion.title}</strong>
+                        <span>{suggestion.description}</span>
+                        <em>Apply preset</em>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {chatMessages.map((message) => {
+                const roleLabel =
+                  message.type === 'user'
+                    ? 'You'
+                    : message.type === 'result'
+                    ? 'Assistant'
+                    : 'System'
+                const headline = message.headline || null
+                const description = message.promptSummary || message.body || ''
+
+                return (
+                  <article key={message.id} className={`chat-message chat-message--${message.type}`}>
+                    <header className="chat-message__header">
+                      <span>{roleLabel}</span>
+                      {message.timestamp && <time>{formatRelativeTime(message.timestamp)}</time>}
+                    </header>
+                    {headline && <h3 className="chat-message__headline">{headline}</h3>}
+                    {description && <p className="chat-message__content">{description}</p>}
+                    {message.images && message.images.length > 0 && (
+                      <div className="chat-message__images">
+                        {message.images.map((imageUrl, index) => (
+                          <button
+                            key={`${message.id}-preview-${index}`}
+                            type="button"
+                            onClick={() =>
+                              onViewImage?.({ src: imageUrl, alt: `Generated variation ${index + 1}` })
+                            }
+                          >
+                            <img src={imageUrl} alt={`Generated variation ${index + 1}`} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {message.coinsSpent && (
+                      <footer className="chat-message__footer">
+                        {message.coinsSpent} coin{message.coinsSpent === 1 ? '' : 's'} used
+                      </footer>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+
+          <aside className="chat-preview">
+            {activePreviewImage ? (
+              <button
+                type="button"
+                className="chat-preview__image"
+                onClick={() => onViewImage?.({ src: activePreviewImage, alt: 'Generated variation' })}
+              >
+                <img src={activePreviewImage} alt="Generated preview" />
+              </button>
+            ) : (
+              <div className="chat-preview__empty">
+                <p>Canvas is waiting. Generate a look to see it here.</p>
+              </div>
+            )}
+
+            {activeCanvasItem && activeCanvasItem.images.length > 1 && (
+              <div className="chat-preview__thumbnails">
+                {activeCanvasItem.images.map((imageUrl, index) => (
+                  <button
+                    type="button"
+                    key={`${activeCanvasItem.id}-thumb-${index}`}
+                    className={`chat-preview__thumb${
+                      index === activeImageIndex ? ' chat-preview__thumb--active' : ''
+                    }`}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    <img src={imageUrl} alt={`Variation ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeCanvasItem && (
+              <footer className="chat-preview__meta">
+                <span>{formatRelativeTime(activeCanvasItem.createdAt)}</span>
+                <span>{buildPromptSummary(activeCanvasItem.prompts, activeCanvasItem.customPrompt)}</span>
+                {typeof activeCanvasItem.coinsSpent === 'number' && (
+                  <span>{activeCanvasItem.coinsSpent} coin{activeCanvasItem.coinsSpent === 1 ? '' : 's'}</span>
+                )}
+              </footer>
+            )}
+          </aside>
+        </div>
+
+        <div className="chat-composer">
+          <div className="chat-composer__grid">
+            <label className="chat-upload">
               <input type="file" accept="image/*" onChange={handleUploadChange} disabled={disableInputs} />
-              {uploadPreview ? 'Replace image' : 'Upload image'}
+              {uploadPreview ? 'Replace image' : 'Upload reference'}
             </label>
 
             <select
-              className="control-bar__item"
+              className="chat-select"
               value={selectedCategoryId}
               onChange={handleCategoryChange}
               disabled={disableInputs}
@@ -520,7 +768,7 @@ export default function Generator({
             </select>
 
             <select
-              className="control-bar__item"
+              className="chat-select"
               value={selectedSubcategoryId}
               onChange={handleSubcategoryChange}
               disabled={disableInputs || !hasSubcategoryOptions}
@@ -534,7 +782,7 @@ export default function Generator({
             </select>
 
             <select
-              className="control-bar__item"
+              className="chat-select"
               value=""
               onChange={handlePromptSelect}
               disabled={disableInputs || availablePromptCount === 0}
@@ -551,29 +799,26 @@ export default function Generator({
 
             <input
               type="text"
-              className="control-bar__item control-bar__custom"
-              placeholder="Custom prompt"
+              className="chat-input"
+              placeholder="Add custom directions"
               value={customPrompt}
               onChange={(event) => setCustomPrompt(event.target.value)}
               disabled={disableInputs}
             />
 
-            <button
-              type="button"
-              className="control-bar__generate"
-              onClick={handleGenerate}
-              disabled={disableInputs}
-            >
-              {isGenerating ? 'Generating…' : `Generate (${coinsRequired} coin${coinsRequired === 1 ? '' : 's'})`}
+            <button type="button" className="chat-generate" onClick={handleGenerate} disabled={disableInputs}>
+              {isGenerating
+                ? 'Generating…'
+                : `Generate (${coinsRequired} coin${coinsRequired === 1 ? '' : 's'})`}
             </button>
           </div>
 
           {(uploadPreview || selectedPromptDetails.length > 0 || customPrompt.trim()) && (
-            <div className="control-bar__chips">
+            <div className="chat-chips">
               {uploadPreview && (
                 <button
                   type="button"
-                  className="control-chip control-chip--image"
+                  className="chat-chip chat-chip--image"
                   onClick={handleRemoveUpload}
                   disabled={disableInputs}
                 >
@@ -584,149 +829,25 @@ export default function Generator({
                 <button
                   key={prompt.id}
                   type="button"
-                  className="control-chip"
+                  className="chat-chip"
                   onClick={() => handleRemovePrompt(prompt.id)}
                   disabled={disableInputs}
                 >
                   {prompt.title} ×
                 </button>
               ))}
-              {customPrompt.trim() && <span className="control-chip control-chip--custom">{customPrompt.trim()}</span>}
+              {customPrompt.trim() && (
+                <span className="chat-chip chat-chip--custom">{customPrompt.trim()}</span>
+              )}
             </div>
           )}
 
-          {errorMessage && <p className="workspace-status workspace-status--error">{errorMessage}</p>}
+          {errorMessage && <p className="chat-status chat-status--error">{errorMessage}</p>}
           {statusMessage && !errorMessage && (
-            <p className="workspace-status workspace-status--info">{statusMessage}</p>
+            <p className="chat-status chat-status--info">{statusMessage}</p>
           )}
-
-          <div className="workspace-canvas">
-            {activePreviewImage ? (
-              <div className="workspace-canvas__preview">
-                <img
-                  src={activePreviewImage}
-                  alt="Generated preview"
-                  onClick={() =>
-                    onViewImage?.({ src: activePreviewImage, alt: 'Generated variation' })
-                  }
-                />
-              </div>
-            ) : (
-              <div className="workspace-canvas__empty">
-                <p>Canvas is empty. Generate a look to see it here.</p>
-              </div>
-            )}
-
-            {activeCanvasItem && activeCanvasItem.images.length > 1 && (
-              <div className="workspace-canvas__thumbnails">
-                {activeCanvasItem.images.map((imageUrl, index) => (
-                  <button
-                    type="button"
-                    key={`${activeCanvasItem.id}-thumb-${index}`}
-                    className={`workspace-canvas__thumb${index === activeImageIndex ? ' workspace-canvas__thumb--active' : ''}`}
-                    onClick={() => setActiveImageIndex(index)}
-                  >
-                    <img src={imageUrl} alt={`Variation ${index + 1}`} />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {activeCanvasItem && (
-              <footer className="workspace-canvas__meta">
-                <span>{formatRelativeTime(activeCanvasItem.createdAt)}</span>
-                <span>{buildPromptSummary(activeCanvasItem.prompts, activeCanvasItem.customPrompt)}</span>
-                {typeof activeCanvasItem.coinsSpent === 'number' && (
-                  <span>{activeCanvasItem.coinsSpent} coin{activeCanvasItem.coinsSpent === 1 ? '' : 's'}</span>
-                )}
-              </footer>
-            )}
-          </div>
-
-          <section className="workspace-chat">
-            <header className="workspace-chat__header">
-              <h2>Chat</h2>
-            </header>
-            <div className="workspace-chat__stream">
-              {chatMessages.map((message) => (
-                <article key={message.id} className={`chat-message chat-message--${message.type}`}>
-                  <header>
-                    <strong>
-                      {message.type === 'user'
-                        ? 'You'
-                        : message.type === 'result'
-                        ? 'Variations ready'
-                        : 'System'}
-                    </strong>
-                    {message.timestamp && <span>{formatRelativeTime(message.timestamp)}</span>}
-                  </header>
-                  <p>{message.promptSummary || message.body}</p>
-                  {message.images && message.images.length > 0 && (
-                    <div className="chat-message__images">
-                      {message.images.map((imageUrl, index) => (
-                        <button
-                          key={`${message.id}-preview-${index}`}
-                          type="button"
-                          onClick={() =>
-                            onViewImage?.({ src: imageUrl, alt: `Generated variation ${index + 1}` })
-                          }
-                        >
-                          <img src={imageUrl} alt={`Generated variation ${index + 1}`} />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {message.coinsSpent && (
-                    <footer>{message.coinsSpent} coin{message.coinsSpent === 1 ? '' : 's'} used</footer>
-                  )}
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
-
-        <aside className="workspace-history">
-          <header className="workspace-history__header">
-            <h2>History</h2>
-            <button type="button" className="workspace-header__secondary" onClick={() => onRefreshSessions?.()}>
-              Refresh
-            </button>
-          </header>
-          <input
-            type="search"
-            className="workspace-history__search"
-            placeholder="Search chats"
-            value={historyQuery}
-            onChange={(event) => setHistoryQuery(event.target.value)}
-          />
-          <div className="workspace-history__list">
-            {filteredHistory.length === 0 ? (
-              <p className="workspace-history__empty">No chats yet. Generate your first look.</p>
-            ) : (
-              filteredHistory.map((session) => (
-                <button
-                  type="button"
-                  key={session.id}
-                  className={`history-item${session.id === activeSessionId ? ' history-item--active' : ''}`}
-                  onClick={() => handleHistorySelect(session.id)}
-                >
-                  <div className="history-item__thumb">
-                    {session.generatedImages?.[0] ? (
-                      <img src={session.generatedImages[0]} alt="Session thumbnail" />
-                    ) : (
-                      <span>📄</span>
-                    )}
-                  </div>
-                  <div className="history-item__meta">
-                    <strong>{session.title || buildPromptSummary(session.prompts, session.customPrompt)}</strong>
-                    <span>{formatRelativeTime(session.createdAt)}</span>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </aside>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }
