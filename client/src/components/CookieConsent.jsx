@@ -128,7 +128,8 @@ export default function CookieConsent() {
   return (
     <>
       <button type="button" className="cookie-trigger" onClick={openPreferences} aria-haspopup="dialog">
-        GDPR & Cookies
+        <span className="sr-only">GDPR &amp; Cookies preferences</span>
+        <span className="cookie-trigger__icon" aria-hidden="true">🛡️</span>
       </button>
 
       {isOpen && (

@@ -1167,7 +1167,7 @@
   }
 
   .chat-shell__main {
-    padding: 88px 24px 36px;
+    padding: 72px 22px 32px;
   }
 
   .chat-shell__main::before {
@@ -1187,7 +1187,7 @@
   .chat-body {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
   }
 
   .chat-preview {
@@ -1215,46 +1215,82 @@
   }
 
   .chat-shell__main {
-    padding: 84px 20px 32px;
-    gap: 24px;
+    padding: 60px 18px 26px;
+    gap: 18px;
   }
 
   .chat-header h1 {
-    font-size: clamp(2.1rem, 6vw, 2.5rem);
+    font-size: clamp(1.9rem, 5.5vw, 2.3rem);
   }
 
   .chat-header p {
     max-width: none;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 
   .chat-body {
-    gap: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .chat-thread,
-  .chat-preview,
   .chat-composer {
-    padding: 20px;
+    padding: 18px;
+  }
+
+  .chat-preview {
+    display: none;
+  }
+
+  .chat-thread {
+    flex: 1;
+  }
+
+  .chat-thread__messages {
+    padding-right: 0;
   }
 
   .chat-composer__bar {
     padding: 12px 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .chat-composer__input,
   .chat-composer__upload,
   .chat-composer__generate {
     flex: 1 1 100%;
+    width: 100%;
   }
 
   .chat-suggestions__slide {
     grid-template-columns: 1fr;
   }
+
+  .chat-composer__control-wrapper {
+    min-width: 0;
+  }
+
+  .chat-composer__input {
+    grid-column: 1 / -1;
+  }
+
+  .chat-composer__generate {
+    grid-column: 1 / -1;
+  }
+
+  .chat-chips,
+  .chat-status {
+    display: none;
+  }
 }
 
 @media (max-width: 520px) {
   .chat-thread,
-  .chat-preview,
   .chat-composer {
     border-radius: 18px;
   }
@@ -1264,6 +1300,7 @@
   }
 
   .chat-composer__bar {
+    display: flex;
     flex-direction: column;
     gap: 12px;
   }
