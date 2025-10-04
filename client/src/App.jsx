@@ -53,7 +53,7 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
   return data
 }
 
-function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
+function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -66,6 +66,10 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
   const [submitting, setSubmitting] = useState(false)
 
   const isRegister = mode === 'register'
+
+  useEffect(() => {
+    setError('')
+  }, [isRegister])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -153,7 +157,33 @@ function AuthModal({ mode, onClose, onAuthenticate, googleClientId }) {
     <div className="modal__backdrop" role="presentation">
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-heading">
         <header className="modal__header">
-          <h2 id="auth-modal-heading">{isRegister ? 'Create your account' : 'Welcome back'}</h2>
+          <h2 id="auth-modal-heading" className="sr-only">
+            {isRegister ? 'Create your account' : 'Welcome back'}
+          </h2>
+          <nav className="modal__tabs" role="tablist" aria-label="Authentication mode">
+            <button
+              type="button"
+              className={`modal__tab${!isRegister ? ' modal__tab--active' : ''}`}
+              role="tab"
+              aria-selected={!isRegister}
+              tabIndex={!isRegister ? 0 : -1}
+              onClick={() => onChangeMode?.('login')}
+              disabled={!onChangeMode}
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              className={`modal__tab${isRegister ? ' modal__tab--active' : ''}`}
+              role="tab"
+              aria-selected={isRegister}
+              tabIndex={isRegister ? 0 : -1}
+              onClick={() => onChangeMode?.('register')}
+              disabled={!onChangeMode}
+            >
+              Sign up
+            </button>
+          </nav>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -1124,6 +1154,7 @@ function App() {
           mode={authModal.mode}
           onClose={closeAuthModal}
           onAuthenticate={handleAuthenticate}
+          onChangeMode={(nextMode) => setAuthModal({ open: true, mode: nextMode })}
           googleClientId={GOOGLE_CLIENT_ID}
         />
       )}
