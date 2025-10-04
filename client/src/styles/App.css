@@ -66,6 +66,13 @@ button {
   display: none;
 }
 
+@media (max-width: 1024px) {
+  .app-main--chat {
+    height: auto;
+    min-height: 100vh;
+  }
+}
+
 .topbar {
   display: flex;
   align-items: center;

@@ -387,6 +387,7 @@ export default function Generator({
   const composerRef = useRef(null)
   const menuRefs = useRef({ category: [], subcategory: [], prompts: [] })
   const [activeSuggestionSlide, setActiveSuggestionSlide] = useState(0)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const suggestionSlides = QUICK_SUGGESTION_SLIDES
   const totalSuggestionSlides = suggestionSlides.length || 1
@@ -816,6 +817,57 @@ export default function Generator({
     setActiveSuggestionSlide((previous) => (previous - 1 + totalSuggestionSlides) % totalSuggestionSlides)
   }, [totalSuggestionSlides])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setMobileSidebarOpen(false)
+      }
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const openMobileSidebar = useCallback(() => {
+    setMobileSidebarOpen(true)
+  }, [])
+
+  const closeMobileSidebar = useCallback(() => {
+    setMobileSidebarOpen(false)
+  }, [])
+
+  const bodyOverflowRef = useRef(null)
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+
+    const { style } = document.body
+
+    if (mobileSidebarOpen) {
+      if (bodyOverflowRef.current === null) {
+        bodyOverflowRef.current = style.overflow || ''
+      }
+      style.overflow = 'hidden'
+    } else if (bodyOverflowRef.current !== null) {
+      style.overflow = bodyOverflowRef.current
+      bodyOverflowRef.current = null
+    }
+
+    return () => {
+      if (bodyOverflowRef.current !== null) {
+        style.overflow = bodyOverflowRef.current
+        bodyOverflowRef.current = null
+      }
+    }
+  }, [mobileSidebarOpen])
+
   const handleSuggestionSelect = (suggestion) => {
     if (!suggestion) return
 
@@ -961,12 +1013,22 @@ export default function Generator({
   menuRefs.current.subcategory = []
   menuRefs.current.prompts = []
 
+  const sidebarClass = `chat-shell__sidebar${mobileSidebarOpen ? ' chat-shell__sidebar--open' : ''}`
+
   return (
-    <div className="chat-shell">
-      <aside className="chat-shell__sidebar">
+    <div className={`chat-shell${mobileSidebarOpen ? ' chat-shell--sidebar-open' : ''}`}>
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          className="chat-shell__overlay"
+          onClick={closeMobileSidebar}
+          aria-label="Close navigation"
+        />
+      )}
+      <aside className={sidebarClass}>
         <div className="chat-sidebar__top">
           <div className="chat-sidebar__brand">
-            <img src="/logo.png" alt="MetaVariant" className="chat-sidebar__logo" />
+            <span className="chat-sidebar__logo">PG</span>
             <div className="chat-sidebar__titles">
               <strong>MetaVariant</strong>
               <span>AI styling studio</span>
@@ -1045,10 +1107,26 @@ export default function Generator({
             <button type="button" onClick={() => onRequestTopUp?.()}>Buy coins</button>
           </div>
         </footer>
+        <button
+          type="button"
+          className="chat-sidebar__close"
+          onClick={closeMobileSidebar}
+          aria-label="Close navigation"
+        >
+          ×
+        </button>
       </aside>
 
       <section className="chat-shell__main">
         <header className="chat-header">
+          <button
+            type="button"
+            className="chat-mobile-trigger"
+            onClick={openMobileSidebar}
+            aria-label="Open navigation"
+          >
+            ☰
+          </button>
           <div>
             <h1>What are we styling today?</h1>
             <p>Upload a product image, mix prompt presets, and brief the assistant to craft new looks.</p>
