@@ -59,14 +59,7 @@
 .chat-sidebar__logo {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #7f5af0, #2cb67d);
-  color: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  object-fit: contain;
 }
 
 .chat-sidebar__titles {

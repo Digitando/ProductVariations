@@ -293,6 +293,166 @@ const QUICK_SUGGESTION_SLIDES = Array.from({ length: Math.ceil(QUICK_SUGGESTIONS
     QUICK_SUGGESTIONS.slice(index * SUGGESTIONS_PER_SLIDE, index * SUGGESTIONS_PER_SLIDE + SUGGESTIONS_PER_SLIDE),
   )
 
+const KEYWORD_SYNONYMS = new Map(
+  Object.entries({
+    vitamins: ['vitamin', 'capsule', 'pill', 'tablet'],
+    minerals: ['mineral'],
+    protein: ['protein', 'powder', 'scoop', 'shake'],
+    workout: ['workout', 'gym', 'training', 'pre-workout', 'post-workout'],
+    smartphones: ['smartphone', 'phone', 'mobile'],
+    smartphone: ['phone', 'mobile'],
+    laptops: ['laptop', 'notebook', 'ultrabook'],
+    tablets: ['tablet', 'ipad', 'stylus'],
+    cases: ['case', 'cover', 'shell', 'bumper'],
+    chargers: ['charger', 'charging', 'dock', 'wireless'],
+    audio: ['audio', 'earbuds', 'headphones', 'speaker'],
+    keyboards: ['keyboard', 'keycap', 'mechanical'],
+    mice: ['mouse', 'mice'],
+    consoles: ['console', 'controller', 'gaming'],
+    kitchen: ['kitchen', 'appliance', 'cook', 'blender'],
+    cleaning: ['cleaning', 'laundry', 'vacuum'],
+    homecare: ['homecare', 'air purifier', 'humidifier'],
+    seating: ['sofa', 'chair', 'seating'],
+    lighting: ['lamp', 'lighting', 'light'],
+    accents: ['decor', 'accent', 'vase', 'art'],
+    gourmet: ['gourmet', 'artisan', 'dessert'],
+    health: ['health', 'nutrition', 'wellness'],
+    drinks: ['drink', 'beverage', 'coffee', 'tea'],
+    apparel: ['apparel', 'clothing', 'outfit'],
+    strollers: ['stroller', 'pram', 'buggy'],
+    board: ['board', 'tabletop'],
+    modeling: ['model', 'miniature', 'diorama', 'kit'],
+    tires: ['tire', 'wheel'],
+    fluids: ['fluid', 'oil', 'coolant'],
+    accessories: ['accessory', 'accessories'],
+    gear: ['gear', 'harness', 'leash'],
+    repair: ['repair', 'maintenance', 'fix'],
+    courses: ['course', 'lesson', 'module', 'curriculum'],
+    guitars: ['guitar', 'instrument', 'strings'],
+    dj: ['dj', 'turntable', 'controller'],
+    vinyl: ['vinyl', 'record'],
+    camping: ['camp', 'camping', 'tent'],
+    backpacks: ['backpack', 'pack', 'rucksack'],
+    holiday: ['holiday', 'festive', 'christmas', 'ornament'],
+    halloween: ['halloween', 'spooky', 'costume'],
+    summer: ['summer', 'beach', 'sun', 'pool'],
+  }),
+)
+
+const SUBCATEGORY_KEYWORD_OVERRIDES = {
+  beauty_cosmetics_fragrances: ['fragrance', 'perfume', 'scent'],
+  vitamins_minerals: ['vitamin', 'capsule', 'pill', 'supplement'],
+  protein_powders: ['protein powder', 'scoop', 'shake'],
+  workout_supplements: ['pre-workout', 'post-workout', 'gym', 'workout'],
+  fitness_sport_equipment: ['fitness equipment', 'gym gear', 'fitness gear', 'dumbbell', 'barbell', 'equipment'],
+  fitness_sport_apparel: ['activewear', 'outfit', 'athletic apparel', 'training outfit'],
+  fitness_sport_machines: [
+    'exercise machine',
+    'treadmill',
+    'bike',
+    'rowing machine',
+    'elliptical',
+    'home gym',
+    'cardio machine',
+  ],
+  electronics_smartphones: ['phone', 'smartphone', 'mobile'],
+  electronics_laptops: ['laptop', 'notebook', 'ultrabook'],
+  electronics_tablets: ['tablet', 'stylus', 'ipad'],
+  mobile_accessories_cases: ['case', 'cover', 'shell'],
+  mobile_accessories_chargers: ['charger', 'charging', 'wireless', 'dock'],
+  mobile_accessories_audio: ['earbuds', 'headphones', 'audio', 'speaker'],
+  computing_gaming_keyboards: ['keyboard', 'keycap', 'mechanical'],
+  computing_gaming_mice: ['mouse', 'gaming mouse'],
+  computing_gaming_consoles: ['console', 'controller', 'gaming console'],
+  home_appliances_kitchen: ['kitchen', 'appliance', 'blender', 'cook'],
+  home_appliances_cleaning: ['cleaning', 'laundry', 'vacuum'],
+  home_appliances_homecare: ['homecare', 'air purifier', 'humidifier', 'filter', 'control panel', 'cord storage'],
+  furniture_decor_seating: ['sofa', 'chair', 'seating'],
+  furniture_decor_lighting: ['lamp', 'lighting'],
+  furniture_decor_accents: ['decor', 'accent', 'centerpiece'],
+  food_beverage_gourmet: ['gourmet', 'dessert', 'artisan'],
+  food_beverage_health: ['nutrition', 'health', 'wellness'],
+  food_beverage_drinks: ['drink', 'beverage', 'coffee', 'tea', 'smoothie'],
+  kids_products_strollers: ['stroller', 'pram', 'buggy'],
+  toys_hobbies_board_games: ['board game', 'tabletop', 'cards'],
+  toys_hobbies_modeling: ['model kit', 'miniature', 'diorama'],
+  automotive_tires: ['tire', 'wheel', 'rim'],
+  automotive_fluids: ['oil', 'fluid', 'coolant'],
+  automotive_accessories: ['car accessory', 'organizer', 'mount', 'detailing', 'trunk'],
+  pet_products_gear: ['harness', 'carrier', 'gear', 'leash'],
+  diy_tools_repair: ['repair', 'maintenance', 'fix', 'tool'],
+  books_education_courses: ['course', 'lesson', 'online class', 'module'],
+  music_instruments_guitars: ['guitar', 'strings'],
+  music_instruments_dj: ['dj', 'turntable', 'controller'],
+  music_instruments_vinyl: ['vinyl', 'record'],
+  outdoor_travel_backpacks: ['backpack', 'pack', 'rucksack'],
+  outdoor_travel_accessories: ['camp gear', 'accessory', 'compass', 'lantern', 'gear'],
+  seasonal_products_holiday: ['holiday', 'christmas', 'festive', 'ornament'],
+  seasonal_products_halloween: ['halloween', 'spooky', 'costume', 'pumpkin'],
+  seasonal_products_summer: ['summer', 'beach', 'pool', 'sun'],
+}
+
+function buildSubcategoryKeywords(subcategory) {
+  if (!subcategory) return []
+  const baseTokens = subcategory.label
+    .toLowerCase()
+    .replace(/&/g, ' ')
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token && token.length > 2)
+
+  const keywords = new Set(baseTokens)
+
+  baseTokens.forEach((token) => {
+    const synonyms = KEYWORD_SYNONYMS.get(token)
+    if (synonyms) {
+      synonyms.forEach((item) => keywords.add(item))
+    }
+  })
+
+  const overrides = SUBCATEGORY_KEYWORD_OVERRIDES[subcategory.id]
+  if (overrides) {
+    overrides.forEach((item) => keywords.add(item.toLowerCase()))
+  }
+
+  return Array.from(keywords)
+}
+
+function filterPromptsForSubcategory(category, subcategoryId) {
+  if (!category) return []
+  const prompts = category.prompts || []
+  if (!subcategoryId) return prompts
+
+  const selection = promptCatalog.getPromptsForSelection({
+    genderId: null,
+    categoryId: category.id,
+    subcategoryId,
+  })
+  if (selection.length) {
+    return selection
+  }
+
+  const subcategory = category.subcategories?.find((entry) => entry.id === subcategoryId)
+  if (!subcategory) {
+    return prompts
+  }
+
+  const keywords = buildSubcategoryKeywords(subcategory)
+  let filtered = prompts.filter((prompt) => {
+    const text = `${prompt.title || ''} ${prompt.description || ''} ${prompt.name || ''} ${prompt.group || ''}`.toLowerCase()
+    return keywords.some((keyword) => keyword && text.includes(keyword))
+  })
+
+  if (filtered.length === 0 && category.groups?.length) {
+    const index = category.subcategories.findIndex((entry) => entry.id === subcategoryId)
+    if (index >= 0) {
+      const group = category.groups[Math.min(index, category.groups.length - 1)]
+      filtered = group?.prompts?.length ? group.prompts : []
+    }
+  }
+
+  return filtered.length ? filtered : prompts
+}
+
 function CheckMarkIcon(props) {
   return (
     <svg viewBox="0 0 14 10" fill="none" aria-hidden="true" {...props}>
@@ -398,7 +558,12 @@ export default function Generator({
   const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
   const hasSubcategoryOptions = activeSubcategories.length > 0
-  const filteredPrompts = useMemo(() => activeCategory?.prompts || [], [activeCategory])
+  const filteredPrompts = useMemo(() => {
+    if (!activeCategory) {
+      return []
+    }
+    return filterPromptsForSubcategory(activeCategory, selectedSubcategoryId)
+  }, [activeCategory, selectedSubcategoryId])
   const availablePromptCount = filteredPrompts.length
   const selectedPromptDetails = useMemo(
     () => selectedPromptIds.map((id) => PROMPTS_BY_ID[id]).filter(Boolean),
@@ -1041,7 +1206,7 @@ export default function Generator({
       <aside className={sidebarClass}>
         <div className="chat-sidebar__top">
           <div className="chat-sidebar__brand">
-            <span className="chat-sidebar__logo">PG</span>
+            <img src="/logo.svg" alt="MetaVariant" className="chat-sidebar__logo" />
             <div className="chat-sidebar__titles">
               <strong>MetaVariant</strong>
               <span>AI styling studio</span>
