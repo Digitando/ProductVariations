@@ -125,6 +125,18 @@ if (!hasClientBuild) {
   );
 }
 
+// Security: Configure CORS with strict origin validation
+// NOTE: This must be defined BEFORE the CSP configuration below
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map(origin => origin.trim())
+  : [];
+
+if (allowedOrigins.length === 0) {
+  console.error('CRITICAL SECURITY ERROR: CLIENT_ORIGIN environment variable is not set.');
+  console.error('Configure allowed origins in .env file (comma-separated for multiple origins).');
+  process.exit(1);
+}
+
 // Security: Configure Content Security Policy
 const cspDirectives = {
   defaultSrc: ["'self'"],
@@ -153,16 +165,6 @@ app.use(
     },
   }),
 );
-// Security: Configure CORS with strict origin validation
-const allowedOrigins = process.env.CLIENT_ORIGIN
-  ? process.env.CLIENT_ORIGIN.split(',').map(origin => origin.trim())
-  : [];
-
-if (allowedOrigins.length === 0) {
-  console.error('CRITICAL SECURITY ERROR: CLIENT_ORIGIN environment variable is not set.');
-  console.error('Configure allowed origins in .env file (comma-separated for multiple origins).');
-  process.exit(1);
-}
 
 app.use(cors({
   origin: (origin, callback) => {
