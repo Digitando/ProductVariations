@@ -613,91 +613,94 @@ function ProfileModal({
     <div className="modal__backdrop" role="presentation">
       <div className="profile modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-heading">
         <header className="profile__hero">
-          <div>
+          <div className="profile__hero-content">
             <p className="profile__eyebrow">Account hub</p>
             <h1 id="profile-modal-heading">{user.name || user.email}</h1>
             <p>Review your creator activity, manage saved sessions, and adjust contact preferences.</p>
             {joinedAt && <span className="profile__meta">Member since {joinedAt}</span>}
           </div>
           <div className="profile__hero-actions">
-            <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
-              ×
-            </button>
             <div className="profile__coin-pill">
               <span>Coins</span>
               <strong>{coins}</strong>
             </div>
-            <button type="button" className="secondary" onClick={() => setActiveTab('wallet')}>
-              Buy coins
-            </button>
-            <button type="button" className="secondary" onClick={onLogout}>
-              Sign out
+            <div className="profile__hero-buttons">
+              <button type="button" className="secondary" onClick={() => setActiveTab('wallet')}>
+                Buy coins
+              </button>
+              <button type="button" className="secondary" onClick={onLogout}>
+                Sign out
+              </button>
+            </div>
+            <button type="button" className="icon-button profile__close" onClick={onClose} aria-label="Close">
+              ×
             </button>
           </div>
         </header>
 
-      <section className="profile__stats">
-        <article className="profile-stat">
-          <h2>Total sessions</h2>
-          <p className="profile-stat__number">{metrics.totalSessions}</p>
-          <p className="profile-stat__hint">Each session captures your prompt set, source photo, and outputs.</p>
-        </article>
-        <article className="profile-stat">
-          <h2>Images generated</h2>
-          <p className="profile-stat__number">{metrics.totalImages}</p>
-          <p className="profile-stat__hint">Download single shots or bulk export from the library view.</p>
-        </article>
-        <article className="profile-stat">
-          <h2>Descriptions crafted</h2>
-          <p className="profile-stat__number">{metrics.totalDescriptions}</p>
-          <p className="profile-stat__hint">High-converting copy stored alongside each session.</p>
-        </article>
-        <article className="profile-stat">
-          <h2>Coins available</h2>
-          <p className="profile-stat__number">{coins}</p>
-          <p className="profile-stat__hint">Each variation uses 1 coin. Keep your balance ready before campaign drops.</p>
-        </article>
-      </section>
+      <div className="profile__body">
+        <section className="profile__stats" aria-label="Creator metrics">
+          <article className="profile-stat">
+            <h2>Total sessions</h2>
+            <p className="profile-stat__number">{metrics.totalSessions}</p>
+            <p className="profile-stat__hint">Each session captures your prompt set, source photo, and outputs.</p>
+          </article>
+          <article className="profile-stat">
+            <h2>Images generated</h2>
+            <p className="profile-stat__number">{metrics.totalImages}</p>
+            <p className="profile-stat__hint">Download single shots or bulk export from the library view.</p>
+          </article>
+          <article className="profile-stat">
+            <h2>Descriptions crafted</h2>
+            <p className="profile-stat__number">{metrics.totalDescriptions}</p>
+            <p className="profile-stat__hint">High-converting copy stored alongside each session.</p>
+          </article>
+          <article className="profile-stat">
+            <h2>Coins available</h2>
+            <p className="profile-stat__number">{coins}</p>
+            <p className="profile-stat__hint">Each variation uses 1 coin. Keep your balance ready before launch day.</p>
+          </article>
+        </section>
 
-      <nav className="profile__tabs" aria-label="Profile sections">
-        <button
-          type="button"
-          className={`profile-tab${activeTab === 'overview' ? ' profile-tab--active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          type="button"
-          className={`profile-tab${activeTab === 'library' ? ' profile-tab--active' : ''}`}
-          onClick={() => setActiveTab('library')}
-        >
-          Library
-        </button>
-        <button
-          type="button"
-          className={`profile-tab${activeTab === 'wallet' ? ' profile-tab--active' : ''}`}
-          onClick={() => setActiveTab('wallet')}
-        >
-          Wallet
-        </button>
-        <button
-          type="button"
-          className={`profile-tab${activeTab === 'settings' ? ' profile-tab--active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          Settings
-        </button>
-      </nav>
+        <nav className="profile__tabs" aria-label="Profile sections">
+          <button
+            type="button"
+            className={`profile-tab${activeTab === 'overview' ? ' profile-tab--active' : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            className={`profile-tab${activeTab === 'library' ? ' profile-tab--active' : ''}`}
+            onClick={() => setActiveTab('library')}
+          >
+            Library
+          </button>
+          <button
+            type="button"
+            className={`profile-tab${activeTab === 'wallet' ? ' profile-tab--active' : ''}`}
+            onClick={() => setActiveTab('wallet')}
+          >
+            Wallet
+          </button>
+          <button
+            type="button"
+            className={`profile-tab${activeTab === 'settings' ? ' profile-tab--active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            Settings
+          </button>
+        </nav>
 
-      {feedback && <p className="profile__feedback">{feedback}</p>}
+        {feedback && <p className="profile__feedback">{feedback}</p>}
 
-      <section className="profile__panel">
-        {activeTab === 'overview' && (
-          <div className="profile-overview">
-            <article className="profile-card">
-              <h2>Creator summary</h2>
-              <ul>
+        <section className="profile__panel">
+          {activeTab === 'overview' && (
+            <div className="profile-overview">
+              <article className="profile-card">
+                <h2>Creator summary</h2>
+                <ul>
                 <li>
                   <span>Account email</span>
                   <strong>{user.email}</strong>
@@ -902,7 +905,8 @@ function ProfileModal({
             </div>
           </div>
         )}
-      </section>
+        </section>
+      </div>
       </div>
     </div>
   )
