@@ -9,8 +9,8 @@ WORKDIR /app/client
 # Copy client package files
 COPY client/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev dependencies needed for build)
+RUN npm ci
 
 # Copy client source
 COPY client/ ./
@@ -24,9 +24,9 @@ FROM node:20-alpine AS server-setup
 
 WORKDIR /app
 
-# Install server dependencies
+# Install server dependencies (production only)
 COPY server/package*.json ./server/
-RUN cd server && npm ci --only=production
+RUN cd server && npm ci --omit=dev
 
 # Stage 3: Final production image
 FROM node:20-alpine
