@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const { body, validationResult } = require('express-validator');
+const xss = require('xss');
 const axios = require('axios');
 const multer = require('multer');
 const dotenv = require('dotenv');
@@ -34,6 +37,19 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Security: Validate JWT_SECRET on startup
+if (!JWT_SECRET || JWT_SECRET === 'change-me') {
+  console.error('CRITICAL SECURITY ERROR: JWT_SECRET is not set or is using the default value.');
+  console.error('Set a strong JWT_SECRET in your .env file before starting the server.');
+  process.exit(1);
+}
+
+if (JWT_SECRET.length < 32) {
+  console.error('CRITICAL SECURITY ERROR: JWT_SECRET must be at least 32 characters long.');
+  process.exit(1);
+}
 
 const stripeClient = STRIPE_SECRET_KEY
   ? new Stripe(STRIPE_SECRET_KEY, {
@@ -109,17 +125,66 @@ if (!hasClientBuild) {
   );
 }
 
+// Security: Configure Content Security Policy
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for React
+  styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+  imgSrc: ["'self'", 'data:', 'https:', 'blob:'], // Allow images from various sources
+  connectSrc: ["'self'", ...allowedOrigins],
+  fontSrc: ["'self'", 'data:'],
+  objectSrc: ["'none'"],
+  mediaSrc: ["'self'"],
+  frameSrc: ["'none'"],
+  upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+};
+
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: cspDirectives,
+    },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
   }),
 );
+// Security: Configure CORS with strict origin validation
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map(origin => origin.trim())
+  : [];
+
+if (allowedOrigins.length === 0) {
+  console.error('CRITICAL SECURITY ERROR: CLIENT_ORIGIN environment variable is not set.');
+  console.error('Configure allowed origins in .env file (comma-separated for multiple origins).');
+  process.exit(1);
+}
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Blocked request from unauthorized origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '20mb' }));
+// Security: Sanitize user input to prevent NoSQL injection
+app.use(mongoSanitize({
+  replaceWith: '_',
+}));
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(optionalAuth);
 app.use(['/auth/register', '/auth/login', '/auth/google'], authLimiter);
@@ -150,9 +215,30 @@ const storage = multer.diskStorage({
   },
 });
 
+// Security: Validate file uploads (MIME type and size)
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+    files: 1,
+  },
+  fileFilter: (_req, file, cb) => {
+    // Security: Validate MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error(`Invalid file type. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`));
+    }
+
+    // Security: Validate file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error(`Invalid file extension. Allowed: ${allowedExtensions.join(', ')}`));
+    }
+
+    cb(null, true);
+  },
 });
 
 const openRouterClient = axios.create({
@@ -310,6 +396,33 @@ function translateUpstreamError(error) {
   return rawMessage || 'Request failed';
 }
 
+// Security: XSS sanitization helper
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  return xss(input.trim());
+}
+
+// Security: Validation error handler
+function handleValidationErrors(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const firstError = errors.array()[0];
+    return res.status(400).json({ error: firstError.msg });
+  }
+  return null;
+}
+
+// Security: Log authentication events
+function logAuthEvent(event, details = {}) {
+  const timestamp = new Date().toISOString();
+  console.log(`[AUTH] ${timestamp} - ${event}:`, {
+    ip: details.ip,
+    email: details.email,
+    success: details.success,
+    ...(details.error && { error: details.error }),
+  });
+}
+
 function sendAuthResponse(res, user) {
   const token = createToken(user);
   if (!token) {
@@ -322,49 +435,118 @@ function sendAuthResponse(res, user) {
   });
 }
 
-app.post('/auth/register', async (req, res) => {
-  try {
-    const { name, email, password, referralCode, acceptPrivacy, marketingOptIn } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
+app.post(
+  '/auth/register',
+  [
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Valid email is required'),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters'),
+    body('name')
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage('Name must be less than 100 characters'),
+    body('referralCode')
+      .optional()
+      .trim()
+      .isLength({ max: 20 })
+      .withMessage('Invalid referral code'),
+    body('acceptPrivacy')
+      .isBoolean()
+      .custom(value => value === true)
+      .withMessage('Privacy consent is required'),
+  ],
+  async (req, res) => {
+    const validationError = handleValidationErrors(req, res);
+    if (validationError) return;
 
-    if (!acceptPrivacy) {
-      return res.status(400).json({ error: 'Privacy consent is required to create an account.' });
-    }
+    try {
+      const { name, email, password, referralCode, acceptPrivacy, marketingOptIn } = req.body || {};
 
-    const user = await registerUser({
-      name,
-      email,
-      password,
-      referralCode,
-      acceptPrivacy,
-      marketingOptIn,
-    });
-    sendWelcomeEmail({ to: user.email, name: user.name }).catch((error) => {
-      console.warn('Welcome email was not sent', error?.message || error);
-    });
-    return sendAuthResponse(res, user);
-  } catch (error) {
-    console.error('Registration failed', error.message || error);
-    res.status(400).json({ error: error.message || 'Registration failed.' });
+      const user = await registerUser({
+        name: sanitizeInput(name),
+        email: sanitizeInput(email),
+        password, // Don't sanitize password - will be hashed
+        referralCode: sanitizeInput(referralCode),
+        acceptPrivacy,
+        marketingOptIn,
+      });
+
+      // Security: Log successful registration
+      logAuthEvent('REGISTRATION', {
+        ip: req.ip,
+        email: sanitizeInput(email),
+        success: true,
+      });
+
+      sendWelcomeEmail({ to: user.email, name: user.name }).catch((error) => {
+        console.warn('Welcome email was not sent', error?.message || error);
+      });
+      return sendAuthResponse(res, user);
+    } catch (error) {
+      // Security: Log failed registration
+      logAuthEvent('REGISTRATION_FAILED', {
+        ip: req.ip,
+        email: sanitizeInput(req.body?.email),
+        success: false,
+        error: error.message,
+      });
+
+      console.error('Registration failed', error.message || error);
+      res.status(400).json({ error: error.message || 'Registration failed.' });
+    }
   }
-});
+);
 
-app.post('/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+app.post(
+  '/auth/login',
+  [
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Valid email is required'),
+    body('password')
+      .notEmpty()
+      .withMessage('Password is required'),
+  ],
+  async (req, res) => {
+    const validationError = handleValidationErrors(req, res);
+    if (validationError) return;
+
+    try {
+      const { email, password } = req.body || {};
+
+      const user = await authenticateCredentials({
+        email: sanitizeInput(email),
+        password
+      });
+
+      // Security: Log successful login
+      logAuthEvent('LOGIN', {
+        ip: req.ip,
+        email: sanitizeInput(email),
+        success: true,
+      });
+
+      return sendAuthResponse(res, user);
+    } catch (error) {
+      // Security: Log failed login attempt
+      logAuthEvent('LOGIN_FAILED', {
+        ip: req.ip,
+        email: sanitizeInput(req.body?.email),
+        success: false,
+        error: error.message,
+      });
+
+      console.error('Login failed', error.message || error);
+      res.status(401).json({ error: error.message || 'Login failed.' });
     }
-
-    const user = await authenticateCredentials({ email, password });
-    return sendAuthResponse(res, user);
-  } catch (error) {
-    console.error('Login failed', error.message || error);
-    res.status(401).json({ error: error.message || 'Login failed.' });
   }
-});
+);
 
 app.post('/auth/google', async (req, res) => {
   try {
@@ -1188,6 +1370,33 @@ if (hasClientBuild) {
   });
 }
 
+// Security: Global error handler - hide stack traces in production
+app.use((err, req, res, next) => {
+  // Log error details for debugging (server-side only)
+  console.error('Error:', {
+    message: err.message,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+  });
+
+  // Security: Don't leak error details in production
+  const message = process.env.NODE_ENV === 'production'
+    ? 'An error occurred processing your request.'
+    : err.message || 'Internal server error';
+
+  res.status(err.status || 500).json({ error: message });
+});
+
+// Security: Log server startup
+console.log(`API server starting...`);
+console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+console.log(`Supabase: ${supabaseClient ? 'Connected' : 'Using local storage'}`);
+console.log(`Stripe: ${stripeClient ? 'Configured' : 'Disabled'}`);
+
 app.listen(PORT, () => {
-  console.log(`API server listening on port ${PORT}`);
+  console.log(`✓ API server listening on port ${PORT}`);
+  console.log(`✓ Security features: CORS, Helmet, Rate Limiting, Input Validation, XSS Protection`);
 });
