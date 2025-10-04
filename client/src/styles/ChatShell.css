@@ -379,6 +379,10 @@
   gap: 16px;
 }
 
+.chat-suggestions--mobile {
+  gap: 14px;
+}
+
 .chat-suggestions__header {
   display: flex;
   flex-direction: column;
@@ -468,6 +472,54 @@
   margin-top: 4px;
 }
 
+.chat-suggestions__chips {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 4px 6px;
+  margin: 0 -4px;
+}
+
+.chat-suggestions__chip {
+  flex: 0 0 auto;
+  min-width: 220px;
+  background: rgba(31, 34, 54, 0.72);
+  border: 1px solid rgba(160, 164, 226, 0.18);
+  border-radius: 18px;
+  padding: 16px;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.chat-suggestions__chip strong {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.chat-suggestions__chip span {
+  font-size: 12.5px;
+  color: rgba(229, 231, 255, 0.75);
+}
+
+.chat-suggestions__chip em {
+  font-style: normal;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(127, 90, 240, 0.85);
+}
+
+.chat-suggestions__chip:hover {
+  border-color: rgba(148, 123, 255, 0.5);
+  transform: translateY(-2px);
+  background: rgba(44, 47, 76, 0.78);
+}
+
 .chat-suggestions__nav {
   border: 1px solid rgba(160, 164, 226, 0.22);
   background: rgba(31, 33, 53, 0.8);
@@ -509,6 +561,31 @@
 .chat-suggestions__dot--active {
   background: rgba(148, 123, 255, 0.95);
   transform: scale(1.2);
+}
+
+.chat-suggestions__toggle {
+  align-self: flex-start;
+  border: 1px solid rgba(148, 123, 255, 0.35);
+  background: rgba(32, 34, 54, 0.75);
+  color: rgba(228, 231, 255, 0.9);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.chat-suggestions__toggle:hover {
+  background: rgba(49, 51, 77, 0.85);
+  border-color: rgba(148, 123, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.chat-suggestions__toggle--collapse {
+  align-self: stretch;
+  text-align: center;
+  margin-top: 6px;
+  background: rgba(44, 47, 76, 0.72);
 }
 
 .chat-message {

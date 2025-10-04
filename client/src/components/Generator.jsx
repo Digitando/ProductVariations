@@ -388,9 +388,12 @@ export default function Generator({
   const menuRefs = useRef({ category: [], subcategory: [], prompts: [] })
   const [activeSuggestionSlide, setActiveSuggestionSlide] = useState(0)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [isMobileSuggestions, setIsMobileSuggestions] = useState(false)
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false)
 
   const suggestionSlides = QUICK_SUGGESTION_SLIDES
   const totalSuggestionSlides = suggestionSlides.length || 1
+  const featuredSuggestions = QUICK_SUGGESTIONS.slice(0, 4)
 
   const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
@@ -798,7 +801,7 @@ export default function Generator({
   }, [showSuggestions])
 
   useEffect(() => {
-    if (!showSuggestions || totalSuggestionSlides <= 1) {
+    if (!showSuggestions || totalSuggestionSlides <= 1 || (isMobileSuggestions && !suggestionsExpanded)) {
       return undefined
     }
 
@@ -807,7 +810,7 @@ export default function Generator({
     }, 6500)
 
     return () => clearInterval(timer)
-  }, [showSuggestions, totalSuggestionSlides])
+  }, [showSuggestions, totalSuggestionSlides, isMobileSuggestions, suggestionsExpanded])
 
   const handleNextSuggestionSlide = useCallback(() => {
     setActiveSuggestionSlide((previous) => (previous + 1) % totalSuggestionSlides)
@@ -826,12 +829,19 @@ export default function Generator({
       if (window.innerWidth > 1024) {
         setMobileSidebarOpen(false)
       }
+      setIsMobileSuggestions(window.innerWidth <= 720)
     }
 
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  useEffect(() => {
+    if (!isMobileSuggestions) {
+      setSuggestionsExpanded(false)
+    }
+  }, [isMobileSuggestions])
 
   const openMobileSidebar = useCallback(() => {
     setMobileSidebarOpen(true)
@@ -898,6 +908,9 @@ export default function Generator({
     setErrorMessage('')
     setStatusMessage('Preset applied. Upload an image and generate to see the results.')
     setOpenMenu(null)
+    if (isMobileSuggestions) {
+      setSuggestionsExpanded(false)
+    }
   }
 
   const toggleMenu = (menu, { disabled } = {}) => {
@@ -1137,68 +1150,108 @@ export default function Generator({
           <section className="chat-thread">
             <div className="chat-thread__messages">
               {showSuggestions && (
-                <div className="chat-suggestions">
+                <div className={`chat-suggestions${isMobileSuggestions ? ' chat-suggestions--mobile' : ''}`}>
                   <div className="chat-suggestions__header">
                     <span>Popular starter briefs</span>
                     <p>Pick one and tweak the details to move even faster.</p>
                   </div>
-                  <div className="chat-suggestions__slider" role="group" aria-label="Starter brief carousel">
-                    <div
-                      className="chat-suggestions__track"
-                      style={{ transform: `translateX(-${activeSuggestionSlide * 100}%)` }}
-                    >
-                      {suggestionSlides.map((slide, slideIndex) => (
-                        <div className="chat-suggestions__slide" key={`starter-slide-${slideIndex}`}>
-                          {slide.map((suggestion) => (
-                            <button
-                              key={suggestion.id}
-                              type="button"
-                              className="chat-suggestion"
-                              onClick={() => handleSuggestionSelect(suggestion)}
-                            >
-                              <strong>{suggestion.title}</strong>
-                              <span>{suggestion.description}</span>
-                              <em>Apply preset</em>
-                            </button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {totalSuggestionSlides > 1 && (
-                    <div className="chat-suggestions__controls">
-                      <button
-                        type="button"
-                        className="chat-suggestions__nav"
-                        onClick={handlePrevSuggestionSlide}
-                        aria-label="Previous starter briefs"
-                      >
-                        ‹
-                      </button>
-                      <div className="chat-suggestions__dots" role="tablist" aria-label="Starter brief slides">
-                        {suggestionSlides.map((_, index) => (
+                  {isMobileSuggestions && !suggestionsExpanded ? (
+                    <>
+                      <div className="chat-suggestions__chips">
+                        {featuredSuggestions.map((suggestion) => (
                           <button
-                            key={`starter-dot-${index}`}
+                            key={suggestion.id}
                             type="button"
-                            className={`chat-suggestions__dot${
-                              activeSuggestionSlide === index ? ' chat-suggestions__dot--active' : ''
-                            }`}
-                            onClick={() => setActiveSuggestionSlide(index)}
-                            aria-label={`Show starter set ${index + 1}`}
-                            aria-selected={activeSuggestionSlide === index}
-                            role="tab"
-                          />
+                            className="chat-suggestions__chip"
+                            onClick={() => handleSuggestionSelect(suggestion)}
+                          >
+                            <strong>{suggestion.title}</strong>
+                            <span>{suggestion.description}</span>
+                            <em>Apply preset</em>
+                          </button>
                         ))}
                       </div>
                       <button
                         type="button"
-                        className="chat-suggestions__nav"
-                        onClick={handleNextSuggestionSlide}
-                        aria-label="Next starter briefs"
+                        className="chat-suggestions__toggle"
+                        onClick={() => {
+                          setSuggestionsExpanded(true)
+                          setActiveSuggestionSlide(0)
+                        }}
                       >
-                        ›
+                        Browse all starter briefs
                       </button>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="chat-suggestions__slider" role="group" aria-label="Starter brief carousel">
+                        <div
+                          className="chat-suggestions__track"
+                          style={{ transform: `translateX(-${activeSuggestionSlide * 100}%)` }}
+                        >
+                          {suggestionSlides.map((slide, slideIndex) => (
+                            <div className="chat-suggestions__slide" key={`starter-slide-${slideIndex}`}>
+                              {slide.map((suggestion) => (
+                                <button
+                                  key={suggestion.id}
+                                  type="button"
+                                  className="chat-suggestion"
+                                  onClick={() => handleSuggestionSelect(suggestion)}
+                                >
+                                  <strong>{suggestion.title}</strong>
+                                  <span>{suggestion.description}</span>
+                                  <em>Apply preset</em>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {totalSuggestionSlides > 1 && (
+                        <div className="chat-suggestions__controls">
+                          <button
+                            type="button"
+                            className="chat-suggestions__nav"
+                            onClick={handlePrevSuggestionSlide}
+                            aria-label="Previous starter briefs"
+                          >
+                            ‹
+                          </button>
+                          <div className="chat-suggestions__dots" role="tablist" aria-label="Starter brief slides">
+                            {suggestionSlides.map((_, index) => (
+                              <button
+                                key={`starter-dot-${index}`}
+                                type="button"
+                                className={`chat-suggestions__dot${
+                                  activeSuggestionSlide === index ? ' chat-suggestions__dot--active' : ''
+                                }`}
+                                onClick={() => setActiveSuggestionSlide(index)}
+                                aria-label={`Show starter set ${index + 1}`}
+                                aria-selected={activeSuggestionSlide === index}
+                                role="tab"
+                              />
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            className="chat-suggestions__nav"
+                            onClick={handleNextSuggestionSlide}
+                            aria-label="Next starter briefs"
+                          >
+                            ›
+                          </button>
+                        </div>
+                      )}
+                      {isMobileSuggestions && (
+                        <button
+                          type="button"
+                          className="chat-suggestions__toggle chat-suggestions__toggle--collapse"
+                          onClick={() => setSuggestionsExpanded(false)}
+                        >
+                          Hide suggestions
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
