@@ -1240,43 +1240,43 @@ export default function Generator({
           {isHistoryEmpty ? (
             <p className="chat-sidebar__empty">No sessions yet. Generate your first variation to see it here.</p>
           ) : (
-            filteredHistory.map((session) => (
-              <button
-                type="button"
-                key={session.id}
-                className={`chat-history__item${
-                  session.id === activeSessionId ? ' chat-history__item--active' : ''
-                }`}
-                onClick={() => handleHistorySelect(session.id)}
-              >
-                <div className="chat-history__thumb">
-                  {session.generatedImages?.[0] ? (
-                    <img
-                      src={session.generatedImages[0]}
-                      alt="Session thumbnail"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<span>📄</span>';
-                      }}
-                    />
-                  ) : (
-                    <span>📄</span>
-                  )}
-                </div>
-                <div className="chat-history__meta">
-                  {(() => {
-                    const title = session.title || buildPromptSummary(session.prompts, session.customPrompt)
-                    const marquee = title.length > 18 ? ' chat-history__title--marquee' : ''
-                    return (
-                      <strong className={`chat-history__title${marquee}`} title={title}>
-                        {title}
-                      </strong>
-                    )
-                  })()}
-                  <span>{formatRelativeTime(session.createdAt)}</span>
-                </div>
-              </button>
-            ))
+            filteredHistory.map((session) => {
+              const fullTitle = session.title || buildPromptSummary(session.prompts, session.customPrompt)
+              const displayTitle =
+                fullTitle.length > 18 ? `${fullTitle.slice(0, 18).trimEnd()}...` : fullTitle
+
+              return (
+                <button
+                  type="button"
+                  key={session.id}
+                  className={`chat-history__item${
+                    session.id === activeSessionId ? ' chat-history__item--active' : ''
+                  }`}
+                  onClick={() => handleHistorySelect(session.id)}
+                >
+                  <div className="chat-history__thumb">
+                    {session.generatedImages?.[0] ? (
+                      <img
+                        src={session.generatedImages[0]}
+                        alt="Session thumbnail"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.parentElement.innerHTML = '<span>📄</span>'
+                        }}
+                      />
+                    ) : (
+                      <span>📄</span>
+                    )}
+                  </div>
+                  <div className="chat-history__meta">
+                    <strong className="chat-history__title" title={fullTitle}>
+                      {displayTitle}
+                    </strong>
+                    <span>{formatRelativeTime(session.createdAt)}</span>
+                  </div>
+                </button>
+              )
+            })
           )}
         </div>
 

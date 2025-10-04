@@ -465,6 +465,13 @@
   gap: 16px;
 }
 
+.profile-settings__form h2,
+.profile-settings__form p,
+.profile-settings__actions--stacked h2,
+.profile-settings__actions--stacked p {
+  color: rgba(236, 238, 250, 0.9);
+}
+
 .profile-settings__actions {
   display: flex;
   gap: 12px;
@@ -490,6 +497,35 @@
   border: 1px solid rgba(138, 141, 196, 0.12);
   box-shadow: 0 16px 36px rgba(10, 11, 30, 0.35);
   min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-wallet h2,
+.profile-wallet p,
+.profile-wallet label {
+  color: rgba(236, 238, 250, 0.9);
+}
+
+.profile-wallet .StripeElement,
+.profile-wallet input,
+.profile-wallet select {
+  background: rgba(15, 18, 29, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: rgba(236, 238, 250, 0.95);
+  font-size: 15px;
+}
+
+.profile-wallet .StripeElement--focus {
+  border-color: rgba(127, 90, 240, 0.55);
+  box-shadow: 0 0 0 3px rgba(127, 90, 240, 0.2);
+}
+
+.profile-wallet button {
+  box-shadow: 0 18px 32px rgba(94, 110, 255, 0.3);
 }
 
 .profile-field {
@@ -503,9 +539,9 @@
 .profile-field input {
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.38);
-  background: rgba(20, 22, 32, 0.4);
-  color: inherit;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(15, 18, 29, 0.7);
+  color: rgba(236, 238, 250, 0.95);
   font: inherit;
 }
 
