@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: product-generator
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5050}:5050"
+    environment:
+      # Server config
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5050
+
+      # Security (MUST be set via .env file)
+      JWT_SECRET: ${JWT_SECRET}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+
+      # API Services
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL:-}
+      OPENROUTER_SITE_NAME: ${OPENROUTER_SITE_NAME:-}
+
+      # Database (optional)
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+
+      # Payment (optional)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+
+      # OAuth (optional)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Debug (optional)
+      DEBUG: ${DEBUG:-false}
+      SHOW_ERRORS: ${SHOW_ERRORS:-false}
+
+    volumes:
+      # Persist uploads and data
+      - uploads:/app/server/uploads
+      - data:/app/server/data
+
+    networks:
+      - app-network
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5050/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  uploads:
+    driver: local
+  data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Development configuration (overrides docker-compose.yml)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: product-generator-dev
+    environment:
+      NODE_ENV: development
+      DEBUG: "true"
+      SHOW_ERRORS: "true"
+    ports:
+      - "5050:5050"  # Server
+      - "5173:5173"  # Vite dev server (if running client in Docker)
+    volumes:
+      # Mount source code for hot reload
+      - ./server/src:/app/server/src
+      - ./client/src:/app/client/src
+      - ./shared:/app/shared
+      - uploads-dev:/app/server/uploads
+      - data-dev:/app/server/data
+      - /app/server/node_modules
+      - /app/client/node_modules
+    command: npm run dev
+
+volumes:
+  uploads-dev:
+  data-dev:

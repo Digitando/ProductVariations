@@ -1,0 +1,50 @@
+# Railway ignore file
+# Files and directories to exclude from Railway deployment
+
+# Development files
+*.log
+.env
+.env.local
+.env.*.local
+.env.development
+
+# Node modules (will be reinstalled)
+node_modules/
+
+# Build artifacts
+dist/
+dist-ssr/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test files
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+test/
+
+# Documentation (optional - include if you want docs deployed)
+*.md
+!README.md
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Local data
+server/data/
+server/uploads/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

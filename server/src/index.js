@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const { body, validationResult } = require('express-validator');
@@ -182,12 +183,41 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+// Production: Enable response compression
+app.use(compression({
+  level: 6, // Compression level (0-9)
+  threshold: 1024, // Only compress responses larger than 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+}));
+
 app.use(express.json({ limit: '20mb' }));
+
 // Security: Sanitize user input to prevent NoSQL injection
 app.use(mongoSanitize({
   replaceWith: '_',
 }));
-app.use('/uploads', express.static(UPLOAD_DIR));
+
+// Production: Static file serving with caching
+const cacheControl = process.env.NODE_ENV === 'production'
+  ? 'public, max-age=31536000, immutable' // 1 year for production
+  : 'public, max-age=0'; // No cache for development
+
+app.use('/uploads', express.static(UPLOAD_DIR, {
+  maxAge: process.env.NODE_ENV === 'production' ? '1y' : '0',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png') || path.endsWith('.webp')) {
+      res.setHeader('Cache-Control', cacheControl);
+    }
+  },
+}));
+
 app.use(optionalAuth);
 app.use(['/auth/register', '/auth/login', '/auth/google'], authLimiter);
 app.use('/api/', apiLimiter);
@@ -1351,8 +1381,56 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
   }
 });
 
+// Production: Enhanced health check endpoint
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Production: Detailed diagnostics endpoint (only in debug mode)
+app.get('/api/diagnostics', (req, res) => {
+  const isDebugMode = process.env.DEBUG === 'true' || process.env.SHOW_ERRORS === 'true';
+
+  if (!isDebugMode && process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Diagnostics disabled in production. Set DEBUG=true to enable.' });
+  }
+
+  const diagnostics = {
+    server: {
+      status: 'running',
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version,
+      platform: process.platform,
+      memory: process.memoryUsage(),
+      port: PORT,
+    },
+    configuration: {
+      supabase: !!supabaseClient,
+      stripe: !!stripeClient,
+      openrouter: !!OPENROUTER_API_KEY,
+      googleOAuth: !!process.env.GOOGLE_CLIENT_ID,
+      jwtConfigured: !!JWT_SECRET,
+      jwtSecretLength: JWT_SECRET?.length || 0,
+      clientBuild: hasClientBuild,
+      corsOrigins: allowedOrigins,
+    },
+    features: {
+      rateLimit: true,
+      helmet: true,
+      cors: true,
+      inputValidation: true,
+      xssProtection: true,
+      fileValidation: true,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  res.json(diagnostics);
 });
 
 if (hasClientBuild) {
@@ -1375,30 +1453,89 @@ if (hasClientBuild) {
 // Security: Global error handler - hide stack traces in production
 app.use((err, req, res, next) => {
   // Log error details for debugging (server-side only)
-  console.error('Error:', {
+  const errorDetails = {
     message: err.message,
     path: req.path,
     method: req.method,
     timestamp: new Date().toISOString(),
+    status: err.status || 500,
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-  });
+  };
 
-  // Security: Don't leak error details in production
-  const message = process.env.NODE_ENV === 'production'
+  console.error('=== ERROR HANDLER ===');
+  console.error(JSON.stringify(errorDetails, null, 2));
+  console.error('=====================');
+
+  // Security: Don't leak error details in production unless DEBUG mode is enabled
+  const isDebugMode = process.env.DEBUG === 'true' || process.env.SHOW_ERRORS === 'true';
+  const message = (process.env.NODE_ENV === 'production' && !isDebugMode)
     ? 'An error occurred processing your request.'
     : err.message || 'Internal server error';
 
-  res.status(err.status || 500).json({ error: message });
+  res.status(err.status || 500).json({
+    error: message,
+    ...(isDebugMode && { details: errorDetails }),
+  });
 });
 
-// Security: Log server startup
-console.log(`API server starting...`);
+// Production: Comprehensive startup validation and logging
+console.log('\n=== SERVER STARTUP ===');
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`Port: ${PORT}`);
+console.log(`Time: ${new Date().toISOString()}`);
+console.log('\n=== CONFIGURATION ===');
 console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
-console.log(`Supabase: ${supabaseClient ? 'Connected' : 'Using local storage'}`);
-console.log(`Stripe: ${stripeClient ? 'Configured' : 'Disabled'}`);
+console.log(`Supabase: ${supabaseClient ? '✓ Connected' : '⚠ Using local storage'}`);
+console.log(`Stripe: ${stripeClient ? '✓ Configured' : '⚠ Disabled'}`);
+console.log(`OpenRouter API: ${OPENROUTER_API_KEY ? '✓ Configured' : '✗ Missing'}`);
+console.log(`Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✓ Configured' : '⚠ Disabled'}`);
+console.log(`JWT Secret: ${JWT_SECRET ? `✓ Set (${JWT_SECRET.length} chars)` : '✗ Missing'}`);
+console.log(`Client Build: ${hasClientBuild ? '✓ Found' : '⚠ Not found'}`);
+console.log('\n=== SECURITY FEATURES ===');
+console.log('✓ CORS Protection');
+console.log('✓ Helmet Security Headers');
+console.log('✓ Rate Limiting');
+console.log('✓ Input Validation');
+console.log('✓ XSS Protection');
+console.log('✓ File Upload Validation');
+console.log('\n=====================\n');
 
-app.listen(PORT, () => {
-  console.log(`✓ API server listening on port ${PORT}`);
-  console.log(`✓ Security features: CORS, Helmet, Rate Limiting, Input Validation, XSS Protection`);
+// Production: Add uncaught exception handlers
+process.on('uncaughtException', (error) => {
+  console.error('=== UNCAUGHT EXCEPTION ===');
+  console.error(error);
+  console.error('=========================');
+  process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('=== UNHANDLED REJECTION ===');
+  console.error('Promise:', promise);
+  console.error('Reason:', reason);
+  console.error('==========================');
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`✅ SERVER READY`);
+  console.log(`✓ Listening on port ${PORT}`);
+  console.log(`✓ Health check: http://localhost:${PORT}/health`);
+  console.log(`\n👉 To enable debug mode in production, set: DEBUG=true or SHOW_ERRORS=true\n`);
+});
+
+// Production: Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  server.close(() => {
+    console.log('Server closed. Exiting process.');
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
