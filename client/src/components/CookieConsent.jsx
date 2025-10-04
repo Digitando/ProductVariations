@@ -190,10 +190,10 @@ export default function CookieConsent() {
 
             <footer className="cookie-consent__footer">
               <div className="cookie-consent__links">
-                <a href="/cookie-policy" target="_blank" rel="noreferrer">
+                <a href="/cookie-policy/index.html" target="_blank" rel="noopener noreferrer">
                   Cookie policy
                 </a>
-                <a href="/privacy" target="_blank" rel="noreferrer">
+                <a href="/privacy/index.html" target="_blank" rel="noopener noreferrer">
                   Privacy notice
                 </a>
               </div>
