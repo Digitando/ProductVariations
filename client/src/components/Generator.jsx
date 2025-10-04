@@ -1843,7 +1843,7 @@ export default function Generator({
           )}
 
           {errorMessage && <p className="chat-status chat-status--error">{errorMessage}</p>}
-          {statusMessage && !errorMessage && (
+          {statusMessage && !errorMessage && isAuthenticated && (
             <p className="chat-status chat-status--info">{statusMessage}</p>
           )}
         </div>
