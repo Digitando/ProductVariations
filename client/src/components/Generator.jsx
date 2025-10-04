@@ -1264,7 +1264,15 @@ export default function Generator({
                   )}
                 </div>
                 <div className="chat-history__meta">
-                  <strong>{session.title || buildPromptSummary(session.prompts, session.customPrompt)}</strong>
+                  {(() => {
+                    const title = session.title || buildPromptSummary(session.prompts, session.customPrompt)
+                    const marquee = title.length > 18 ? ' chat-history__title--marquee' : ''
+                    return (
+                      <strong className={`chat-history__title${marquee}`} title={title}>
+                        {title}
+                      </strong>
+                    )
+                  })()}
                   <span>{formatRelativeTime(session.createdAt)}</span>
                 </div>
               </button>
