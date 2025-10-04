@@ -478,17 +478,23 @@ function CloseIcon(props) {
 function formatRelativeTime(input) {
   if (!input) return ''
   const date = typeof input === 'string' ? new Date(input) : input
-  const diffMs = Date.now() - date.getTime()
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  let diffMs = Date.now() - date.getTime()
   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
   const divisions = [
-    { amount: 60_000 * 60 * 24, unit: 'day' },
-    { amount: 60_000 * 60, unit: 'hour' },
-    { amount: 60_000, unit: 'minute' },
+    { amount: 1_000 * 60 * 60 * 24 * 365, unit: 'year' },
+    { amount: 1_000 * 60 * 60 * 24 * 30, unit: 'month' },
+    { amount: 1_000 * 60 * 60 * 24, unit: 'day' },
+    { amount: 1_000 * 60 * 60, unit: 'hour' },
+    { amount: 1_000 * 60, unit: 'minute' },
   ]
 
   for (const division of divisions) {
     if (Math.abs(diffMs) >= division.amount) {
-      return rtf.format(Math.round(diffMs / division.amount), division.unit)
+      return rtf.format(-Math.round(diffMs / division.amount), division.unit)
     }
   }
 
@@ -585,6 +591,7 @@ export default function Generator({
     () => sessions.find((session) => session.id === activeSessionId) || null,
     [sessions, activeSessionId],
   )
+  const viewingSavedSession = Boolean(activeSessionId && activeSession)
 
   const filteredHistory = useMemo(() => {
     const query = historyQuery.trim().toLowerCase()
@@ -954,6 +961,8 @@ export default function Generator({
 
   const isAuthenticated = Boolean(user)
   const disableInputs = isGenerating
+  const showComposer = isAuthenticated && !viewingSavedSession
+  const showAuthPrompt = !isAuthenticated
   const profileInitial = (user?.name || user?.email || 'A').slice(0, 1).toUpperCase()
   const profileLabel = user?.name || user?.email || 'Your profile'
   const profileHint = user ? 'Manage account & preferences' : 'Sign in to save your sessions'
@@ -1527,10 +1536,12 @@ export default function Generator({
         </div>
 
         <div
-          className={`chat-composer${isAuthenticated ? '' : ' chat-composer--locked'}`}
+          className={`chat-composer${showAuthPrompt ? ' chat-composer--locked' : ''}${
+            !showComposer && !showAuthPrompt ? ' chat-composer--readonly' : ''
+          }`}
           ref={composerRef}
         >
-          {isAuthenticated ? (
+          {showComposer ? (
             <>
               <div className="chat-composer__bar">
             <div className="chat-composer__control-wrapper">
@@ -1766,8 +1777,8 @@ export default function Generator({
             </button>
           </div>
 
-          {(uploadPreview || selectedPromptDetails.length > 0 || customPrompt.trim()) && (
-            <div className="chat-chips">
+              {(uploadPreview || selectedPromptDetails.length > 0 || customPrompt.trim()) && (
+                <div className="chat-chips">
               {uploadPreview && (
                 <button
                   type="button"
@@ -1804,9 +1815,9 @@ export default function Generator({
                 <span className="chat-chip chat-chip--custom">{customPrompt.trim()}</span>
               )}
             </div>
-          )}
+              )}
             </>
-          ) : (
+          ) : showAuthPrompt ? (
             <div className="chat-composer__cta" role="presentation">
               <h3>Log in to generate MetaVariations</h3>
               <p>
@@ -1814,6 +1825,19 @@ export default function Generator({
               </p>
               <button type="button" className="primary chat-composer__cta-button" onClick={handleAuthRequest}>
                 Log in or sign up
+              </button>
+            </div>
+          ) : (
+            <div className="chat-composer__readonly" role="presentation">
+              <div>
+                <h3>Viewing a saved session</h3>
+                <p>
+                  This history is read-only so you can review prompts, settings, and generated results without editing them.
+                  Start a new variation run whenever you are ready to brief the assistant again.
+                </p>
+              </div>
+              <button type="button" className="primary" onClick={handleStartNewChat}>
+                Start a new session
               </button>
             </div>
           )}
