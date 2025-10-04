@@ -16,42 +16,282 @@ const EMPTY_CHAT_MESSAGE = {
 
 const QUICK_SUGGESTIONS = [
   {
-    id: 'suggestion-hero-shot',
-    title: 'Polish my hero image',
-    description: 'Studio-ready beauty setup with glossy reflections and soft gradients.',
+    id: 'suggestion-beauty-hero-glow',
+    title: 'Beauty hero glow',
+    description: 'Studio hero for skincare bottles with luminous reflections.',
     categoryId: 'beauty_cosmetics',
+    subcategoryId: 'beauty_cosmetics_skincare',
     promptIds: ['beauty_cosmetics-01', 'beauty_cosmetics-03'],
     customPrompt:
-      'Balance a warm gradient backdrop with crisp reflections so the packaging looks premium and editorial ready.',
+      'Dial up reflective acrylic blocks and dewy highlights so the packaging looks ultra-premium and editorial ready.',
   },
   {
-    id: 'suggestion-energize',
-    title: 'Make it athletic & bold',
-    description: 'Outdoor lifestyle energy, perfect for fitness gear launches.',
+    id: 'suggestion-beauty-fragrance',
+    title: 'Fragrance spotlight',
+    description: 'Perfume hero with dreamy backlight and diffusion.',
+    categoryId: 'beauty_cosmetics',
+    subcategoryId: 'beauty_cosmetics_fragrances',
+    promptIds: ['beauty_cosmetics-03', 'beauty_cosmetics-11'],
+    customPrompt:
+      'Add a soft bokeh glow and a mirrored base so the bottle looks like a campaign visual.',
+  },
+  {
+    id: 'suggestion-beauty-flatlay',
+    title: 'Routine flat lay',
+    description: 'Organised makeup story for a morning routine post.',
+    categoryId: 'beauty_cosmetics',
+    subcategoryId: 'beauty_cosmetics_makeup',
+    promptIds: ['beauty_cosmetics-02', 'beauty_cosmetics-06'],
+    customPrompt:
+      'Style brushes, palettes, and lifestyle props in a tidy grid with soft top-down daylight and linen texture.',
+  },
+  {
+    id: 'suggestion-beauty-nightstand',
+    title: 'Nightstand ritual',
+    description: 'Cozy bedside skincare vignette with warm lighting.',
+    categoryId: 'beauty_cosmetics',
+    subcategoryId: 'beauty_cosmetics_skincare',
+    promptIds: ['beauty_cosmetics-12', 'beauty_cosmetics-13'],
+    customPrompt:
+      'Include a wood nightstand, glowing lamp, and hardcover book to sell the relaxing bedtime ritual.',
+  },
+  {
+    id: 'suggestion-supplements-morning',
+    title: 'Morning wellness bar',
+    description: 'Bright kitchen counter with vitamins and citrus props.',
+    categoryId: 'health_supplements',
+    subcategoryId: 'vitamins_minerals',
+    promptIds: ['health_supplements-01', 'health_supplements-06'],
+    customPrompt:
+      'Style sliced citrus, a water glass, and morning sun streaks to reinforce a healthy start to the day.',
+  },
+  {
+    id: 'suggestion-supplements-gym',
+    title: 'Gym bag essentials',
+    description: 'Workout flatlay for protein and shaker bottles.',
+    categoryId: 'health_supplements',
+    subcategoryId: 'workout_supplements',
+    promptIds: ['health_supplements-07', 'health_supplements-08'],
+    customPrompt:
+      'Include a textured rubber floor, dumbbells, and a towel for a gritty, high-energy training vibe.',
+  },
+  {
+    id: 'suggestion-supplements-lineup',
+    title: 'Product line family',
+    description: 'Tiered podium display for a full supplement range.',
+    categoryId: 'health_supplements',
+    subcategoryId: 'protein_powders',
+    promptIds: ['health_supplements-02', 'health_supplements-10'],
+    customPrompt:
+      'Arrange the full SKU lineup on cylindrical risers with a soft gradient background and clean reflections.',
+  },
+  {
+    id: 'suggestion-fitness-motion',
+    title: 'Dynamic fitness motion',
+    description: 'Energetic studio look for equipment in action.',
     categoryId: 'fitness_sport',
-    promptIds: ['fitness_sport-02'],
+    subcategoryId: 'fitness_sport_equipment',
+    promptIds: ['fitness_sport-01', 'fitness_sport-10'],
     customPrompt:
-      'Show the product in motion with dynamic lighting, shallow depth of field, and vibrant athletic energy.',
+      'Add motion streaks and angled rim lights so the gear reads powerful and high-performance.',
   },
   {
-    id: 'suggestion-tech',
-    title: 'Highlight tech features',
-    description: 'Hero desk setup with cinematic lighting for electronics.',
+    id: 'suggestion-fitness-lookbook',
+    title: 'Athletic lookbook',
+    description: 'Apparel showcase on mannequins with bold contrast.',
+    categoryId: 'fitness_sport',
+    subcategoryId: 'fitness_sport_apparel',
+    promptIds: ['fitness_sport-02', 'fitness_sport-05'],
+    customPrompt:
+      'Shoot the outfit on headless mannequins with a saturated gradient background and dramatic sidelight.',
+  },
+  {
+    id: 'suggestion-fitness-homegym',
+    title: 'Home gym setup',
+    description: 'Compact home workout corner styling.',
+    categoryId: 'fitness_sport',
+    subcategoryId: 'fitness_sport_machines',
+    promptIds: ['fitness_sport-04', 'fitness_sport-06'],
+    customPrompt:
+      'Place the gear on hardwood floor with a plant and smart speaker to show an aspirational condo gym.',
+  },
+  {
+    id: 'suggestion-electronics-desktop',
+    title: 'Creator desk hero',
+    description: 'Laptop and monitor workstation with neon accents.',
     categoryId: 'electronics',
-    promptIds: ['electronics-01'],
+    subcategoryId: 'electronics_laptops',
+    promptIds: ['electronics-01', 'electronics-10'],
     customPrompt:
-      'Stage the device on a moody workstation with accent lighting that outlines key hardware and materials.',
+      'Light with cyan-magenta gradients and include stylus + notebook to emphasise creative pro workflow.',
   },
   {
-    id: 'suggestion-launch',
-    title: 'Launch-ready mockups',
-    description: 'Minimal packaging mockups ideal for mobile accessories.',
-    categoryId: 'mobile_accessories',
-    promptIds: ['mobile_accessories-01', 'mobile_accessories-11'],
+    id: 'suggestion-electronics-unboxing',
+    title: 'Unboxing layout',
+    description: 'Clean unboxing spread for smartphone launch.',
+    categoryId: 'electronics',
+    subcategoryId: 'electronics_smartphones',
+    promptIds: ['electronics-02', 'electronics-05'],
     customPrompt:
-      'Present the product with floating components and soft drop shadows on a clean gradient, ready for a landing page.',
+      'Arrange box components neatly with soft shadows and add subtle depth haze for a premium unboxing feel.',
+  },
+  {
+    id: 'suggestion-electronics-tablet',
+    title: 'Tablet productivity',
+    description: 'Tablet with keyboard in a modern office nook.',
+    categoryId: 'electronics',
+    subcategoryId: 'electronics_tablets',
+    promptIds: ['electronics-03', 'electronics-12'],
+    customPrompt:
+      'Include stylus notes, task lists, and a blurred city window to sell remote productivity vibes.',
+  },
+  {
+    id: 'suggestion-mobile-case',
+    title: 'Case colour wall',
+    description: 'Gradient wall of cases for a bold merchandising shot.',
+    categoryId: 'mobile_accessories',
+    subcategoryId: 'mobile_accessories_cases',
+    promptIds: ['mobile_accessories-01', 'mobile_accessories-10'],
+    customPrompt:
+      'Display multiple case colours on floating pegs with directional light for crisp drop shadows.',
+  },
+  {
+    id: 'suggestion-mobile-nightstand',
+    title: 'Nightstand charging',
+    description: 'Wireless charging vignette in a calming bedroom.',
+    categoryId: 'mobile_accessories',
+    subcategoryId: 'mobile_accessories_chargers',
+    promptIds: ['mobile_accessories-02', 'mobile_accessories-05'],
+    customPrompt:
+      'Style a linen nightstand with lamp glow, hardcover book, and ambient bokeh to emphasise wind-down charging.',
+  },
+  {
+    id: 'suggestion-mobile-audio',
+    title: 'Pocketable audio drop',
+    description: 'Earbuds on reflective surface with water droplet detail.',
+    categoryId: 'mobile_accessories',
+    subcategoryId: 'mobile_accessories_audio',
+    promptIds: ['mobile_accessories-03', 'mobile_accessories-12'],
+    customPrompt:
+      'Add subtle water droplets and LED accents to emphasise rugged, sweat-ready earbuds.',
+  },
+  {
+    id: 'suggestion-appliance-kitchen',
+    title: 'Kitchen hero island',
+    description: 'Appliance staged on marble island with ingredients.',
+    categoryId: 'home_appliances',
+    subcategoryId: 'home_appliances_kitchen',
+    promptIds: ['home_appliances-01', 'home_appliances-04'],
+    customPrompt:
+      'Include fresh produce, utensils, and rim lights so the appliance looks ready for a recipe reel.',
+  },
+  {
+    id: 'suggestion-appliance-clean',
+    title: 'Laundry refresh',
+    description: 'Cleaning appliance hero with folded towels.',
+    categoryId: 'home_appliances',
+    subcategoryId: 'home_appliances_cleaning',
+    promptIds: ['home_appliances-02', 'home_appliances-11'],
+    customPrompt:
+      'Stage a bright utility room with stacked towels and sunlight to communicate fresh, efficient cleaning.',
+  },
+  {
+    id: 'suggestion-furniture-lounge',
+    title: 'Living room lounge',
+    description: 'Sectional styling with cozy lighting and decor.',
+    categoryId: 'furniture_decor',
+    subcategoryId: 'furniture_decor_seating',
+    promptIds: ['furniture_decor-01', 'furniture_decor-05'],
+    customPrompt:
+      'Style layered throws, coffee table books, and warm floor lamps to build a catalog-ready living room.',
+  },
+  {
+    id: 'suggestion-furniture-lighting',
+    title: 'Statement lighting',
+    description: 'Sculptural lamp hero on a minimalist set.',
+    categoryId: 'furniture_decor',
+    subcategoryId: 'furniture_decor_lighting',
+    promptIds: ['furniture_decor-02', 'furniture_decor-11'],
+    customPrompt:
+      'Use a dark-to-light gradient backdrop and gentle fog to highlight the lamp glow and material finish.',
+  },
+  {
+    id: 'suggestion-food-coffee',
+    title: 'Cafe-style pour',
+    description: 'Gourmet beverage setup with steam and props.',
+    categoryId: 'food_beverage',
+    subcategoryId: 'food_beverage_drinks',
+    promptIds: ['food_beverage-01', 'food_beverage-06'],
+    customPrompt:
+      'Capture steam trails, latte art, and small pastries on rustic wood to mimic an artisan coffee shop.',
+  },
+  {
+    id: 'suggestion-food-hydration',
+    title: 'Functional hydration',
+    description: 'Electrolyte drink hero for wellness campaigns.',
+    categoryId: 'food_beverage',
+    subcategoryId: 'food_beverage_health',
+    promptIds: ['food_beverage-02', 'food_beverage-10'],
+    customPrompt:
+      'Incorporate sliced fruit, condensation, and a bright gradient to communicate energising hydration.',
+  },
+  {
+    id: 'suggestion-outdoor-camping',
+    title: 'Camp setup overview',
+    description: 'Camping bundle laid out on scenic campsite.',
+    categoryId: 'outdoor_travel',
+    subcategoryId: 'outdoor_travel_camping',
+    promptIds: ['outdoor_travel-01', 'outdoor_travel-04'],
+    customPrompt:
+      'Include tent, lantern, and boots arranged on pine needles with golden hour lighting for an adventurous mood.',
+  },
+  {
+    id: 'suggestion-outdoor-backpack',
+    title: 'Backpack load-out',
+    description: 'Travel backpack hero with organised contents.',
+    categoryId: 'outdoor_travel',
+    subcategoryId: 'outdoor_travel_backpacks',
+    promptIds: ['outdoor_travel-02', 'outdoor_travel-11'],
+    customPrompt:
+      'Lay out travel essentials around the pack on a concrete floor with directional light for crisp product edges.',
+  },
+  {
+    id: 'suggestion-tech-minimal',
+    title: 'Minimal desk drop',
+    description: 'Three-product tech hero on glass desk.',
+    categoryId: 'electronics',
+    subcategoryId: 'electronics_laptops',
+    promptIds: ['electronics-04', 'electronics-06'],
+    customPrompt:
+      'Use a smoked glass desk with floating shelves and cool temperature lighting for a modern spec-sheet feel.',
+  },
+  {
+    id: 'suggestion-fitness-recovery',
+    title: 'Recovery essentials',
+    description: 'Massage gun and recovery tools set.',
+    categoryId: 'fitness_sport',
+    subcategoryId: 'fitness_sport_equipment',
+    promptIds: ['fitness_sport-03', 'fitness_sport-12'],
+    customPrompt:
+      'Highlight foam rollers, massage gun, and calming blues to communicate post-workout relief.',
+  },
+  {
+    id: 'suggestion-mobile-bundle',
+    title: 'Accessory bundle',
+    description: 'Starter kit of charger, buds, and case.',
+    categoryId: 'mobile_accessories',
+    promptIds: ['mobile_accessories-04', 'mobile_accessories-07', 'mobile_accessories-13'],
+    customPrompt:
+      'Lay accessories on a color-blocked surface with top-down lighting for a merch-ready starter bundle.',
   },
 ]
+
+const SUGGESTIONS_PER_SLIDE = 4
+
+const QUICK_SUGGESTION_SLIDES = Array.from({ length: Math.ceil(QUICK_SUGGESTIONS.length / SUGGESTIONS_PER_SLIDE) })
+  .map((_, index) =>
+    QUICK_SUGGESTIONS.slice(index * SUGGESTIONS_PER_SLIDE, index * SUGGESTIONS_PER_SLIDE + SUGGESTIONS_PER_SLIDE),
+  )
 
 function CheckMarkIcon(props) {
   return (
@@ -146,6 +386,10 @@ export default function Generator({
   const [openMenu, setOpenMenu] = useState(null)
   const composerRef = useRef(null)
   const menuRefs = useRef({ category: [], subcategory: [], prompts: [] })
+  const [activeSuggestionSlide, setActiveSuggestionSlide] = useState(0)
+
+  const suggestionSlides = QUICK_SUGGESTION_SLIDES
+  const totalSuggestionSlides = suggestionSlides.length || 1
 
   const activeCategory = useMemo(() => getStandaloneDefinition(selectedCategoryId), [selectedCategoryId])
   const activeSubcategories = activeCategory?.subcategories || []
@@ -546,6 +790,32 @@ export default function Generator({
   const showSuggestions =
     chatMessages.length === 1 && chatMessages[0]?.id === EMPTY_CHAT_MESSAGE.id && !isGenerating
 
+  useEffect(() => {
+    if (showSuggestions) {
+      setActiveSuggestionSlide(0)
+    }
+  }, [showSuggestions])
+
+  useEffect(() => {
+    if (!showSuggestions || totalSuggestionSlides <= 1) {
+      return undefined
+    }
+
+    const timer = setInterval(() => {
+      setActiveSuggestionSlide((previous) => (previous + 1) % totalSuggestionSlides)
+    }, 6500)
+
+    return () => clearInterval(timer)
+  }, [showSuggestions, totalSuggestionSlides])
+
+  const handleNextSuggestionSlide = useCallback(() => {
+    setActiveSuggestionSlide((previous) => (previous + 1) % totalSuggestionSlides)
+  }, [totalSuggestionSlides])
+
+  const handlePrevSuggestionSlide = useCallback(() => {
+    setActiveSuggestionSlide((previous) => (previous - 1 + totalSuggestionSlides) % totalSuggestionSlides)
+  }, [totalSuggestionSlides])
+
   const handleSuggestionSelect = (suggestion) => {
     if (!suggestion) return
 
@@ -794,20 +1064,64 @@ export default function Generator({
                     <span>Popular starter briefs</span>
                     <p>Pick one and tweak the details to move even faster.</p>
                   </div>
-                  <div className="chat-suggestions__grid">
-                    {QUICK_SUGGESTIONS.map((suggestion) => (
-                      <button
-                        key={suggestion.id}
-                        type="button"
-                        className="chat-suggestion"
-                        onClick={() => handleSuggestionSelect(suggestion)}
-                      >
-                        <strong>{suggestion.title}</strong>
-                        <span>{suggestion.description}</span>
-                        <em>Apply preset</em>
-                      </button>
-                    ))}
+                  <div className="chat-suggestions__slider" role="group" aria-label="Starter brief carousel">
+                    <div
+                      className="chat-suggestions__track"
+                      style={{ transform: `translateX(-${activeSuggestionSlide * 100}%)` }}
+                    >
+                      {suggestionSlides.map((slide, slideIndex) => (
+                        <div className="chat-suggestions__slide" key={`starter-slide-${slideIndex}`}>
+                          {slide.map((suggestion) => (
+                            <button
+                              key={suggestion.id}
+                              type="button"
+                              className="chat-suggestion"
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                            >
+                              <strong>{suggestion.title}</strong>
+                              <span>{suggestion.description}</span>
+                              <em>Apply preset</em>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                  {totalSuggestionSlides > 1 && (
+                    <div className="chat-suggestions__controls">
+                      <button
+                        type="button"
+                        className="chat-suggestions__nav"
+                        onClick={handlePrevSuggestionSlide}
+                        aria-label="Previous starter briefs"
+                      >
+                        ‹
+                      </button>
+                      <div className="chat-suggestions__dots" role="tablist" aria-label="Starter brief slides">
+                        {suggestionSlides.map((_, index) => (
+                          <button
+                            key={`starter-dot-${index}`}
+                            type="button"
+                            className={`chat-suggestions__dot${
+                              activeSuggestionSlide === index ? ' chat-suggestions__dot--active' : ''
+                            }`}
+                            onClick={() => setActiveSuggestionSlide(index)}
+                            aria-label={`Show starter set ${index + 1}`}
+                            aria-selected={activeSuggestionSlide === index}
+                            role="tab"
+                          />
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="chat-suggestions__nav"
+                        onClick={handleNextSuggestionSlide}
+                        aria-label="Next starter briefs"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {chatMessages.map((message) => {
