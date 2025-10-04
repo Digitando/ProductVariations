@@ -119,15 +119,6 @@ export default function GoogleSignInButton({ clientId, onCredential, text = 'Con
           text: normalizedButtonText,
           ...(renderWidth ? { width: renderWidth } : {}),
         })
-
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.warn('Google One Tap not displayed:', {
-              notDisplayedReason: notification.getNotDisplayedReason?.(),
-              skippedReason: notification.getSkippedReason?.(),
-            })
-          }
-        })
       },
       onError: () => {
         if (!isMounted) {
