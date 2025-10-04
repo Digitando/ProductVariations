@@ -1152,6 +1152,7 @@ function App() {
             }
             setProfileModal({ open: true, initialTab: 'overview' })
           }}
+          onRequestAuth={() => openAuthModal('login')}
         />
       </main>
 

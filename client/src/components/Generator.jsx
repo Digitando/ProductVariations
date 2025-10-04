@@ -528,6 +528,7 @@ export default function Generator({
   onRefreshSessions,
   user,
   onOpenProfile,
+  onRequestAuth,
 }) {
   const [uploadFile, setUploadFile] = useState(null)
   const [uploadPreview, setUploadPreview] = useState('')
@@ -951,6 +952,7 @@ export default function Generator({
     return images[activeImageIndex] || images[0] || uploadPreview
   }, [activeCanvasItem, activeImageIndex, uploadPreview])
 
+  const isAuthenticated = Boolean(user)
   const disableInputs = isGenerating
   const profileInitial = (user?.name || user?.email || 'A').slice(0, 1).toUpperCase()
   const profileLabel = user?.name || user?.email || 'Your profile'
@@ -980,6 +982,14 @@ export default function Generator({
   const handleNextSuggestionSlide = useCallback(() => {
     setActiveSuggestionSlide((previous) => (previous + 1) % totalSuggestionSlides)
   }, [totalSuggestionSlides])
+
+  const handleAuthRequest = useCallback(() => {
+    if (onRequestAuth) {
+      onRequestAuth()
+      return
+    }
+    onOpenProfile?.()
+  }, [onRequestAuth, onOpenProfile])
 
   const handlePrevSuggestionSlide = useCallback(() => {
     setActiveSuggestionSlide((previous) => (previous - 1 + totalSuggestionSlides) % totalSuggestionSlides)
@@ -1516,8 +1526,13 @@ export default function Generator({
           </aside>}
         </div>
 
-        <div className="chat-composer" ref={composerRef}>
-          <div className="chat-composer__bar">
+        <div
+          className={`chat-composer${isAuthenticated ? '' : ' chat-composer--locked'}`}
+          ref={composerRef}
+        >
+          {isAuthenticated ? (
+            <>
+              <div className="chat-composer__bar">
             <div className="chat-composer__control-wrapper">
               <button
                 type="button"
@@ -1788,6 +1803,18 @@ export default function Generator({
               {customPrompt.trim() && (
                 <span className="chat-chip chat-chip--custom">{customPrompt.trim()}</span>
               )}
+            </div>
+          )}
+            </>
+          ) : (
+            <div className="chat-composer__cta" role="presentation">
+              <h3>Log in to generate MetaVariations</h3>
+              <p>
+                Sign in or create an account to unlock the generator, save sessions, and export your favourite looks.
+              </p>
+              <button type="button" className="primary chat-composer__cta-button" onClick={handleAuthRequest}>
+                Log in or sign up
+              </button>
             </div>
           )}
 
