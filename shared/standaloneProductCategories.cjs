@@ -5,6 +5,7 @@ const categories = {
       { id: 'beauty_cosmetics_makeup', label: 'Makeup' },
       { id: 'beauty_cosmetics_skincare', label: 'Skincare' },
       { id: 'beauty_cosmetics_fragrances', label: 'Fragrances' },
+      { id: 'beauty_cosmetics_haircare', label: 'Haircare' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -133,6 +134,24 @@ const categories = {
             'Photograph a serum droplet creating ripples on a glossy liquid surface beside the product packaging. High-speed flash to freeze motion, soft gradient backdrop, no hands or text.',
         },
       ],
+      'Haircare Treatments': [
+        {
+          idSuffix: '90',
+          name: 'Haircare_Salon_Display',
+          title: 'Haircare salon display',
+          description: 'Haircare products arranged on a salon vanity with styling tools.',
+          prompt:
+            'Create a premium beauty photo of my haircare products arranged on a salon vanity with brushes, combs, and a diffuser in view. Warm light washes across glossy bottles while mist adds a haircare treatment vibe. No people, no text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Haircare_Shower_Ritual',
+          title: 'Haircare shower ritual',
+          description: 'Haircare duo balanced on a tiled ledge with steam and droplets.',
+          prompt:
+            'Photograph my haircare shampoo and conditioner on a tiled shower ledge with droplets, eucalyptus, and gentle steam to emphasize a relaxing haircare ritual. Lighting is soft and refreshing. No people, no text.',
+        },
+      ],
     },
   },
   health_supplements: {
@@ -141,6 +160,7 @@ const categories = {
       { id: 'health_supplements_vitamins', label: 'Vitamins' },
       { id: 'health_supplements_proteins', label: 'Protein Powders' },
       { id: 'health_supplements_dietary', label: 'Dietary Supplements' },
+      { id: 'health_supplements_herbal', label: 'Herbal Remedies' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -269,6 +289,24 @@ const categories = {
             'Capture a tight macro of my supplement bottle neck showing the tamper-evident seal and cap threading with specular highlights. Clean gradient background, no text.',
         },
       ],
+      'Herbal Remedies': [
+        {
+          idSuffix: '90',
+          name: 'Herbal_Tincture_Display',
+          title: 'Herbal tincture display',
+          description: 'Herbal remedy bottles styled with fresh botanicals for a wellness story.',
+          prompt:
+            'Create a wellness still life of my herbal remedies arranged with fresh herbs, mortar and pestle, and amber dropper bottles to emphasize natural herbal remedies. Soft daylight, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Herbal_Tea_Ritual',
+          title: 'Herbal tea ritual',
+          description: 'Herbal supplements steeped with tea accessories for a calm moment.',
+          prompt:
+            'Photograph my herbal supplement drops being added to a cup of herbal tea alongside honey, sliced lemon, and chamomile flowers to reinforce a soothing herbal remedy ritual. Warm morning light, no people or typography.',
+        },
+      ],
     },
   },
   fitness_sport: {
@@ -277,6 +315,7 @@ const categories = {
       { id: 'fitness_sport_equipment', label: 'Sports Equipment' },
       { id: 'fitness_sport_apparel', label: 'Training Apparel' },
       { id: 'fitness_sport_machines', label: 'Exercise Machines' },
+      { id: 'fitness_sport_recovery', label: 'Recovery Gear' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -405,6 +444,24 @@ const categories = {
             'Capture a close-up of my resistance band stretched across a neutral background to highlight surface texture and tension. Use side lighting and shallow depth of field. No text.',
         },
       ],
+      'Recovery Gear': [
+        {
+          idSuffix: '90',
+          name: 'Recovery_Foam_Roller',
+          title: 'Recovery foam roller scene',
+          description: 'Recovery gear styled with foam roller, massage ball, and calm lighting.',
+          prompt:
+            'Photograph my recovery gear—foam roller, massage ball, and stretch strap—arranged on a mat with folded towel and water bottle to emphasize recovery gear for athletes. Soft natural light, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Recovery_Ice_Bath',
+          title: 'Recovery cold therapy prep',
+          description: 'Recovery accessories beside an ice bath bucket for post-training relief.',
+          prompt:
+            'Create a fitness recovery vignette of my recovery gear next to an ice bath bucket with ice packs, compression sleeves, and timer to highlight dedicated recovery gear. Cool lighting, gym setting, no people or typography.',
+        },
+      ],
     },
   },
   electronics: {
@@ -413,6 +470,7 @@ const categories = {
       { id: 'electronics_smartphones', label: 'Smartphones' },
       { id: 'electronics_laptops', label: 'Laptops' },
       { id: 'electronics_tablets', label: 'Tablets' },
+      { id: 'electronics_wearables', label: 'Wearables' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -541,6 +599,24 @@ const categories = {
             'Photograph the power or volume button on my device at macro scale to highlight chamfers and tactile texture. Employ dramatic cross-lighting with blurred background. No text.',
         },
       ],
+      'Wearable Tech': [
+        {
+          idSuffix: '90',
+          name: 'Wearable_Wrist_Display',
+          title: 'Wearable wrist display',
+          description: 'Smartwatch styled on a pedestal with wearable accessories.',
+          prompt:
+            'Create a studio hero image of my wearable smartwatch displayed on a sculpted stand with interchangeable bands and earbuds nearby to spotlight wearable technology. Cool gradient lighting, no text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Wearable_Fitness_Set',
+          title: 'Wearable fitness set',
+          description: 'Fitness wearables arranged with running accessories.',
+          prompt:
+            'Photograph my wearable tracker and smart earbuds alongside running shoes, sweatband, and water bottle to reinforce active wearable tech. Natural daylight, no people or typography.',
+        },
+      ],
     },
   },
   mobile_accessories: {
@@ -549,6 +625,7 @@ const categories = {
       { id: 'mobile_accessories_cases', label: 'Phone Cases' },
       { id: 'mobile_accessories_chargers', label: 'Chargers' },
       { id: 'mobile_accessories_audio', label: 'Headphones & Earbuds' },
+      { id: 'mobile_accessories_mounts', label: 'Mounts & Stands' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -677,6 +754,24 @@ const categories = {
             'Photograph the braided sleeve of my charging cable at macro scale with shallow depth of field to highlight weave pattern. Subtle gradient backdrop, no text.',
         },
       ],
+      'Mounts & Stands': [
+        {
+          idSuffix: '90',
+          name: 'Mount_Dashboard_Display',
+          title: 'Dashboard mount display',
+          description: 'Car dash mount styled with navigation accessories.',
+          prompt:
+            'Create a lifestyle photo of my mounts and stands with a smartphone secured in a dashboard mount, sunglasses, and travel mug to emphasize versatile mobile mounts. Ambient car lighting, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Mount_Desk_Stand',
+          title: 'Adjustable desk stand hero',
+          description: 'Adjustable phone stand highlighted on a workspace.',
+          prompt:
+            'Photograph my adjustable phone stand on a tidy workspace with keyboard, notebook, and plant to showcase functional mobile mounts. Soft natural daylight, no people or text.',
+        },
+      ],
     },
   },
   computing_gaming: {
@@ -685,6 +780,7 @@ const categories = {
       { id: 'computing_gaming_keyboards', label: 'Keyboards' },
       { id: 'computing_gaming_mice', label: 'Mice & Accessories' },
       { id: 'computing_gaming_consoles', label: 'Consoles & Games' },
+      { id: 'computing_gaming_monitors', label: 'Monitors' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -813,6 +909,24 @@ const categories = {
             'Photograph the ear cushion of my gaming headset showing stitching and memory foam texture with soft directional lighting. Background blurred, no text.',
         },
       ],
+      'Monitor Setups': [
+        {
+          idSuffix: '90',
+          name: 'Monitor_Studio_Display',
+          title: 'Monitor studio display',
+          description: 'Monitors arranged with bias lighting for immersive setup.',
+          prompt:
+            'Create a studio hero image of my monitors on a desk with RGB bias lighting, matching keyboard, and mouse to spotlight high-performance gaming monitors. Dark backdrop, no text on screens.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Monitor_Workflow_Split',
+          title: 'Dual monitor workflow',
+          description: 'Dual monitors showing productivity tools for creators.',
+          prompt:
+            'Photograph my dual monitor workflow with color grading panel, stylus, and notebook to emphasize versatile monitors for creators. Soft daylight, screens blank, no people.',
+        },
+      ],
     },
   },
   home_appliances: {
@@ -821,6 +935,7 @@ const categories = {
       { id: 'home_appliances_kitchen', label: 'Small Kitchen Appliances' },
       { id: 'home_appliances_cleaning', label: 'Cleaning Devices' },
       { id: 'home_appliances_homecare', label: 'Home Care Gadgets' },
+      { id: 'home_appliances_climate', label: 'Climate Control' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -949,6 +1064,24 @@ const categories = {
             'Capture a close-up of my appliance power cord wrap or plug with emphasis on tidy storage solutions. Soft lighting and shallow depth of field, no text.',
         },
       ],
+      'Climate Control': [
+        {
+          idSuffix: '90',
+          name: 'Climate_Air_Purifier',
+          title: 'Climate control purifier scene',
+          description: 'Air purifiers and humidifiers arranged with calm lighting.',
+          prompt:
+            'Photograph my climate control appliances—air purifier, humidifier, or dehumidifier—arranged beside plants and neatly stacked books to emphasize modern climate control. Soft daylight, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Climate_Thermostat_Set',
+          title: 'Smart thermostat lifestyle',
+          description: 'Smart thermostat and climate gadgets styled in a living room.',
+          prompt:
+            'Create a lifestyle vignette of my smart thermostat with matching climate control accessories on a console table highlighting smart climate control. Warm ambient lighting, no people or typography.',
+        },
+      ],
     },
   },
   furniture_decor: {
@@ -957,6 +1090,7 @@ const categories = {
       { id: 'furniture_decor_seating', label: 'Seating' },
       { id: 'furniture_decor_lighting', label: 'Lighting' },
       { id: 'furniture_decor_accents', label: 'Decor Accents' },
+      { id: 'furniture_decor_storage', label: 'Storage Solutions' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1085,6 +1219,24 @@ const categories = {
             'Capture a macro shot of my furniture inlay or decorative hardware showing pattern intricacy with directional light. Neutral background, no text.',
         },
       ],
+      'Storage Solutions': [
+        {
+          idSuffix: '90',
+          name: 'Storage_Modular_Credenza',
+          title: 'Storage credenza styling',
+          description: 'Modular storage credenza styled with baskets and decor.',
+          prompt:
+            'Photograph my storage credenza with neatly arranged baskets, books, and decor to emphasize versatile storage solutions. Soft daylight and a tidy interior, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Storage_Shelf_Display',
+          title: 'Storage shelving vignette',
+          description: 'Shelving system styled with organized storage boxes.',
+          prompt:
+            'Create a lifestyle vignette of my shelving system showcasing labeled bins, woven baskets, and folded textiles as smart storage solutions. Warm ambient light, no people.',
+        },
+      ],
     },
   },
   home_living: {
@@ -1093,6 +1245,7 @@ const categories = {
       { id: 'home_living_bedding', label: 'Bedding' },
       { id: 'home_living_rugs', label: 'Rugs' },
       { id: 'home_living_kitchenware', label: 'Kitchenware' },
+      { id: 'home_living_bath', label: 'Bath Essentials' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1221,6 +1374,24 @@ const categories = {
             'Photograph the glaze or metallic finish of my tableware with controlled reflections and shallow depth of field to showcase craftsmanship. Neutral background, no text.',
         },
       ],
+      'Bath Essentials': [
+        {
+          idSuffix: '90',
+          name: 'Bath_Spa_Trays',
+          title: 'Bath essentials spa tray',
+          description: 'Bath essentials arranged on a wooden tray beside a tub.',
+          prompt:
+            'Capture my bath essentials—towels, bath salts, and soap dispensers—styled on a wooden tray beside a soaking tub to spotlight bath essentials. Soft daylight, candles, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Bath_Linen_Stack',
+          title: 'Bath linen stack',
+          description: 'Plush bath linens stacked with spa accessories.',
+          prompt:
+            'Photograph my bath linens stacked with loofah, brush, and essential oils to highlight indulgent bath essentials. Warm ambient lighting, neutral background, no people.',
+        },
+      ],
     },
   },
   food_beverage: {
@@ -1229,6 +1400,7 @@ const categories = {
       { id: 'food_beverage_gourmet', label: 'Gourmet Treats' },
       { id: 'food_beverage_health', label: 'Health Foods' },
       { id: 'food_beverage_drinks', label: 'Coffee & Tea' },
+      { id: 'food_beverage_snacks', label: 'Snacks' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1357,6 +1529,24 @@ const categories = {
             'Photograph a close-up of my packaging label highlighting foil or embossed details with angled light to reveal shine. Background softly blurred, no text.',
         },
       ],
+      'Snack Moments': [
+        {
+          idSuffix: '90',
+          name: 'Snack_GameNight',
+          title: 'Snack game night spread',
+          description: 'Snacks arranged for game night with board games in frame.',
+          prompt:
+            'Create a lifestyle photo of my snack foods arranged around a board game with drinks and napkins to highlight craveable snacks. Warm evening lighting, friends implied but not visible, no text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Snack_OnTheGo',
+          title: 'Snack on-the-go kit',
+          description: 'Snack packs styled inside a commuter bag.',
+          prompt:
+            'Photograph my snack packs neatly organized inside an open commuter bag with headphones, water bottle, and laptop to emphasize portable snacks. Natural daylight, no people or typography.',
+        },
+      ],
     },
   },
   kids_products: {
@@ -1365,6 +1555,7 @@ const categories = {
       { id: 'kids_products_apparel', label: 'Apparel' },
       { id: 'kids_products_toys', label: 'Toys' },
       { id: 'kids_products_strollers', label: 'Strollers & Gear' },
+      { id: 'kids_products_nursery', label: 'Nursery Gear' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1493,6 +1684,24 @@ const categories = {
             'Photograph the surface texture of my teether or sensory toy at macro scale with side lighting to highlight ridges and patterns. Background softly blurred, no text.',
         },
       ],
+      'Nursery Gear': [
+        {
+          idSuffix: '90',
+          name: 'Nursery_Crib_Setup',
+          title: 'Nursery crib setup',
+          description: 'Nursery gear styled around a crib with nightlight glow.',
+          prompt:
+            'Create a cozy nursery vignette with my nursery gear—crib organizer, mobile, and baby monitor—arranged around a crib under soft nightlight glow to highlight thoughtful nursery gear. No people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Nursery_Dresser_Organization',
+          title: 'Nursery dresser organization',
+          description: 'Nursery dresser with organized storage baskets and essentials.',
+          prompt:
+            'Photograph my nursery dresser with changing pad, storage baskets, and baby care products neatly arranged to emphasize organized nursery gear. Soft daylight, pastel palette, no people.',
+        },
+      ],
     },
   },
   toys_hobbies: {
@@ -1501,6 +1710,7 @@ const categories = {
       { id: 'toys_hobbies_building_sets', label: 'Building Sets' },
       { id: 'toys_hobbies_board_games', label: 'Board Games' },
       { id: 'toys_hobbies_modeling', label: 'Model Kits' },
+      { id: 'toys_hobbies_outdoor', label: 'Outdoor Play' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1629,6 +1839,24 @@ const categories = {
             'Photograph the painted surface or decals on my model kit at macro scale to highlight craftsmanship and weathering with shallow depth of field. No text.',
         },
       ],
+      'Outdoor Play': [
+        {
+          idSuffix: '90',
+          name: 'Outdoor_Play_Field',
+          title: 'Outdoor play field set',
+          description: 'Outdoor play toys arranged on grass with sunshine.',
+          prompt:
+            'Capture my outdoor play toys—kites, jump ropes, and lawn games—arranged on fresh grass with sunlit highlights to promote active outdoor play. Bright daylight, no kids present, no text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Outdoor_Play_Patio',
+          title: 'Backyard outdoor play station',
+          description: 'Outdoor play gear styled on a patio with storage.',
+          prompt:
+            'Photograph my outdoor play gear organized on a patio with storage bins, chalk drawings, and watering can to emphasize organized outdoor play. Soft late afternoon light, no people.',
+        },
+      ],
     },
   },
   automotive: {
@@ -1637,6 +1865,7 @@ const categories = {
       { id: 'automotive_tires', label: 'Tires & Wheels' },
       { id: 'automotive_fluids', label: 'Fluids & Maintenance' },
       { id: 'automotive_accessories', label: 'Interior Accessories' },
+      { id: 'automotive_care_detailing', label: 'Care & Detailing' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1765,6 +1994,24 @@ const categories = {
             'Photograph beads of water or ceramic coating on a glossy painted panel to highlight hydrophobic effect with sharp highlights. Neutral backdrop, no text.',
         },
       ],
+      'Care & Detailing': [
+        {
+          idSuffix: '90',
+          name: 'Detailing_Kit_Display',
+          title: 'Care & detailing kit display',
+          description: 'Detailing products arranged on a workbench.',
+          prompt:
+            'Photograph my car care & detailing products arranged on a workbench with microfiber towels, spray bottles, and polish pads to emphasize premium care & detailing. Focused garage lighting, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Detailing_Ceramic_Coat',
+          title: 'Ceramic coating session',
+          description: 'Detailing tools beside a ceramic-coated panel.',
+          prompt:
+            'Create a lifestyle vignette of my care & detailing set beside a ceramic-coated panel with gloves, applicators, and gloss meter to highlight meticulous care & detailing. Cool garage lighting, no people.',
+        },
+      ],
     },
   },
   pet_products: {
@@ -1773,6 +2020,7 @@ const categories = {
       { id: 'pet_products_food', label: 'Food' },
       { id: 'pet_products_gear', label: 'Gear & Care' },
       { id: 'pet_products_toys', label: 'Toys' },
+      { id: 'pet_products_grooming', label: 'Grooming' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -1901,6 +2149,24 @@ const categories = {
             'Photograph the buckle and stitching on my pet collar at macro scale with controlled highlights to showcase craftsmanship. Background softly blurred, no text.',
         },
       ],
+      'Grooming': [
+        {
+          idSuffix: '90',
+          name: 'Grooming_Spa_Set',
+          title: 'Pet grooming spa set',
+          description: 'Pet grooming tools arranged like a spa station.',
+          prompt:
+            'Create a pet grooming vignette with my pet grooming brushes, clippers, and shampoos arranged on a towel with greenery to highlight gentle pet grooming. Soft daylight, no animals or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Grooming_Bath_Ready',
+          title: 'Grooming bath ready scene',
+          description: 'Pet grooming bath setup with towels and drying tools.',
+          prompt:
+            'Photograph my grooming essentials beside a pet bathtub with towels, blow dryer, and treats to showcase at-home pet grooming. Warm ambient lighting, no animals.',
+        },
+      ],
     },
   },
   diy_tools: {
@@ -1909,6 +2175,7 @@ const categories = {
       { id: 'diy_tools_hand', label: 'Hand Tools' },
       { id: 'diy_tools_repair', label: 'Repair Kits' },
       { id: 'diy_tools_materials', label: 'Materials' },
+      { id: 'diy_tools_power', label: 'Power Tools' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2037,6 +2304,24 @@ const categories = {
             'Photograph the textured grip of my tool highlighting pattern and ergonomics with side lighting and shallow depth of field. Neutral background, no text.',
         },
       ],
+      'Power Tools': [
+        {
+          idSuffix: '90',
+          name: 'PowerTool_Workshop_Scene',
+          title: 'Power tools workshop scene',
+          description: 'Power tools lineup staged on a bench with safety gear.',
+          prompt:
+            'Create a workshop scene of my power tools lined up on a bench with safety goggles, gloves, and sawdust to emphasize dependable power tools. Warm task lighting, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'PowerTool_Action_Close',
+          title: 'Power tool action close-up',
+          description: 'Power tool cutting through lumber with sparks or shavings.',
+          prompt:
+            'Photograph my power tool cutting through lumber with flying shavings or sparks frozen mid-air to showcase rugged power tools. Dramatic lighting, no people visible.',
+        },
+      ],
     },
   },
   books_education: {
@@ -2045,6 +2330,7 @@ const categories = {
       { id: 'books_education_print', label: 'Books' },
       { id: 'books_education_ebooks', label: 'E-books' },
       { id: 'books_education_courses', label: 'Online Courses' },
+      { id: 'books_education_workbooks', label: 'Workbooks' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2173,6 +2459,24 @@ const categories = {
             'Photograph the edge of my book pages or deckled paper with shallow depth of field to emphasize texture. Soft lighting, no text.',
         },
       ],
+      'Workbooks': [
+        {
+          idSuffix: '90',
+          name: 'Workbook_Desk_Session',
+          title: 'Workbook desk session',
+          description: 'Workbook open with pencils and study planner.',
+          prompt:
+            'Create a study scene of my workbook open with pencils, sticky notes, and planner spread across a desk to spotlight interactive workbooks. Natural daylight, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Workbook_Flatlay',
+          title: 'Workbook flatlay',
+          description: 'Flatlay of workbook pages with markers and tabs.',
+          prompt:
+            'Photograph my workbook pages in a neat flatlay with colorful markers, tabs, and progress stickers to emphasize engaging workbooks. Soft overhead lighting, no text beyond page content.',
+        },
+      ],
     },
   },
   music_instruments: {
@@ -2181,6 +2485,7 @@ const categories = {
       { id: 'music_instruments_guitars', label: 'Guitars' },
       { id: 'music_instruments_dj', label: 'DJ Equipment' },
       { id: 'music_instruments_vinyl', label: 'Vinyl Records' },
+      { id: 'music_instruments_keys', label: 'Keyboards & Pianos' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2309,6 +2614,24 @@ const categories = {
             'Photograph the indicator mark on my amplifier or mixer knob with dramatic lighting to reveal engraving and finish. Dark blurred background, no text.',
         },
       ],
+      'Keyboards & Pianos': [
+        {
+          idSuffix: '90',
+          name: 'Keys_Studio_Display',
+          title: 'Keyboard studio display',
+          description: 'Keyboard or piano staged with studio monitors.',
+          prompt:
+            'Create a studio hero shot of my keyboard or digital piano positioned with studio monitors and pedals to emphasize premium keyboards & pianos. Moody stage lighting, no text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Keys_LivingRoom_Session',
+          title: 'Living room piano session',
+          description: 'Keyboard styled in a living room for practice sessions.',
+          prompt:
+            'Photograph my keyboard set up in a living room with sheet music, headphones, and plants to highlight home-friendly keyboards & pianos. Warm ambient lighting, no people.',
+        },
+      ],
     },
   },
   outdoor_travel: {
@@ -2317,6 +2640,7 @@ const categories = {
       { id: 'outdoor_travel_camping', label: 'Camping Gear' },
       { id: 'outdoor_travel_backpacks', label: 'Backpacks' },
       { id: 'outdoor_travel_accessories', label: 'Travel Accessories' },
+      { id: 'outdoor_travel_apparel', label: 'Outdoor Apparel' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2445,6 +2769,24 @@ const categories = {
             'Photograph the braided structure of my climbing rope or strap with shallow depth of field and side lighting to emphasize fibers. Neutral background, no text.',
         },
       ],
+      'Outdoor Apparel': [
+        {
+          idSuffix: '90',
+          name: 'Outdoor_Apparel_Layers',
+          title: 'Layered outdoor apparel',
+          description: 'Outdoor apparel layered on a mannequin with gear.',
+          prompt:
+            'Create a studio hero display of my outdoor apparel layered on a mannequin with backpack, boots, and trekking poles to highlight protective outdoor apparel. Cool mountain lighting, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Outdoor_Apparel_Flatlay',
+          title: 'Trail apparel flatlay',
+          description: 'Outdoor clothing flatlay with maps and trail snacks.',
+          prompt:
+            'Photograph my outdoor apparel arranged in a flatlay with trail map, compass, and energy snacks to spotlight versatile outdoor apparel. Natural daylight, no people.',
+        },
+      ],
     },
   },
   seasonal_products: {
@@ -2453,6 +2795,7 @@ const categories = {
       { id: 'seasonal_products_holiday', label: 'Holiday Decor' },
       { id: 'seasonal_products_halloween', label: 'Halloween Costumes' },
       { id: 'seasonal_products_summer', label: 'Summer Essentials' },
+      { id: 'seasonal_products_spring', label: 'Spring Celebrations' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2581,6 +2924,24 @@ const categories = {
             'Photograph a macro view of my costume accessory—mask, sequined trim, or ribbon—highlighting texture with side lighting and shallow depth of field. No text.',
         },
       ],
+      'Spring Celebrations': [
+        {
+          idSuffix: '90',
+          name: 'Spring_Centerpiece',
+          title: 'Spring celebration centerpiece',
+          description: 'Spring celebration decor arranged on a dining table.',
+          prompt:
+            'Create a lifestyle scene of my spring celebration decor arranged on a dining table with fresh flowers, pastel linens, and place cards to highlight joyful spring celebrations. Soft daylight, no people.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Spring_Porch_Display',
+          title: 'Spring porch display',
+          description: 'Spring wreath and decor styled on a sunny porch.',
+          prompt:
+            'Photograph my spring celebration wreath and decor styled on a sunny porch with potted bulbs and ribbons to celebrate spring celebrations. Natural light, no people.',
+        },
+      ],
     },
   },
 
@@ -2591,6 +2952,7 @@ const categories = {
       { id: 'vitamins_minerals', label: 'Vitamins & Minerals' },
       { id: 'protein_powders', label: 'Protein Powders' },
       { id: 'workout_supplements', label: 'Pre/Post-Workout' },
+      { id: 'health_supplements_herbal', label: 'Herbal Remedies' },
     ],
     groups: {
       'Studio Hero Shots': [
@@ -2675,6 +3037,24 @@ const categories = {
           description: 'Product in outdoor fitness context with natural lighting.',
           prompt:
             'Photograph my supplement product resting on outdoor workout equipment or park bench with natural daylight and soft bokeh background. Product sharp and prominent. No people, no text overlays.',
+        },
+      ],
+      'Herbal Remedies': [
+        {
+          idSuffix: '90',
+          name: 'Herbal_Tonic_Set',
+          title: 'Herbal tonic set',
+          description: 'Herbal supplements styled with botanicals and glassware.',
+          prompt:
+            'Create a calm tabletop scene of my herbal remedies placed beside fresh herbs, mortar and pestle, and amber droppers to spotlight natural herbal remedies. Soft daylight, no people or text.',
+        },
+        {
+          idSuffix: '91',
+          name: 'Herbal_Tea_Time',
+          title: 'Herbal tea time',
+          description: 'Herbal supplement blended into tea with soothing props.',
+          prompt:
+            'Photograph my herbal supplement being added to a steaming cup of tea with honey, dried flowers, and linen napkin to emphasize restorative herbal remedies. Warm morning light, no people or typography.',
         },
       ],
     },
