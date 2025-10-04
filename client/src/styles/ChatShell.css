@@ -751,6 +751,8 @@
   line-height: 1.5;
   white-space: normal;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .chat-composer {

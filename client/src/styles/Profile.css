@@ -10,6 +10,7 @@
   box-shadow: 0 40px 90px rgba(5, 7, 22, 0.75);
   backdrop-filter: blur(32px);
   overflow: hidden;
+  position: relative;
 }
 
 .profile__hero {
@@ -105,9 +106,13 @@
 }
 
 .profile__close {
-  margin-left: auto;
+  position: absolute;
+  top: 18px;
+  right: 18px;
   font-size: 1.8rem;
   color: rgba(226, 231, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
 }
 
 .profile__body {
@@ -608,7 +613,8 @@
   }
 
   .profile__close {
-    align-self: flex-end;
+    top: 14px;
+    right: 14px;
   }
 
   .profile__body {
