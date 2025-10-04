@@ -830,16 +830,18 @@ function ProfileModal({
           </div>
         )}
 
-        {activeTab === 'wallet' && (
-          stripePromise ? (
-            <Elements stripe={stripePromise} key={stripePromise ? 'wallet-enabled' : 'wallet-disabled'}>
-              <WalletPanel user={user} token={token} onUserUpdate={onUserUpdate} />
-            </Elements>
-          ) : (
-            <div className="profile-panel__empty">
-              <p>Connect your Stripe publishable key to enable in-app coin purchases.</p>
-              <p className="profile-panel__hint">Set VITE_STRIPE_PUBLISHABLE_KEY in the client environment.</p>
+      {activeTab === 'wallet' && (
+        stripePromise ? (
+            <div className="profile-wallet">
+              <Elements stripe={stripePromise} key={stripePromise ? 'wallet-enabled' : 'wallet-disabled'}>
+                <WalletPanel user={user} token={token} onUserUpdate={onUserUpdate} />
+              </Elements>
             </div>
+        ) : (
+          <div className="profile-panel__empty">
+            <p>Connect your Stripe publishable key to enable in-app coin purchases.</p>
+            <p className="profile-panel__hint">Set VITE_STRIPE_PUBLISHABLE_KEY in the client environment.</p>
+          </div>
           )
         )}
 
