@@ -1332,9 +1332,12 @@ export default function Generator({
           >
             ☰
           </button>
-          <div>
+          <div className="chat-header__content">
             <h1>What are we styling today?</h1>
-            <p>Upload a product image, mix prompt presets, and brief the assistant to craft new looks.</p>
+            <p>
+              <br />
+              Upload a product image, mix prompt presets, and brief the assistant to craft new looks.
+            </p>
           </div>
         </header>
 

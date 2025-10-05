@@ -315,6 +315,18 @@
   z-index: 0;
 }
 
+.chat-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  position: relative;
+}
+
+.chat-header__content {
+  display: flex;
+  flex-direction: column;
+}
+
 .chat-header h1 {
   margin: 0 0 4px;
   font-size: clamp(1.8rem, 3.5vw, 2.2rem);
@@ -1295,12 +1307,22 @@
 
   .chat-mobile-trigger {
     display: inline-flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
   }
 
   .chat-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    padding-left: 58px;
+    padding-top: 4px;
+  }
+
+  .chat-header__content {
+    width: 100%;
   }
 
   .chat-body {
