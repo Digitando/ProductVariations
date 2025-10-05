@@ -143,8 +143,8 @@ const GOOGLE_ORIGIN = 'https://accounts.google.com';
 
 const cspDirectives = {
   defaultSrc: ["'self'"],
-  scriptSrc: ["'self'", "'unsafe-inline'", GOOGLE_ORIGIN], // Allow Google Identity Services
-  styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+  scriptSrc: ["'self'", "'unsafe-inline'", GOOGLE_ORIGIN, "https://js.stripe.com"], // Allow Google Identity Services and Stripe
+  styleSrc: ["'self'", "'unsafe-inline'", GOOGLE_ORIGIN], // Allow inline styles for React and Google Sign-In
   imgSrc: ["'self'", 'data:', 'https:', 'blob:'], // Allow images from various sources
   connectSrc: ["'self'", GOOGLE_ORIGIN, ...allowedOrigins],
   fontSrc: ["'self'", 'data:'],
