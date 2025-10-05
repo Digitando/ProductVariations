@@ -930,7 +930,7 @@ button {
   display: grid;
   place-items: center;
   padding: 24px;
-  z-index: 20;
+  z-index: 80;
 }
 
 .modal {

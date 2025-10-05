@@ -1360,6 +1360,11 @@
     gap: 18px;
   }
 
+  .chat-suggestions,
+  .chat-suggestions--mobile {
+    display: none;
+  }
+
   .chat-header h1 {
     font-size: clamp(1.9rem, 5.5vw, 2.3rem);
   }
