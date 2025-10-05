@@ -139,16 +139,18 @@ if (allowedOrigins.length === 0) {
 }
 
 // Security: Configure Content Security Policy
+const GOOGLE_ORIGIN = 'https://accounts.google.com';
+
 const cspDirectives = {
   defaultSrc: ["'self'"],
-  scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for React
+  scriptSrc: ["'self'", "'unsafe-inline'", GOOGLE_ORIGIN], // Allow Google Identity Services
   styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
   imgSrc: ["'self'", 'data:', 'https:', 'blob:'], // Allow images from various sources
-  connectSrc: ["'self'", ...allowedOrigins],
+  connectSrc: ["'self'", GOOGLE_ORIGIN, ...allowedOrigins],
   fontSrc: ["'self'", 'data:'],
   objectSrc: ["'none'"],
   mediaSrc: ["'self'"],
-  frameSrc: ["'none'"],
+  frameSrc: ["'self'", GOOGLE_ORIGIN],
   upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
 };
 
