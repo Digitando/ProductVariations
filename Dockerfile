@@ -4,10 +4,6 @@
 # Stage 1: Build client
 FROM node:20-alpine AS client-builder
 
-# Accept build arguments for Vite environment variables
-ARG VITE_GOOGLE_CLIENT_ID=""
-ARG VITE_API_BASE_URL=""
-
 WORKDIR /app/client
 
 # Copy client package files
@@ -20,12 +16,11 @@ RUN npm ci
 COPY client/ ./
 COPY shared/ ../shared/
 
-# Build client with environment variables
-RUN echo "Building with VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:0:20}..." && \
-    echo "Building with VITE_API_BASE_URL: ${VITE_API_BASE_URL}" && \
-    VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID}" \
-    VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
-    npm run build
+# Copy production env file (if it exists)
+COPY client/.env.production* ./ 2>/dev/null || true
+
+# Build client - Vite will use .env.production files
+RUN npm run build
 
 # Stage 2: Server setup
 FROM node:20-alpine AS server-setup
