@@ -16,10 +16,7 @@ RUN npm ci
 COPY client/ ./
 COPY shared/ ../shared/
 
-# Copy production env file (if it exists)
-COPY client/.env.production* ./ 2>/dev/null || true
-
-# Build client - Vite will use .env.production files
+# Build client - Vite will use .env.production files if they exist
 RUN npm run build
 
 # Stage 2: Server setup
