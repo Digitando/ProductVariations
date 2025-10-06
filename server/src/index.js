@@ -326,9 +326,9 @@ async function getUserStoreEntry(userId) {
   return { users, user, index };
 }
 
-function computeRequiredCoins(variationRequests = []) {
-  const count = Array.isArray(variationRequests) ? variationRequests.length : 0;
-  return Math.max(count, 1);
+function computeRequiredCoins() {
+  // Always charge exactly 1 coin per generation, regardless of number of variations
+  return 1;
 }
 
 async function loadImageBuffer(reference) {
@@ -914,7 +914,7 @@ app.post('/api/generate-images', requireAuth, upload.single('image'), async (req
     const customPrompt = typeof req.body.customPrompt === 'string' ? req.body.customPrompt : '';
     const variationRequests = buildVariationRequests({ promptIds, customPrompt });
 
-    const coinsRequired = computeRequiredCoins(variationRequests);
+    const coinsRequired = computeRequiredCoins();
     const { users, user, index } = await getUserStoreEntry(req.user.id);
     if (!user || index === -1) {
       return res.status(401).json({ error: 'Authentication required.' });

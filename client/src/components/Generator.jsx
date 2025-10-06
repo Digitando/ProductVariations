@@ -577,10 +577,9 @@ export default function Generator({
     [selectedPromptIds],
   )
   const coinsRequired = useMemo(() => {
-    const presetCount = selectedPromptIds.length
-    const customCount = customPrompt.trim() ? 1 : 0
-    return Math.max(presetCount + customCount, 1)
-  }, [selectedPromptIds.length, customPrompt])
+    // Always charge exactly 1 coin per generation, regardless of selections
+    return 1
+  }, [])
   const hasEnoughCoins = coins >= coinsRequired
 
   const activeCanvasItem = useMemo(
