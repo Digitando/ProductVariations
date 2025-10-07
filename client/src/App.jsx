@@ -64,6 +64,7 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
   })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const isRegister = mode === 'register'
 
@@ -154,48 +155,69 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
   }
 
   return (
-    <div className="modal__backdrop" role="presentation">
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-heading">
-        <header className="modal__header">
-          <h2 id="auth-modal-heading" className="sr-only">
+    <div className="modal__backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-heading">
+        <button type="button" className="modal__close" onClick={onClose} aria-label="Close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <header className="auth-modal__header">
+          <div className="auth-modal__logo">
+            <div className="auth-modal__logo-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="url(#gradient)" />
+                <path d="M16 8L20 14H12L16 8Z" fill="white" />
+                <path d="M16 24L12 18H20L16 24Z" fill="white" />
+                <defs>
+                  <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#8b5cf6" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+          <h2 id="auth-modal-heading" className="auth-modal__title">
             {isRegister ? 'Create your account' : 'Welcome back'}
           </h2>
-          <nav className="modal__tabs" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              className={`modal__tab${!isRegister ? ' modal__tab--active' : ''}`}
-              role="tab"
-              aria-selected={!isRegister}
-              tabIndex={!isRegister ? 0 : -1}
-              onClick={() => onChangeMode?.('login')}
-              disabled={!onChangeMode}
-            >
-              Log in
-            </button>
-            <button
-              type="button"
-              className={`modal__tab${isRegister ? ' modal__tab--active' : ''}`}
-              role="tab"
-              aria-selected={isRegister}
-              tabIndex={isRegister ? 0 : -1}
-              onClick={() => onChangeMode?.('register')}
-              disabled={!onChangeMode}
-            >
-              Sign up
-            </button>
-          </nav>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </header>
-        <div className="modal__body">
-          <p className="modal__subtitle">
+          <p className="auth-modal__subtitle">
             {isRegister
-              ? 'Register to save your garment uploads and revisit generated assets at any time.'
-              : 'Sign in to access saved uploads and continue where you left off.'}
+              ? 'Join us to save your work and access premium features'
+              : 'Sign in to continue where you left off'}
           </p>
+        </header>
+
+        <nav className="auth-modal__tabs" role="tablist" aria-label="Authentication mode">
+          <button
+            type="button"
+            className={`auth-modal__tab${!isRegister ? ' auth-modal__tab--active' : ''}`}
+            role="tab"
+            aria-selected={!isRegister}
+            tabIndex={!isRegister ? 0 : -1}
+            onClick={() => onChangeMode?.('login')}
+            disabled={!onChangeMode}
+          >
+            <span className="auth-modal__tab-text">Log in</span>
+          </button>
+          <button
+            type="button"
+            className={`auth-modal__tab${isRegister ? ' auth-modal__tab--active' : ''}`}
+            role="tab"
+            aria-selected={isRegister}
+            tabIndex={isRegister ? 0 : -1}
+            onClick={() => onChangeMode?.('register')}
+            disabled={!onChangeMode}
+          >
+            <span className="auth-modal__tab-text">Sign up</span>
+          </button>
+        </nav>
+
+        <div className="modal__body">
           {isRegister && (
-            <div className="auth-form__consent">
+            <div className="auth-form__consent auth-form__consent--top">
               <label className="auth-form__checkbox">
                 <input
                   type="checkbox"
@@ -207,8 +229,7 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
                 />
                 <span>
                   I accept the{' '}
-                  <span className="link-button">Privacy Policy</span>{' '}
-                  and GDPR terms.
+                  <span className="link-button">Privacy Policy</span> and GDPR terms
                 </span>
               </label>
               <label className="auth-form__checkbox">
@@ -219,23 +240,31 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
                     setFormData((prev) => ({ ...prev, consentMarketing: event.target.checked }))
                   }
                 />
-                <span>I agree to receive promotional materials and updates (optional).</span>
+                <span>Send me promotional updates (optional)</span>
               </label>
             </div>
           )}
+
           <GoogleSignInButton
             clientId={googleClientId}
             onCredential={handleGoogleCredential}
             text={isRegister ? 'Sign up with Google' : 'Sign in with Google'}
             buttonText={isRegister ? 'signup_with' : 'signin_with'}
           />
-          <div className="modal__divider">
-            <span>or</span>
+
+          <div className="auth-modal__divider">
+            <span>or continue with email</span>
           </div>
+
           <form className="auth-form" onSubmit={handleSubmit}>
             {isRegister && (
               <label className="auth-form__field">
-                <span>Full name</span>
+                <span className="auth-form__label">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1a6 6 0 00-6 6h12a6 6 0 00-6-6z"/>
+                  </svg>
+                  Full name
+                </span>
                 <input
                   type="text"
                   value={formData.name}
@@ -245,11 +274,17 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
                   placeholder="Alex Rivera"
                   required
                   disabled={submitting}
+                  className="auth-form__input"
                 />
               </label>
             )}
             <label className="auth-form__field">
-              <span>Email</span>
+              <span className="auth-form__label">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2-1a1 1 0 00-1 1v.5l5 3 5-3V4a1 1 0 00-1-1H4zm6.5 5.5l-5.5 3.3V6.5l5 3 5-3v5.3l-4.5-2.7z"/>
+                </svg>
+                Email address
+              </span>
               <input
                 type="email"
                 value={formData.email}
@@ -259,24 +294,56 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
                 placeholder="you@example.com"
                 required
                 disabled={submitting}
+                className="auth-form__input"
               />
             </label>
             <label className="auth-form__field">
-              <span>Password</span>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(event) =>
-                  setFormData((prev) => ({ ...prev, password: event.target.value }))
-                }
-                placeholder="••••••••"
-                required
-                disabled={submitting}
-              />
+              <span className="auth-form__label">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4 4v2H3a1 1 0 00-1 1v6a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1h-1V4a4 4 0 00-8 0zm6 2V4a2 2 0 10-4 0v2h4z"/>
+                </svg>
+                Password
+              </span>
+              <div className="auth-form__password-wrapper">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, password: event.target.value }))
+                  }
+                  placeholder="••••••••"
+                  required
+                  disabled={submitting}
+                  className="auth-form__input"
+                />
+                <button
+                  type="button"
+                  className="auth-form__password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"/>
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </label>
             {isRegister && (
               <label className="auth-form__field">
-                <span>Referral code (optional)</span>
+                <span className="auth-form__label">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4 2a2 2 0 00-2 2v1h12V4a2 2 0 00-2-2H4zM2 7v5a2 2 0 002 2h8a2 2 0 002-2V7H2zm6 2a1 1 0 011 1v2a1 1 0 11-2 0v-2a1 1 0 011-1z"/>
+                  </svg>
+                  Referral code (optional)
+                </span>
                 <input
                   type="text"
                   value={formData.referralCode}
@@ -286,12 +353,35 @@ function AuthModal({ mode, onClose, onAuthenticate, onChangeMode, googleClientId
                   placeholder="INVITE123"
                   disabled={submitting}
                   autoComplete="off"
+                  className="auth-form__input"
                 />
               </label>
             )}
-            {error && <p className="auth-form__error">{error}</p>}
-            <button type="submit" className="primary" disabled={submitting}>
-              {submitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
+            {error && (
+              <div className="auth-form__error">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 16A8 8 0 108 0a8 8 0 000 16zM7 4a1 1 0 112 0v5a1 1 0 11-2 0V4zm1 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+            <button type="submit" className="auth-form__submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <svg className="auth-form__spinner" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3"/>
+                    <path d="M18 10a8 8 0 01-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  Please wait…
+                </>
+              ) : (
+                <>
+                  {isRegister ? 'Create account' : 'Sign in'}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 9H3a1 1 0 110-2h9.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                  </svg>
+                </>
+              )}
             </button>
           </form>
         </div>
